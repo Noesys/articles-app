@@ -1,13 +1,20 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 
+function htmlToPlainText(html: string): string {
+  if (typeof document === "undefined") return html;
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  return (tmp.textContent ?? tmp.innerText ?? "").replace(/\u00A0/g, " ");
+}
+
 export default function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
 
   return (
     <button
       onClick={(e) => {
-        navigator.clipboard.writeText(text);
+        navigator.clipboard.writeText(htmlToPlainText(text));
         setCopied(true);
         e.stopPropagation();
         setTimeout(() => setCopied(false), 2000);

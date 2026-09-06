@@ -17,19 +17,25 @@ function apiMethodProxy() {
         const isArticles = url.startsWith("/api/articles");
         const isMine = url.includes("/mine");
         let targetBase: string | null = null;
-        if (req.method === "POST" && isArticles) targetBase = "http://127.0.0.1:8787";
-        else if (req.method === "GET" && isArticles && !isMine) {
+        if (req.method === "POST" && isArticles) {
+          // User article creation
+          targetBase = "http://127.0.0.1:8787";
+        } else if (req.method === "GET" && isArticles) {
+          if (isMine) {
+            // User article detail/history — handled by vite proxy below
+            return next();
+          }
           // Admin list/detail: GET /api/articles[?month=] or GET /api/articles/:id
-          // User detail is /api/articles/mine/:id (already handled by proxy)
           targetBase = "http://127.0.0.1:8788";
         }
         if (!targetBase) return next();
+        // Admin-api keeps /api prefix (mounted at /api/articles, /api/users, etc.).
+        // User-api strips /api (mounted at /articles, /auth, etc.).
+        const finalPath = targetBase.includes("8788")
+          ? url
+          : url.replace(/^\/api/, "");
         const http = await import("node:http");
-        const target = targetBase + url.replace(/^\/api/, isMine ? "" : url.startsWith("/api/articles") && targetBase.includes("8787") ? "" : url.startsWith("/api/articles") ? "/api/articles" + url.slice("/api/articles".length) : url);
-        // Simplify: keep /api prefix for admin (8788), strip for user (8787)
-        const finalPath = targetBase.includes("8788") ? url : url.replace(/^\/api/, "");
-        const finalTarget = targetBase + finalPath;
-        const parsed = new URL(finalTarget);
+        const parsed = new URL(`http://127.0.0.1:${targetBase.includes("8788") ? "8788" : "8787"}${finalPath}`);
         const proxyReq = http.request(
           { hostname: parsed.hostname, port: parsed.port, path: parsed.pathname + parsed.search, method: req.method, headers: req.headers },
           (proxyRes: any) => {

@@ -75,12 +75,16 @@ type ApiResponse<T> = {
     totalPages: number;
   };
 };
+let isRedirectingToLogin = false;
 function redirectToLogin(path: string) {
   tokenManager.clear();
   // Auth endpoints (otp/me) return 401 as part of normal unauthenticated flow
   // — must not trigger a navigation side-effect.
   const isAuthEndpoint = path.startsWith("/auth/otp") || path.startsWith("/auth/me");
   if (isAuthEndpoint) return;
+  // Guard against multiple concurrent 401s racing to redirect
+  if (isRedirectingToLogin) return;
+  isRedirectingToLogin = true;
   // Avoid hard reload (window.location.assign) which breaks SPA state and
   // causes infinite reload loops on mount. Soft-replace URL and let React
   // Router guards handle the redirect; dispatch popstate for listeners.
@@ -88,6 +92,10 @@ function redirectToLogin(path: string) {
     window.history.replaceState(null, "", "/login");
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
+  // Reset on next tick so subsequent genuine navigations aren't blocked
+  setTimeout(() => {
+    isRedirectingToLogin = false;
+  }, 0);
 }
 async function fetchWithAuth<T>(
   path: string,
