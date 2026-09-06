@@ -162,7 +162,7 @@ articleRoutes.get("/mine/:id", async (c) => {
     );
   }
 
-  const history = await getArticleHistory(db, articleId);
+  const history = await getArticleHistory(db, articleId, user.id);
 
   if (history.length > 0) {
     history.sort((a, b) => a.version - b.version);
@@ -317,8 +317,8 @@ articleRoutes.post("/", async (c) => {
       ]);
     } catch {
       // Fallback to sequential if batch not supported in local D1
-      await snapshotArticle(db, requestedId, historyId, now);
-      await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth);
+      await snapshotArticle(db, requestedId, historyId, now, user.id);
+      await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth, user.id);
     }
 
     articleId = requestedId;
