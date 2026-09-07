@@ -37,8 +37,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
         <Loader2 size={28} className="animate-spin text-slate-400" />
       </div>
     );
-  if (!user || tokenManager.isExpired())
-    return <Navigate to="/login" replace />;
+  if (!user || tokenManager.isExpired()) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
