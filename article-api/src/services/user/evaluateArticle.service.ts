@@ -1,4 +1,3 @@
-// db/evaluateArticle.service.ts
 import {
   getArticleTypeConfig,
   getActiveParameters,

@@ -1,4 +1,4 @@
-import type { Bindings } from "../types";
+import type { Bindings } from "../types/shared-types";
 
 export async function sendOTPEmail(
   env: Bindings,
@@ -6,15 +6,17 @@ export async function sendOTPEmail(
   otp: string
 ): Promise<boolean> {
   const apiKey = env.SENDGRID_API_KEY;
-  // Use the confirmed verified sender directly
-  const fromEmail = "vishal@noesyssoftware.com";
+  const fromEmail = (env.FROM_EMAIL ?? "").trim();
 
   if (!apiKey) {
     console.error("SENDGRID_API_KEY is missing");
     return false;
   }
 
-  // console.log(`[Email] Attempting to send OTP to ${email} from ${fromEmail}`);
+  if (!fromEmail) {
+    console.error("FROM_EMAIL is missing - set via wrangler secret (wrangler secret put FROM_EMAIL)");
+    return false;
+  }
 
   try {
     const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
@@ -45,7 +47,6 @@ export async function sendOTPEmail(
       return false;
     }
 
-    // console.log(`[Email] Successfully sent OTP to ${email}. SendGrid Status: ${response.status}`);
     return true;
   } catch (error) {
     console.error("[Email] Failed to send OTP email:", error);

@@ -1,4 +1,3 @@
-// routes/insights.route.ts
 import { Hono } from "hono";
 import {
   getSummary,
