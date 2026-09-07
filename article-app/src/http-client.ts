@@ -1,5 +1,5 @@
 const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
+  (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "/api";
 
 const TOKEN_KEY = "auth:token";
 const ROLE_KEY = "auth:role";
