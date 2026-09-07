@@ -1,10 +1,5 @@
-// services/evaluationBuilder.service.ts
 import { z } from "zod";
 import { ArticleTypeConfig, ParameterConfig } from "../../types/user-types";
-
-// Only include parameters that CAN be scored:
-// - numeric always qualifies
-// - option only qualifies if the admin has actually added active options
 export function getScoreableParameters(
   parameters: ParameterConfig[],
 ): ParameterConfig[] {
@@ -13,7 +8,6 @@ export function getScoreableParameters(
   );
 }
 
-// evaluationBuilder.service.ts — key changes only
 export function buildEvaluationSchema(
   articleType: ArticleTypeConfig,
   parameters: ParameterConfig[],

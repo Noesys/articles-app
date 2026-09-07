@@ -1,4 +1,4 @@
-import type { Bindings } from "../types";
+import type { Bindings } from "../types/shared-types";
 
 const encoder = new TextEncoder();
 
