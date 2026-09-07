@@ -325,9 +325,6 @@ articleRoutes.post("/", async (c) => {
 
     const nextVersion = existingArticle.version + 1;
 
-    // ❌ REMOVED: Synchronous evaluation (was blocking)
-    // ✅ ADDED: Background evaluation via waitUntil
-    const currentVersion = existingArticle.version;
     c.executionCtx.waitUntil(
       backgroundEvaluateArticle(
         db,
@@ -369,8 +366,6 @@ articleRoutes.post("/", async (c) => {
 
     articleId = newId;
 
-    // ❌ REMOVED: Synchronous evaluation (was blocking 10-30s)
-    // ✅ ADDED: Background evaluation via waitUntil
     c.executionCtx.waitUntil(
       backgroundEvaluateArticle(
         db,
