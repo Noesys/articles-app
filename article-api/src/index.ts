@@ -19,6 +19,8 @@ import articleTypesRoute from "./routes/admin/articleTypes";
 import parametersRoute from "./routes/admin/parameters";
 import insightsRoute from "./routes/admin/insights";
 
+import { AppError } from "../src/utils/errors";
+
 const app = new Hono<AppEnv>();
 
 app.use(
@@ -85,11 +87,29 @@ app.route("/api/article-types", parametersRoute);
 app.route("/api/insights", insightsRoute);
 
 app.onError((err, c) => {
-  console.error("[user-api] unhandled error:", err);
+  // Correlation id so we can match a support report / log line to this
+  // specific failure without ever exposing internals to the client.
+  const errorId = crypto.randomUUID();
+
+  if (err instanceof AppError) {
+    // Deliberately thrown, safe-to-show message (validation, not-found, etc).
+    if (err.status >= 500) {
+      console.error(`[user-api] ${errorId}:`, err);
+    }
+    return c.json(
+      { success: false, message: err.message, errorId },
+      err.status as any,
+    );
+  }
+
+  // Anything else (D1 errors, network failures, bugs) is unexpected —
+  // log it fully server-side, but never forward err.message to the client.
+  console.error(`[user-api] ${errorId} unhandled error:`, err);
   return c.json(
     {
       success: false,
-      message: err.message || "Internal server error",
+      message: "Something went wrong. Please try again.",
+      errorId,
     },
     500,
   );
