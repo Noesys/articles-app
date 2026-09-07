@@ -1,0 +1,23 @@
+name = "article-api"
+main = "src/index.ts"
+compatibility_date = "2024-12-30"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "noesys-dev"
+database_id = "83331df4-d437-4c67-92e4-313065a15762"
+
+[ai]
+binding = "AI"
+
+[vars]
+ENVIRONMENT = "production"
+
+[env.development]
+routes = [
+  { pattern = "api.localhost/*", zone_name = "localhost" }
+]
+
+[env.development.vars]
+ENVIRONMENT = "development"

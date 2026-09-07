@@ -1,0 +1,22 @@
+{
+  "name": "article-api",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler build",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.123.0"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^4.0.64",
+    "@sendgrid/mail": "^8.1.6",
+    "ai": "^7.0.93",
+    "hono": "^4.13.3",
+    "jose": "^6.2.9",
+    "zod": "^4.4.3"
+  }
+}
