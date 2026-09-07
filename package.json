@@ -6,7 +6,7 @@
   "type": "module",
   "workspaces": [
     "app",
-    "workers/*"
+    "article-api"
   ],
   "scripts": {
     "dev": "npm run dev --workspaces",

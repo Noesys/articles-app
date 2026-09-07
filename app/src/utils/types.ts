@@ -1,3 +1,14 @@
+export type ApiResponse<T> = {
+  success?: boolean;
+  message?: string;
+  data: T;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
 
 export interface ArticleDetail {
   id: string;
@@ -34,9 +45,7 @@ export interface ArticleDetailResponse {
   parameter_results?: ParameterResult[];
 }
 
-
 // useMyArticles
-
 
 export interface ArticleListItem {
   id: string;
@@ -68,7 +77,6 @@ export interface ArticleRow {
   article: Omit<ArticleListItem, "authorName">;
   author?: { id: string; name: string };
 }
-
 
 // smart paste
 export interface SmartPasteOptions {

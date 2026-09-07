@@ -1,5 +1,0 @@
-JWT_SECRET=local-dev-secret-change-me
-SENDGRID_API_KEY=dummy
-FROM_EMAIL=vishal@noesyssoftware.com
-ENVIRONMENT=development
-

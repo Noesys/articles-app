@@ -1,3 +1,5 @@
+import { ApiResponse } from "./utils/types";
+
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
 
@@ -64,22 +66,14 @@ export class ApiError extends Error {
     this.status = s;
   }
 }
-type ApiResponse<T> = {
-  success?: boolean;
-  message?: string;
-  data: T;
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-};
+
+
 function redirectToLogin(path: string) {
   tokenManager.clear();
   // Auth endpoints (otp/me) return 401 as part of normal unauthenticated flow
   // — must not trigger a navigation side-effect.
-  const isAuthEndpoint = path.startsWith("/auth/otp") || path.startsWith("/auth/me");
+  const isAuthEndpoint =
+    path.startsWith("/auth/otp") || path.startsWith("/auth/me");
   if (isAuthEndpoint) return;
   // Avoid hard reload (window.location.assign) which breaks SPA state and
   // causes infinite reload loops on mount. Soft-replace URL and let React
@@ -89,16 +83,20 @@ function redirectToLogin(path: string) {
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
 }
+
+
 async function fetchWithAuth<T>(
   path: string,
   options: RequestInit,
   full: true,
 ): Promise<ApiResponse<T>>;
+
 async function fetchWithAuth<T>(
   path: string,
   options: RequestInit,
   full: false,
 ): Promise<T>;
+
 async function fetchWithAuth<T>(
   path: string,
   options: RequestInit,
@@ -129,16 +127,26 @@ async function fetchWithAuth<T>(
     throw new ApiError(msg, 401);
   }
   if (res.status === 204) {
-    return (full ? { success: true, data: undefined as unknown as T } : (undefined as unknown as T)) as T | ApiResponse<T>;
+    return (
+      full
+        ? { success: true, data: undefined as unknown as T }
+        : (undefined as unknown as T)
+    ) as T | ApiResponse<T>;
   }
   const ct = res.headers.get("content-type") || "";
   if (!ct.includes("application/json")) {
     const text = await res.text().catch(() => "");
-    throw new ApiError(text || `Unexpected response (${res.status})`, res.status);
+    throw new ApiError(
+      text || `Unexpected response (${res.status})`,
+      res.status,
+    );
   }
   const body = (await res.json()) as ApiResponse<T> & { message?: string };
   if (!res.ok) {
-    throw new ApiError(body?.message || `Request failed (${res.status})`, res.status);
+    throw new ApiError(
+      body?.message || `Request failed (${res.status})`,
+      res.status,
+    );
   }
   return full ? (body as ApiResponse<T>) : (body as ApiResponse<T>).data;
 }
