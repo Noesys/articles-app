@@ -20,7 +20,6 @@ export type AuthContext = {
   };
 };
 
-
 export interface ArticleHistoryEntry {
   id: string;
   article_id: string;
@@ -44,8 +43,7 @@ export type AuthenticatedUser = {
   is_active: number;
 };
 
-
-// article types 
+// article types
 export interface ArticleParameterResult {
   parameterId: string;
   parameterName: string;
@@ -79,7 +77,6 @@ export interface ArticleListResult {
   article_type_name: string;
   parameters: ArticleParameterResult[];
 }
-
 
 export interface ArticleTypeListItem {
   id: string;
@@ -210,8 +207,6 @@ export const ALLOWED_SUBMISSION_STATUSES: SubmissionStatus[] = [
 export type AssignableAuthRole = "user" | "admin";
 export const ALLOWED_AUTH_ROLES: AssignableAuthRole[] = ["user", "admin"];
 
-
-
 export interface UpdateUserRoleBody {
   role: string;
 }
@@ -284,12 +279,19 @@ export interface ParameterInput {
   options?: ParameterOptionInput[];
 }
 
+export type Resolved = {
+  id: string;
+  label: string;
+  sortOrder: number;
+  isNew: boolean;
+  oldLabel: string | null;
+};
 
 // parameter results
 export interface ParameterResultRow {
   id: string;
   parameter_id: string;
-  name: string; 
+  name: string;
   value: string;
   version: number;
   scored_at: string;
