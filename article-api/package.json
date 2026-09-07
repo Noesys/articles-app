@@ -12,7 +12,9 @@
     "wrangler": "^4.123.0"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.64",
     "@sendgrid/mail": "^8.1.6",
+    "ai": "^7.0.93",
     "hono": "^4.13.3",
     "jose": "^6.2.9",
     "zod": "^4.4.3"

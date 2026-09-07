@@ -165,7 +165,7 @@ articleRoutes.get("/mine/:id", async (c) => {
     );
   }
 
-  const history = await getArticleHistory(db, articleId);
+  const history = await getArticleHistory(db, articleId, user.id);
 
   if (history.length > 0) {
     history.sort((a, b) => a.version - b.version);
@@ -320,13 +320,14 @@ articleRoutes.post("/", async (c) => {
       ]);
     } catch {
       // Fallback to sequential if batch not supported in local D1
-      await snapshotArticle(db, requestedId, historyId, now);
+      await snapshotArticle(db, requestedId, historyId, now, user.id);
       await updateArticleForRewrite(
         db,
         requestedId,
         title,
         content,
         rewriteMonth,
+        user.id,
       );
     }
 
@@ -334,6 +335,9 @@ articleRoutes.post("/", async (c) => {
 
     const nextVersion = existingArticle.version + 1;
 
+    // ❌ REMOVED: Synchronous evaluation (was blocking)
+    // ✅ ADDED: Background evaluation via waitUntil
+    const currentVersion = existingArticle.version;
     c.executionCtx.waitUntil(
       backgroundEvaluateArticle(
         db,
@@ -375,6 +379,8 @@ articleRoutes.post("/", async (c) => {
 
     articleId = newId;
 
+    // ❌ REMOVED: Synchronous evaluation (was blocking 10-30s)
+    // ✅ ADDED: Background evaluation via waitUntil
     c.executionCtx.waitUntil(
       backgroundEvaluateArticle(
         db,

@@ -6,7 +6,6 @@ import { AppEnv } from "../types/shared-types";
 export function authMiddleware(...allowedRoles: ("admin" | "super_admin")[]) {
   return async (c: Context<AppEnv>, next: Next) => {
     const header = c.req.header("Authorization");
-    console.log(header);
 
     if (!header || !header.startsWith("Bearer ")) {
       return c.json(

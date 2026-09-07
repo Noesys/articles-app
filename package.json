@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "app",
+    "article-app",
     "article-api"
   ],
   "scripts": {

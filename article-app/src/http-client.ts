@@ -1,5 +1,3 @@
-import { ApiResponse } from "./utils/types";
-
 const API_BASE =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
 
@@ -66,15 +64,27 @@ export class ApiError extends Error {
     this.status = s;
   }
 }
-
-
+type ApiResponse<T> = {
+  success?: boolean;
+  message?: string;
+  data: T;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+let isRedirectingToLogin = false;
 function redirectToLogin(path: string) {
   tokenManager.clear();
   // Auth endpoints (otp/me) return 401 as part of normal unauthenticated flow
   // — must not trigger a navigation side-effect.
-  const isAuthEndpoint =
-    path.startsWith("/auth/otp") || path.startsWith("/auth/me");
+  const isAuthEndpoint = path.startsWith("/auth/otp") || path.startsWith("/auth/me");
   if (isAuthEndpoint) return;
+  // Guard against multiple concurrent 401s racing to redirect
+  if (isRedirectingToLogin) return;
+  isRedirectingToLogin = true;
   // Avoid hard reload (window.location.assign) which breaks SPA state and
   // causes infinite reload loops on mount. Soft-replace URL and let React
   // Router guards handle the redirect; dispatch popstate for listeners.
@@ -82,21 +92,21 @@ function redirectToLogin(path: string) {
     window.history.replaceState(null, "", "/login");
     window.dispatchEvent(new PopStateEvent("popstate"));
   }
+  // Reset on next tick so subsequent genuine navigations aren't blocked
+  setTimeout(() => {
+    isRedirectingToLogin = false;
+  }, 0);
 }
-
-
 async function fetchWithAuth<T>(
   path: string,
   options: RequestInit,
   full: true,
 ): Promise<ApiResponse<T>>;
-
 async function fetchWithAuth<T>(
   path: string,
   options: RequestInit,
   full: false,
 ): Promise<T>;
-
 async function fetchWithAuth<T>(
   path: string,
   options: RequestInit,
@@ -127,26 +137,16 @@ async function fetchWithAuth<T>(
     throw new ApiError(msg, 401);
   }
   if (res.status === 204) {
-    return (
-      full
-        ? { success: true, data: undefined as unknown as T }
-        : (undefined as unknown as T)
-    ) as T | ApiResponse<T>;
+    return (full ? { success: true, data: undefined as unknown as T } : (undefined as unknown as T)) as T | ApiResponse<T>;
   }
   const ct = res.headers.get("content-type") || "";
   if (!ct.includes("application/json")) {
     const text = await res.text().catch(() => "");
-    throw new ApiError(
-      text || `Unexpected response (${res.status})`,
-      res.status,
-    );
+    throw new ApiError(text || `Unexpected response (${res.status})`, res.status);
   }
   const body = (await res.json()) as ApiResponse<T> & { message?: string };
   if (!res.ok) {
-    throw new ApiError(
-      body?.message || `Request failed (${res.status})`,
-      res.status,
-    );
+    throw new ApiError(body?.message || `Request failed (${res.status})`, res.status);
   }
   return full ? (body as ApiResponse<T>) : (body as ApiResponse<T>).data;
 }

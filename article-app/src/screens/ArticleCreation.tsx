@@ -276,6 +276,11 @@ export default function ArticleCreation() {
       return;
     }
 
+    if (!types.some((t) => t.id === values.article_type_id)) {
+      setError("Please select a valid article type");
+      return;
+    }
+
     if (!values.title.trim()) {
       setError("Please enter a title");
       return;
