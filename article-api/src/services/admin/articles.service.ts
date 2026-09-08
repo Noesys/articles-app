@@ -10,7 +10,9 @@ export async function getArticles(
   month?: string,
   status?: string,
   type?: string,
-): Promise<ArticleListResult[]> {
+  page = 1,
+  limit = 10,
+): Promise<{ data: ArticleListResult[]; total: number }> {
   const conditions: string[] = [];
   const params: unknown[] = [];
 
@@ -84,21 +86,17 @@ export async function getArticles(
     ORDER BY a.submitted_at DESC
   `;
 
-  const result = await db
-    .prepare(sql)
-    .bind(...params)
-    .all<ArticleListRawRow>();
-
-  return result.results.map(
-    (row): ArticleListResult => ({
-      ...row,
-      parameters: row.parameters
-        ? (
-            JSON.parse(row.parameters) as (ArticleParameterResult | null)[]
-          ).filter((p): p is ArticleParameterResult => p !== null)
-        : [],
-    }),
-  );
+  const countSql = `SELECT COUNT(DISTINCT a.id) as total FROM articles a JOIN users u ON u.id=a.user_id JOIN article_types at ON at.id=a.article_type_id ${whereClause}`;
+  const totalRow = await db.prepare(countSql).bind(...params).first<{ total: number }>();
+  const total = totalRow?.total ?? 0;
+  const offset = (page - 1) * limit;
+  const pagedSql = sql + ` LIMIT ? OFFSET ?`;
+  const result = await db.prepare(pagedSql).bind(...params, limit, offset).all<ArticleListRawRow>();
+  const data = result.results.map((row): ArticleListResult => ({
+    ...row,
+    parameters: row.parameters ? (JSON.parse(row.parameters) as (ArticleParameterResult | null)[]).filter((p): p is ArticleParameterResult => p !== null) : [],
+  }));
+  return { data, total };
 }
 
 export interface ArticleDetail {
