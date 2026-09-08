@@ -3,7 +3,7 @@ import ArticlesTable from "../../components/articles/ArticlesTable";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Select } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
-import { api, tokenStorage } from "@/http-client";
+import { api, apiFull } from "@/http-client";
 
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -13,8 +13,6 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { ArticleSummary } from "@/admin/utils/types";
-
-const BACKEND_URL = ((import.meta.env.VITE_BACKEND_URL as string | undefined) || "").replace(/\/$/, "");
 
 type ArticleTypeOption = {
   id: string;
@@ -115,35 +113,21 @@ const AllArticles = () => {
         params.set("type", selectedType);
       }
 
-      const base = BACKEND_URL;
-      const endpoint = id
-        ? `${base}/api/users/${id}/articles?${params.toString()}`
-        : `${base}/api/articles?${params.toString()}`;
-
-      const res = await fetch(endpoint, {
-        headers: {
-          Authorization: `Bearer ${tokenStorage.get()}`
-        }
-      });
-
-      const ct = res.headers.get("content-type") || "";
-      if (!ct.includes("application/json")) {
-        const text = await res.text();
-        throw new Error(`Unexpected response (${res.status}): ${text.slice(0, 200)}`);
+      const path = id
+        ? `/users/${id}/articles?${params.toString()}`
+        : `/articles?${params.toString()}`;
+      if (id) {
+        const res: any = await apiFull(path);
+        if (res?.user) setUserName(res.user.name ?? "");
+        // res.data is articles array; res may also contain user at top level via body
+        const body: any = res as any;
+        setArticles(body.data ?? []);
+        // also check raw body for user when apiFull wraps
+        if (body.user) setUserName(body.user.name ?? "");
+      } else {
+        const data = await api<ArticleSummary[]>(path);
+        setArticles(data ?? []);
       }
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as { message?: string }).message || `Failed to fetch articles (${res.status})`);
-      }
-
-      const json = await res.json();
-
-      if (json.user) {
-        setUserName(json.user.name ?? "");
-      }
-
-      setArticles(json.data ?? []);
     } catch (err) {
       console.error("Failed to load articles:", err);
 
