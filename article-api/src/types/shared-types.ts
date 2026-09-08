@@ -5,7 +5,11 @@ export type Bindings = {
   FROM_EMAIL?: string;
   DEV_EMAIL?: string;
   ENVIRONMENT?: string;
-  GOOGLE_GENERATIVE_AI_API_KEY: string;
+  GENERATIVE_AI_API_KEY: string;
+
+  AI: Ai;
+  AI_PROVIDER: string;
+  AI_MODEL: string;
 };
 
 export type AuthenticatedUser = {
