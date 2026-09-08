@@ -23,27 +23,26 @@ import { accessAuth } from "./middleware/accessAuth";
 
 const app = new Hono<AppEnv>();
 
-app.use(
-  "*",
-  cors({
+app.use("*", async (c, next) => {
+  const corsMiddleware = cors({
     origin: (origin) => {
       if (!origin) return "";
+
       if (
         origin === "http://localhost:5173" ||
         origin === "http://localhost:5174" ||
-        origin === "https://noesys-article-platform.pages.dev" ||
-        origin.endsWith("noesys-article-platform-admin.pages.dev")
+        origin === c.env.FRONTEND_URL
       ) {
         return origin;
       }
+
       return "";
     },
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "Cookie"],
-    exposeHeaders: ["Set-Cookie"],
     credentials: true,
-  }),
-);
+  });
+
+  return corsMiddleware(c, next);
+});
 
 app.get("/", (c) => {
   return c.json({

@@ -7,6 +7,7 @@ export type Bindings = {
   ALLOWED_EMAIL_DOMAIN: string;
   // email domain for email validation in the middleware.
   
+  FRONTEND_URL: string;
   AI: Ai;
   AI_PROVIDER: string;
   AI_MODEL: string;
