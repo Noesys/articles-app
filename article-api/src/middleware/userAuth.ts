@@ -3,7 +3,7 @@ import type { AppEnv } from "../types/shared-types";
 import { verifyJwt } from "../utils/jwt";
 import { getUserById } from "../services/user/users";
 
-export async function authMiddleware(
+export async function userAuthMiddleware(
   c: Context<AppEnv>,
   next: Next
 ) {

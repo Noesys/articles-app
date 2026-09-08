@@ -7,11 +7,11 @@ import {
   updateArticleType,
   getArticleTypes,
 } from "../../services/admin/articleTypes.service";
-import { authMiddleware } from "../../middleware/adminAuth";
+import { requireAdminRoles } from "../../middleware/adminAuth";
 import { AppEnv } from "../../types/shared-types";
 
 const articleTypesRoute = new Hono<AppEnv>();
-articleTypesRoute.use("*", authMiddleware("admin", "super_admin"));
+articleTypesRoute.use("*", requireAdminRoles("admin", "super_admin"));
 
 function parseArticleTypeBody(
   body: unknown,

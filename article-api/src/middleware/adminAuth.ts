@@ -3,7 +3,7 @@ import { getUserById } from "../services/admin/users.service";
 import { verifyJwt } from "../utils/jwt";
 import { AppEnv } from "../types/shared-types";
 
-export function authMiddleware(...allowedRoles: ("admin" | "super_admin")[]) {
+export function requireAdminRoles(...allowedRoles: ("admin" | "super_admin")[]) {
   return async (c: Context<AppEnv>, next: Next) => {
     const header = c.req.header("Authorization");
 

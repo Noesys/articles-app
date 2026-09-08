@@ -10,11 +10,11 @@ import {
   getParameterResults,
   storeParameterResults,
 } from "../../services/admin/articleParameterResults.service";
-import { authMiddleware } from "../../middleware/adminAuth";
+import { requireAdminRoles } from "../../middleware/adminAuth";
 import { AppEnv } from "../../types/shared-types";
 
 const articlesRoute = new Hono<AppEnv>();
-articlesRoute.use("*", authMiddleware("admin", "super_admin"));
+articlesRoute.use("*", requireAdminRoles("admin", "super_admin"));
 
 articlesRoute.get("/", async (c) => {
   const month = c.req.query("month");

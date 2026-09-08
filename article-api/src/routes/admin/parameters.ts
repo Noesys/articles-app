@@ -7,11 +7,11 @@ import {
   getParametersByArticleType,
   updateParameter,
 } from "../../services/admin/parameters.service";
-import { authMiddleware } from "../../middleware/adminAuth";
+import { requireAdminRoles } from "../../middleware/adminAuth";
 import { AppEnv } from "../../types/shared-types";
 
 const parametersRoute = new Hono<AppEnv>();
-parametersRoute.use("*", authMiddleware("admin", "super_admin"));
+parametersRoute.use("*", requireAdminRoles("admin", "super_admin"));
 
 function parseParameterBody(body: unknown): ParameterInput | { error: string } {
   const b = body as Record<string, unknown>;

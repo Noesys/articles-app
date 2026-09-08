@@ -8,7 +8,7 @@ import {
   invalidatePendingOtps,
 } from "../../services/user/otpCodes";
 import { signJwt } from "../../utils/jwt";
-import { authMiddleware } from "../../middleware/userAuth";
+import { userAuthMiddleware } from "../../middleware/userAuth";
 import { sendOTPEmail } from "../../utils/email";
 
 const authRoutes = new Hono<AppEnv>();
@@ -198,7 +198,7 @@ authRoutes.post("/otp/verify", async (c) => {
   });
 });
 
-authRoutes.get("/me", authMiddleware, async (c) => {
+authRoutes.get("/me", userAuthMiddleware, async (c) => {
   const user = c.get("user");
 
   const dbUser = await getUserById(c.env.DB, user.id);
