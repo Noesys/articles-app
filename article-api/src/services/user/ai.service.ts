@@ -2,20 +2,34 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { generateText, Output } from "ai";
 import type { z } from "zod";
 import { AIEvaluationResult } from "../../types/user-types";
+import { Bindings } from "../../types/shared-types";
+import { createWorkersAI } from "workers-ai-provider";
+
+function getLanguageModel(env: Bindings) {
+  switch (env.AI_PROVIDER) {
+    case "workers-ai": {
+      const workersai = createWorkersAI({ binding: env.AI });
+      return workersai(env.AI_MODEL ?? "@cf/meta/llama-3.1-8b-instruct");
+    }
+    case "google":
+    default: {
+      const google = createGoogleGenerativeAI({
+        apiKey: env.GENERATIVE_AI_API_KEY,
+      });
+      return google(env.AI_MODEL ?? "gemini-3.5-flash-lite");
+    }
+  }
+}
 
 export async function evaluateArticle(
-  apiKey: string,
   prompt: string,
-  schema: z.ZodType<AIEvaluationResult>
+  schema: z.ZodType<AIEvaluationResult>,
+  bindings: Bindings,
 ): Promise<AIEvaluationResult> {
-  if (!apiKey) {
-    throw new Error("Google Generative AI API key is missing.");
-  }
-
-  const google = createGoogleGenerativeAI({ apiKey });
+  const model = getLanguageModel(bindings);
 
   const { output } = await generateText({
-    model: google("gemini-3.5-flash-lite"),
+    model: model,
     output: Output.object({
       schema,
     }),
@@ -25,4 +39,4 @@ export async function evaluateArticle(
   });
 
   return output as AIEvaluationResult;
-} 
+}
