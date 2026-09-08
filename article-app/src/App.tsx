@@ -51,7 +51,7 @@ function RootRouteRedirect() {
     );
   if (!user) return <Navigate to="/login" replace />;
   if (user.auth_role === "admin" || user.auth_role === "super_admin")
-    return <Navigate to="/admin/my-article" replace />;
+    return <Navigate to="/admin/articles" replace />;
   return <MyArticles />;
 }
 

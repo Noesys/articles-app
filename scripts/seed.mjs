@@ -1,10 +1,3 @@
-/**
- * Single-file seed: Article_folder -> local D1 (via node:sqlite)
- * - Promotes vishal@noesyssoftware.com to super_admin
- * - Uses exact Primary Purpose from article_type_mapping.csv (incl. Not suitable)
- * - Preserves formatting: .md raw markdown, .docx -> HTML via mammoth.convertToHtml
- * Usage: node seed.mjs
- */
 import fs from "fs";
 import path from "path";
 import { DatabaseSync } from "node:sqlite";
@@ -12,17 +5,18 @@ import { parse } from "csv-parse/sync";
 import mammoth from "mammoth";
 import matter from "gray-matter";
 
-const FOLDER =
-  "C:\\Users\\Vishal M B\\Desktop\\Article-Platform\\Article_folder";
+const ROOT = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname),
+  "..",
+);
+const FOLDER = process.env.SEED_FOLDER ?? path.join(ROOT, "Article_folder");
 const CSV =
-  "C:\\Users\\Vishal M B\\Desktop\\Article-Platform\\scripts\\article_type_mapping.csv";
+  process.env.SEED_CSV ?? path.join(ROOT, "scripts/article_type_mapping.csv");
 import { globSync } from "fs";
 const _dbGlob = globSync(
-  "C:\\Users\\Vishal M B\\Desktop\\Article-Platform\\workers\\user-api\\.wrangler\\state\\v3\\d1\\miniflare-D1DatabaseObject\\*.sqlite",
+  path.join(ROOT, "article-api/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite"),
 ).find((f) => !f.includes("metadata"));
-const DB =
-  _dbGlob ??
-  "C:\\Users\\Vishal M B\\Desktop\\Article-Platform\\workers\\user-api\\.wrangler\\state\\v3\\d1\\miniflare-D1DatabaseObject\\e388a27d7610cfe6633d2ff1cdfc58ef54637e4bf9b8df4381b4ff9d5be0ba5.sqlite";
+const DB = process.env.SEED_DB ?? _dbGlob ?? null;
 
 function monToNum(s) {
   const m = {
@@ -77,9 +71,9 @@ function parseFilename(fn) {
   };
 }
 
-if (!fs.existsSync(DB)) {
+if (!DB || !fs.existsSync(DB)) {
   console.error(
-    "DB not found, run: npx wrangler d1 migrations apply noesys-dev --local",
+    DB ? `DB not found at ${DB}` : "DB not found via glob. Run: npx wrangler d1 migrations apply --local (in article-api) or set SEED_DB env",
   );
   process.exit(1);
 }
@@ -119,7 +113,10 @@ const vishal = db
     "SELECT email,auth_role FROM users WHERE email='vishal@noesyssoftware.com'",
   )
   .get();
-console.log("vishal@noesyssoftware.com:", vishal ?? "not found (already set via DB, not hardcoded)");
+console.log(
+  "vishal@noesyssoftware.com:",
+  vishal ?? "not found (already set via DB, not hardcoded)",
+);
 if (!db.prepare("SELECT id FROM users WHERE id='seed_bot_001'").get()) {
   db.prepare(
     "INSERT INTO users (id,email,name,auth_role,job_role,created_at,created_by,is_active) VALUES (?,?,?,?,?,?,?,?)",
@@ -164,7 +161,9 @@ const typeMap = new Map(typeRows.map((r) => [r.name.toLowerCase(), r.id]));
 const files = fs.readdirSync(FOLDER).filter((f) => /\.(docx|md|mdx)$/i.test(f));
 console.log(`Files: ${files.length}`);
 // clear previous seeded articles to avoid duplicates and ensure month fix
-db.prepare("DELETE FROM article_history WHERE article_id IN (SELECT id FROM articles WHERE user_id='seed_bot_001')").run();
+db.prepare(
+  "DELETE FROM article_history WHERE article_id IN (SELECT id FROM articles WHERE user_id='seed_bot_001')",
+).run();
 db.prepare("DELETE FROM articles WHERE user_id='seed_bot_001'").run();
 let inserted = 0,
   skipped = 0;
@@ -240,19 +239,4 @@ console.log(
     .get(),
 );
 
-// sync to admin-api
-const _adminGlob = globSync(
-  "C:\\Users\\Vishal M B\\Desktop\\Article-Platform\\workers\\admin-api\\.wrangler\\state\\v3\\d1\\miniflare-D1DatabaseObject\\*.sqlite",
-).find((f) => !f.includes("metadata"));
-const adminDb =
-  _adminGlob ??
-  "C:\\Users\\Vishal M B\\Desktop\\Article-Platform\\workers\\admin-api\\.wrangler\\state\\v3\\d1\\miniflare-D1DatabaseObject\\e388a27d7610cfe6633d2ff1cdfc58ef54637e4bf9b8df4381b4ff9d5be0ba5.sqlite";
-try {
-  // copy via file copy (workerd stopped)
-  const { execSync } = await import("child_process");
-  // ensure admin dir exists and checkpoint: just copy file if exists, else wrangler will recreate
-  if (fs.existsSync(adminDb)) fs.copyFileSync(DB, adminDb);
-  console.log("Synced admin DB");
-} catch (e) {
-  console.warn("admin sync skipped:", e.message);
-}
+
