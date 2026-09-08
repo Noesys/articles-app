@@ -19,7 +19,7 @@ import articleTypesRoute from "./routes/admin/articleTypes";
 import parametersRoute from "./routes/admin/parameters";
 import insightsRoute from "./routes/admin/insights";
 
-import { AppError } from "../src/utils/errors";
+import { AppError } from "./utils/errors";
 
 const app = new Hono<AppEnv>();
 
