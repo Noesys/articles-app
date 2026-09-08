@@ -456,19 +456,4 @@ articleRoutes.get("/:id/status", async (c) => {
   });
 });
 
-articleRoutes.get("/article-types", async (c) => {
-  const db = c.env.DB;
-
-  const types = await getArticleTypes(db);
-
-  return c.json({
-    message: "Article types fetched successfully",
-    data: types.map((t) => ({
-      id: t.id,
-      name: t.name,
-      description: t.description,
-    })),
-  });
-});
-
 export default articleRoutes;

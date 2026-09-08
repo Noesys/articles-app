@@ -11,7 +11,6 @@ import {
   storeParameterResults,
 } from "../../services/admin/articleParameterResults.service";
 import { AppEnv } from "../../types/shared-types";
-import { accessAuth } from "../../middleware/accessAuth";
 import { requireRole } from "../../middleware/requireRole";
 
 const articlesRoute = new Hono<AppEnv>();
