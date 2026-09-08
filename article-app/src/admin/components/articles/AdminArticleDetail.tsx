@@ -62,7 +62,7 @@ export default function AdminArticleDetail() {
       setError(null);
 
       try {
-        const d: any = await api(`/articles/${id}`);
+        const d: any = await api(`/admin/articles/${id}`);
 
         if (cancelled) return;
 
@@ -161,7 +161,7 @@ export default function AdminArticleDetail() {
     if (!id || !versionParam) return;
     (async () => {
       try {
-        const data: any = await api(`/articles/${id}/parameter-results?version=${versionParam}`);
+        const data: any = await api(`/admin/articles/${id}/parameter-results?version=${versionParam}`);
         const rows = Array.isArray(data) ? data : data?.data ?? data;
         if (rows) {
           setParameterResults(

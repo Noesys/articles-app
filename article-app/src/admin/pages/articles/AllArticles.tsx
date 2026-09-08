@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ArticlesTable from "../../components/articles/ArticlesTable";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Select } from "antd";
+import { Pagination, Select } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { api, apiFull } from "@/http-client";
 
@@ -63,8 +63,10 @@ const AllArticles = () => {
   const [authors, setAuthors] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
-
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
 
   const setFilterParam = (name: string, value: string, defaultValue?: string) => {
     setSearchParams((current) => {
@@ -82,7 +84,7 @@ const AllArticles = () => {
           id: string;
           name: string;
         }>
-      >("/article-types");
+      >("/admin/article-types");
 
       setArticleTypes(
         response.map((type) => ({
@@ -101,9 +103,9 @@ const AllArticles = () => {
 
     try {
       const params = new URLSearchParams();
-
-      // Always send month.
       params.set("month", selectedMonthKey);
+      params.set("page", String(page));
+      params.set("limit", String(limit));
 
       if (selectedStatus !== "all") {
         params.set("status", selectedStatus);
@@ -114,19 +116,19 @@ const AllArticles = () => {
       }
 
       const path = id
-        ? `/users/${id}/articles?${params.toString()}`
-        : `/articles?${params.toString()}`;
+        ? `/admin/users/${id}/articles?${params.toString()}`
+        : `/admin/articles?${params.toString()}`;
       if (id) {
         const res: any = await apiFull(path);
         if (res?.user) setUserName(res.user.name ?? "");
-        // res.data is articles array; res may also contain user at top level via body
         const body: any = res as any;
         setArticles(body.data ?? []);
-        // also check raw body for user when apiFull wraps
         if (body.user) setUserName(body.user.name ?? "");
+        if (body.pagination) setTotal(body.pagination.total ?? 0);
       } else {
-        const data = await api<ArticleSummary[]>(path);
-        setArticles(data ?? []);
+        const res: any = await apiFull<ArticleSummary[]>(path);
+        setArticles(res.data ?? []);
+        if (res.pagination) setTotal(res.pagination.total ?? 0);
       }
     } catch (err) {
       console.error("Failed to load articles:", err);
@@ -137,7 +139,7 @@ const AllArticles = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, selectedMonthKey, selectedStatus, selectedType]);
+  }, [id, selectedMonthKey, selectedStatus, selectedType, page]);
 
   useEffect(() => {
     fetchArticleTypes();
@@ -392,10 +394,10 @@ const AllArticles = () => {
           Loading articles
         </div>
       ) : (
-        <ArticlesTable
-          articles={displayedArticles}
-          onRowClick={(articleId) => navigate(`/admin/articles/${articleId}`)}
-        />
+        <>
+          <ArticlesTable articles={displayedArticles} onRowClick={(articleId: string) => navigate(`/admin/articles/${articleId}`)} />
+          {total > limit && <div className="flex justify-end mt-4"><Pagination current={page} total={total} pageSize={limit} onChange={(p) => setPage(p)} showSizeChanger={false} /></div>}
+        </>
       )}
     </div>
   );
