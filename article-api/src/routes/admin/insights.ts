@@ -3,11 +3,11 @@ import {
   getSummary,
   getEmployeeSubmissions,
 } from "../../services/admin/insights.service";
-import { authMiddleware } from "../../middleware/adminAuth";
 import { AppEnv } from "../../types/shared-types";
+import { requireRole } from "../../middleware/requireRole";
 
 const insightsRoute = new Hono<AppEnv>();
-insightsRoute.use("*", authMiddleware("admin", "super_admin"));
+insightsRoute.use("*", requireRole("admin", "super_admin"));
 
 insightsRoute.get("/summary", async (c) => {
   const start = c.req.query("start");

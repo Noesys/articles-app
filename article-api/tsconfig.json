@@ -15,7 +15,6 @@
     "rootDir": "./src",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "types": ["@cloudflare/workers-types"]
   },
-  "include": ["src"],
+  "include": ["src", "worker-configuration.d.ts"],
 }

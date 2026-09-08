@@ -10,11 +10,12 @@ import {
   getParameterResults,
   storeParameterResults,
 } from "../../services/admin/articleParameterResults.service";
-import { authMiddleware } from "../../middleware/adminAuth";
 import { AppEnv } from "../../types/shared-types";
+import { accessAuth } from "../../middleware/accessAuth";
+import { requireRole } from "../../middleware/requireRole";
 
 const articlesRoute = new Hono<AppEnv>();
-articlesRoute.use("*", authMiddleware("admin", "super_admin"));
+articlesRoute.use("*", requireRole("admin", "super_admin"));
 
 articlesRoute.get("/", async (c) => {
   const month = c.req.query("month");
@@ -61,11 +62,13 @@ articlesRoute.get("/:id", async (c) => {
 
   const currentFeedback =
     article.ai_feedback ||
-    (history.length > 0
-      ? history[history.length - 1].ai_feedback || ""
-      : "");
+    (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
 
-  const parameter_results = await getParameterResults(db, articleId, article.version);
+  const parameter_results = await getParameterResults(
+    db,
+    articleId,
+    article.version,
+  );
 
   return c.json({
     message: "Article fetched successfully",
@@ -108,7 +111,11 @@ articlesRoute.get("/:id/parameter-results", async (c) => {
   const id = c.req.param("id");
   const versionQuery = c.req.query("version");
   const version = versionQuery ? parseInt(versionQuery, 10) : undefined;
-  const data = await getParameterResults(c.env.DB, id, isNaN(version!) ? undefined : version);
+  const data = await getParameterResults(
+    c.env.DB,
+    id,
+    isNaN(version!) ? undefined : version,
+  );
   return c.json({ message: "Parameter results fetched", data });
 });
 

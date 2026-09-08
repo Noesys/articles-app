@@ -13,11 +13,11 @@ import {
   UpdateUserRoleBody,
   UpdateUserStatusBody,
 } from "../../types/admin-types";
-import { authMiddleware } from "../../middleware/adminAuth";
 import { AppEnv } from "../../types/shared-types";
+import { requireRole } from "../../middleware/requireRole";
 
 const usersRoute = new Hono<AppEnv>();
-usersRoute.use("*", authMiddleware("admin", "super_admin"));
+usersRoute.use("*", requireRole("admin", "super_admin"));
 
 function parseUpdateUserBody(
   body: unknown,

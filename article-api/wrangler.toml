@@ -23,3 +23,11 @@ routes = [
 
 [env.development.vars]
 ENVIRONMENT = "development"
+ALLOWED_EMAIL_DOMAIN="noesyssoftware.com"
+DEV_USER_MAIL="vikas@noesyssoftware.com"
+
+[access.dev]
+aud = "article-app"
+
+[access.dev.identity]
+email = "vikas@noesyssoftware.com"

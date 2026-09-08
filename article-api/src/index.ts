@@ -8,7 +8,6 @@ import articleRoutes from "./routes/user/articles";
 // user service
 import { getArticleTypes } from "./services/user/articleTypes";
 
-import { authMiddleware } from "./middleware/userAuth";
 import type { AppEnv } from "./types/shared-types";
 
 /* ADMIN ROUTES IMPORTS */
@@ -20,6 +19,7 @@ import parametersRoute from "./routes/admin/parameters";
 import insightsRoute from "./routes/admin/insights";
 
 import { AppError } from "../src/utils/errors";
+import { accessAuth } from "./middleware/accessAuth";
 
 const app = new Hono<AppEnv>();
 
@@ -56,7 +56,7 @@ app.get("/", (c) => {
 app.route("/auth", authRoutes);
 app.route("/articles", articleRoutes);
 
-app.get("/article-types", authMiddleware, async (c) => {
+app.get("/article-types", accessAuth, async (c) => {
   const db = c.env.DB;
   const types = await getArticleTypes(db);
   return c.json({

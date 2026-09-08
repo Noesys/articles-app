@@ -21,7 +21,7 @@ export function RoleBasedRoute({
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <div>Not authorized</div>;
   }
 
   if (!allowedRoles.includes(user.auth_role)) {
