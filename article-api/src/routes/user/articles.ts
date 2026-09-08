@@ -50,7 +50,7 @@ function articleToListItem(article: {
   };
 }
 
-// Background evaluation with safe retry (does not affect request flow)
+// Background evaluation - single attempt via waitUntil; durable retry via Queue/cron
 async function backgroundEvaluateArticle(
   db: D1Database,
   env: { GENERATIVE_AI_API_KEY: string },
@@ -61,30 +61,20 @@ async function backgroundEvaluateArticle(
   version: number,
   bindings: Bindings,
 ) {
-  const maxAttempts = 2;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      await evaluateArticle(
-        db,
-        env.GENERATIVE_AI_API_KEY,
-        articleId,
-        articleTypeId,
-        title,
-        content,
-        version,
-        bindings
-      );
-      return;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(
-        `Background evaluation attempt ${attempt} failed:`,
-        msg,
-        err,
-      );
-      if (attempt === maxAttempts) return;
-      await new Promise((r) => setTimeout(r, 2000 * attempt));
-    }
+  try {
+    await evaluateArticle(
+      db,
+      env.GENERATIVE_AI_API_KEY,
+      articleId,
+      articleTypeId,
+      title,
+      content,
+      version,
+      bindings,
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Background evaluation failed:", msg, err);
   }
 }
 
@@ -349,7 +339,7 @@ articleRoutes.post("/", async (c) => {
         title,
         content,
         nextVersion,
-        c.env
+        c.env,
       ),
     );
 
@@ -393,7 +383,7 @@ articleRoutes.post("/", async (c) => {
         title,
         content,
         1, // New articles start at version 1
-        c.env
+        c.env,
       ),
     );
 

@@ -55,4 +55,5 @@ coverage/
 # Seed articles (local only)
 Article_folder/
 
+ChangeLog.md
 CodeReview.md

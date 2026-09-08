@@ -13,9 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { User } from "@/admin/utils/types";
-import { tokenManager } from "@/http-client";
-
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL as string | undefined);
+import { api } from "@/http-client";
 
 async function fetchUsers(
   month?: string,
@@ -26,19 +24,8 @@ async function fetchUsers(
     params.set("month", month);
     params.set("submission_status", submissionStatus);
   }
-
-  const res = await fetch(`${BACKEND_URL}/api/users?${params}`, {
-    headers: {
-      Authorization: `Bearer ${tokenManager.get()}`,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch users: ${res.status}`);
-  }
-
-  const data = await res.json();
-  return data.data;
+  const qs = params.toString();
+  return api<User[]>(`/users${qs ? `?${qs}` : ""}`);
 }
 
 const UsersPage = () => {
@@ -86,13 +73,10 @@ const UsersPage = () => {
   }, [showNotSubmitted, selectedMonthKey]);
 
   const handleToggleActive = async (userId: string, nextIsActive: boolean) => {
-    const res = await fetch(`${BACKEND_URL}/api/users/${userId}/status`, {
+    await api(`/users/${userId}/status`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${tokenManager.get()}` },
       body: JSON.stringify({ is_active: nextIsActive }),
     });
-
-    if (!res.ok) throw new Error("Failed to update user status");
 
     setUsers((prev) =>
       prev.map((u) =>
@@ -105,14 +89,10 @@ const UsersPage = () => {
     userId: string,
     nextRole: "user" | "admin" | "super_admin",
   ) => {
-    const res = await fetch(`${BACKEND_URL}/api/users/${userId}/role`, {
+    await api(`/users/${userId}/role`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${tokenManager.get()}` },
-      credentials: "include",
       body: JSON.stringify({ role: nextRole }),
     });
-
-    if (!res.ok) throw new Error("Failed to update user role");
 
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, auth_role: nextRole } : u)),

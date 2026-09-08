@@ -104,11 +104,12 @@ export default function ArticleDetail() {
     effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
 
-  // Poll every 2.5s while scoring; stops on unmount/complete/timeout (5 min)
+  // Poll every 2.5s while scoring; stops on terminal status/complete/timeout
+  const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
   const POLLING_INTERVAL = 2500;
   const MAX_POLL_DURATION = 300000;
   useEffect(() => {
-    if (effectiveSnapshot || !article || currentScore !== null) return;
+    if (effectiveSnapshot || !article || currentScore !== null || TERMINAL_STATUSES.includes(article.status)) return;
     let stopped = false;
     let timer: number | null = null;
     const pollStart = Date.now();
