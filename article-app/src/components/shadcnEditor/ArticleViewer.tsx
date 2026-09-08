@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import "./Tiptap.css";
 import { tiptapExtensions } from "./TiptapExtensions";
 import { resolveContentToHtml } from "@/components/editor/lib/contentNormalize";
+import { sanitizeHtml } from "@/utils/htmlSanitize";
 import CopyButton from "@/admin/utils/CopyButton";
 
 type Props = {
@@ -23,18 +24,13 @@ type Props = {
 export default function ArticleViewer({ content }: Props) {
   const editor = useEditor({
     extensions: tiptapExtensions,
-    content: resolveContentToHtml(content),
+    content: sanitizeHtml(resolveContentToHtml(content)),
     editable: false,
   });
-
-  // Preview is re-opened with new content while mounted (toggling Editor /
-  // Preview keeps this component alive in some screens), so re-sync.
   useEffect(() => {
     if (!editor) return;
-    const next = resolveContentToHtml(content);
-    if (next !== editor.getHTML()) {
-      editor.commands.setContent(next, { emitUpdate: false });
-    }
+    const next = sanitizeHtml(resolveContentToHtml(content));
+    if (next !== editor.getHTML()) editor.commands.setContent(next, { emitUpdate: false });
   }, [content, editor]);
 
   if (!editor) return null;
