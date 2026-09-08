@@ -5,6 +5,7 @@ export type Bindings = {
   FROM_EMAIL?: string;
   DEV_EMAIL?: string;
   ENVIRONMENT?: string;
+  CORS_ORIGINS?: string;
   GENERATIVE_AI_API_KEY: string;
 
   AI: Ai;
