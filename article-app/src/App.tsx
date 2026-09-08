@@ -7,6 +7,7 @@ import ArticleDetail from "./screens/ArticleDetail";
 
 import type { ReactNode } from "react";
 import { RoleBasedRoute } from "./components/RoleBasedRoute";
+import { UnauthorizedPage } from "./components/UnauthorizedPage";
 import AllArticles from "./admin/pages/articles/AllArticles";
 import UsersPage from "./admin/pages/users/UsersPage";
 import ArticleTypesPage from "./admin/pages/articleTypes/ArticleTypesPage";
@@ -35,7 +36,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
         <Loader2 size={28} className="animate-spin text-slate-400" />
       </div>
     );
-  if (!user) return <div>Not authorized</div>;
+  if (!user) return <UnauthorizedPage />;
   return <>{children}</>;
 }
 
@@ -47,7 +48,7 @@ function RootRouteRedirect() {
         <Loader2 size={28} className="animate-spin text-slate-400" />
       </div>
     );
-  if (!user) return <div>Not authorized</div>;
+  if (!user) return <UnauthorizedPage />;
   if (user.auth_role === "admin" || user.auth_role === "super_admin")
     return <Navigate to="/admin/articles" replace />;
   return <MyArticles />;
