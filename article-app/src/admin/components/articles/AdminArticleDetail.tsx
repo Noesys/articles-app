@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import dayjs from "dayjs";
-import { tokenStorage } from "../../../http-client";
+import { api } from "../../../http-client";
 import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
 import ScoringHistoryTable from "./ScoringHistoryTable";
 import ParameterResultsBox from "./ParameterResultsBox";
@@ -55,7 +55,6 @@ export default function AdminArticleDetail() {
 
   useEffect(() => {
     if (!id) return;
-    const controller = new AbortController();
     let cancelled = false;
 
     (async () => {
@@ -63,36 +62,11 @@ export default function AdminArticleDetail() {
       setError(null);
 
       try {
-        const base = (
-          (import.meta.env.VITE_BACKEND_URL as string | undefined) || ""
-        ).replace(/\/$/, "");
-        const token =
-          tokenStorage.get() ||
-          localStorage.getItem("token") ||
-          sessionStorage.getItem("token");
+        const d: any = await api(`/articles/${id}`);
 
-        const headers: Record<string, string> = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
+        if (cancelled) return;
 
-        const res = await fetch(`${base}/api/articles/${id}`, {
-          credentials: "include",
-          headers,
-          signal: controller.signal,
-        });
-
-        if (cancelled || controller.signal.aborted) return;
-
-        const ct = res.headers.get("content-type") || "";
-        if (!ct.includes("application/json")) {
-          const text = await res.text();
-          throw new Error(
-            `Unexpected response (${res.status}): ${text.slice(0, 200)}`,
-          );
-        }
-        if (!res.ok) throw new Error("Failed to load");
-
-        const json = await res.json();
-        const d = json.data;
+        // api() unwraps to data
 
         // Handle both admin flat shape and user nested shape
         if (d.article) {
@@ -148,8 +122,7 @@ export default function AdminArticleDetail() {
           setHistory(hist as HistoryItem[]);
         }
       } catch (e: unknown) {
-        if (cancelled || (e instanceof DOMException && e.name === "AbortError"))
-          return;
+        if (cancelled) return;
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         if (!cancelled) setLoading(false);
@@ -158,7 +131,6 @@ export default function AdminArticleDetail() {
 
     return () => {
       cancelled = true;
-      controller.abort();
     };
   }, [id]);
 
@@ -187,58 +159,31 @@ export default function AdminArticleDetail() {
 
   useEffect(() => {
     if (!id || !versionParam) return;
-    const controller = new AbortController();
-
     (async () => {
       try {
-        const base = (
-          (import.meta.env.VITE_BACKEND_URL as string | undefined) || ""
-        ).replace(/\/$/, "");
-        const token =
-          tokenStorage.get() ||
-          localStorage.getItem("token") ||
-          sessionStorage.getItem("token");
-
-        const headers: Record<string, string> = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-
-        const res = await fetch(
-          `${base}/api/articles/${id}/parameter-results?version=${versionParam}`,
-          {
-            credentials: "include",
-            headers,
-            signal: controller.signal,
-          },
-        );
-
-        if (res.ok) {
-          const json = await res.json();
-          if (json.data) {
-            setParameterResults(
-              json.data.map(
-                (r: {
-                  name?: string;
-                  parameterName?: string;
-                  parameter_name?: string;
-                  scopeType?: string;
-                  scope_type?: string;
-                  value: string | number;
-                }) => ({
-                  parameter_name:
-                    r.parameterName || r.parameter_name || r.name || "",
-                  scope_type: r.scopeType || r.scope_type || "",
-                  value: r.value,
-                }),
-              ),
-            );
-          }
+        const data: any = await api(`/articles/${id}/parameter-results?version=${versionParam}`);
+        const rows = Array.isArray(data) ? data : data?.data ?? data;
+        if (rows) {
+          setParameterResults(
+            (rows as any[]).map(
+              (r: {
+                name?: string;
+                parameterName?: string;
+                parameter_name?: string;
+                scopeType?: string;
+                scope_type?: string;
+                value: string | number;
+              }) => ({
+                parameter_name:
+                  r.parameterName || r.parameter_name || r.name || "",
+                scope_type: r.scopeType || r.scope_type || "",
+                value: r.value,
+              }),
+            ),
+          );
         }
-      } catch (e: unknown) {
-        if (e instanceof DOMException && e.name === "AbortError") return;
-      }
+      } catch {}
     })();
-
-    return () => controller.abort();
   }, [id, versionParam]);
 
   const hasScore = displayScore !== null;

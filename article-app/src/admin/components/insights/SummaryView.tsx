@@ -13,9 +13,7 @@ import {
   NumericDistributionBucket,
   ParameterSummary,
 } from "@/admin/utils/types";
-import { tokenManager } from "@/http-client";
-
-const BACKEND_URL = ((import.meta.env.VITE_BACKEND_URL as string | undefined) || "").replace(/\/$/, "");
+import { api } from "@/http-client";
 
 function NumericDistribution({
   distribution,
@@ -55,16 +53,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
   const [loading, setLoading] = useState(true);
 
   async function fetchInsightsSummary(start: string, end: string) {
-    const res = await fetch(
-      `${BACKEND_URL}/api/insights/summary?start=${start}&end=${end}`,
-      {
-        headers: {
-          Authorization: `Bearer ${tokenManager.get()}`,
-        },
-      },
-    );
-    const data = await res.json();
-    return data;
+    return api<ArticleTypeSummary[]>(`/insights/summary?start=${start}&end=${end}`);
   }
 
   useEffect(() => {

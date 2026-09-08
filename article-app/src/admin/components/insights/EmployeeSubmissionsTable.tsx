@@ -5,7 +5,7 @@ import {
   EmployeeSubmissionRow,
   EmployeeSubmissionsResult,
 } from "@/admin/utils/types";
-import { tokenManager } from "@/http-client";
+import { api } from "@/http-client";
 
 const MONTH_LABELS = [
   "Jan",
@@ -26,8 +26,6 @@ const formatMonth = (ym: string) => {
   return `${MONTH_LABELS[Number(m) - 1]}-${y.slice(2)}`;
 };
 
-const BACKEND_URL = ((import.meta.env.VITE_BACKEND_URL as string | undefined) || "").replace(/\/$/, "");
-
 export function EmployeeSubmissionsTable({
   start,
   end,
@@ -42,15 +40,9 @@ export function EmployeeSubmissionsTable({
     async function loadEmployeeSubmissions() {
       setLoading(true);
       try {
-        const res = await fetch(
-          `${BACKEND_URL}/api/insights/employee-submissions?start=${start}&end=${end}`,
-          {
-            headers: {
-              Authorization: `Bearer ${tokenManager.get()}`,
-            },
-          },
+        const data = await api<EmployeeSubmissionsResult>(
+          `/insights/employee-submissions?start=${start}&end=${end}`,
         );
-        const data = await res.json();
         setData(data);
       } finally {
         setLoading(false);

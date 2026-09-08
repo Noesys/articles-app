@@ -50,7 +50,7 @@ function articleToListItem(article: {
   };
 }
 
-// Background evaluation with safe retry (does not affect request flow)
+// Background evaluation - single attempt via waitUntil; durable retry via Queue/cron
 async function backgroundEvaluateArticle(
   db: D1Database,
   env: { GOOGLE_GENERATIVE_AI_API_KEY: string },
@@ -60,29 +60,19 @@ async function backgroundEvaluateArticle(
   content: string,
   version: number,
 ) {
-  const maxAttempts = 2;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      await evaluateArticle(
-        db,
-        env.GOOGLE_GENERATIVE_AI_API_KEY,
-        articleId,
-        articleTypeId,
-        title,
-        content,
-        version,
-      );
-      return;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(
-        `Background evaluation attempt ${attempt} failed:`,
-        msg,
-        err,
-      );
-      if (attempt === maxAttempts) return;
-      await new Promise((r) => setTimeout(r, 2000 * attempt));
-    }
+  try {
+    await evaluateArticle(
+      db,
+      env.GOOGLE_GENERATIVE_AI_API_KEY,
+      articleId,
+      articleTypeId,
+      title,
+      content,
+      version,
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Background evaluation failed:", msg, err);
   }
 }
 

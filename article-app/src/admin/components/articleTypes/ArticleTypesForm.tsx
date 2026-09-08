@@ -4,7 +4,7 @@ import { ChevronLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { ConfigProvider, Table, theme as antdTheme } from "antd";
 import Button from "../../components/ui/Button";
 import DeleteConfirmation from "./DeleteConfirmation";
-import { tokenStorage } from "@/http-client";
+import { api, apiFull } from "@/http-client";
 import Badge from "../../components/ui/Badge";
 import {
   ArticleTypeResponse,
@@ -33,8 +33,6 @@ const EMPTY_PARAM_DRAFT: Omit<ParameterDraft, "id" | "isNew"> = {
   maxValue: "10",
   options: [],
 };
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 function parameterFromResponse(p: ParameterResponse): ParameterDraft {
   return {
@@ -69,7 +67,6 @@ export default function ArticleTypesForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
-  const token = tokenStorage.get();
   const handleWheel = (e: WheelEvent<HTMLInputElement>) => {
     // Blur the element to prevent changing the number value on scroll
     e.currentTarget.blur();
@@ -93,24 +90,10 @@ export default function ArticleTypesForm() {
     async function loadArticleType() {
       setLoading(true);
       try {
-        const headers: Record<string, string> = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-        const [typeRes, paramsRes] = await Promise.all([
-          fetch(`${BACKEND_URL}/api/article-types/${id}`, {
-            credentials: "include",
-            headers,
-          }),
-          fetch(`${BACKEND_URL}/api/article-types/${id}/parameters`, {
-            credentials: "include",
-            headers,
-          }),
+        const [t, params] = await Promise.all([
+          api<ArticleTypeResponse>(`/article-types/${id}`),
+          api<ParameterResponse[]>(`/article-types/${id}/parameters`),
         ]);
-        if (!typeRes.ok) throw new Error("Failed to load article type");
-        if (!paramsRes.ok) throw new Error("Failed to load parameters");
-        const typeJson: { data: ArticleTypeResponse } = await typeRes.json();
-        const paramsJson: { data: ParameterResponse[] } =
-          await paramsRes.json();
-        const t = typeJson.data;
         setForm({
           name: t.name,
           description: t.description ?? "",
@@ -118,7 +101,7 @@ export default function ArticleTypesForm() {
           scoreMin: t.score_min.toString(),
           scoreMax: t.score_max.toString(),
           passThreshold: t.pass_threshold.toString(),
-          parameters: paramsJson.data.map(parameterFromResponse),
+          parameters: params.map(parameterFromResponse),
         });
       } catch (err) {
         console.error(err);
@@ -220,70 +203,22 @@ export default function ArticleTypesForm() {
       });
       let articleTypeId = id;
       if (isEditing) {
-        const res = await fetch(`${BACKEND_URL}/api/article-types/${id}`, {
-          method: "PATCH",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body,
-        });
-        if (!res.ok) throw new Error(await res.text());
+        await api(`/article-types/${id}`, { method: "PATCH", body });
       } else {
-        const res = await fetch(`${BACKEND_URL}/api/article-types`, {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body,
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const json = await res.json();
-        articleTypeId = json.data.id;
+        const created: any = await apiFull(`/article-types`, { method: "POST", body });
+        articleTypeId = created.data.id;
       }
       await Promise.all(
         removedParameterIds.map((paramId) =>
-          fetch(
-            `${BACKEND_URL}/api/article-types/${articleTypeId}/parameters/${paramId}`,
-            {
-              method: "DELETE",
-              credentials: "include",
-              headers: { Authorization: `Bearer ${token}` },
-            },
-          ),
+          api(`/article-types/${articleTypeId}/parameters/${paramId}`, { method: "DELETE" }),
         ),
       );
       await Promise.all(
         form.parameters.map((p) => {
           const paramBody = JSON.stringify(parameterToBody(p));
           if (p.isNew)
-            return fetch(
-              `${BACKEND_URL}/api/article-types/${articleTypeId}/parameters`,
-              {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: paramBody,
-              },
-            );
-          return fetch(
-            `${BACKEND_URL}/api/article-types/${articleTypeId}/parameters/${p.id}`,
-            {
-              method: "PATCH",
-              credentials: "include",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: paramBody,
-            },
-          );
+            return api(`/article-types/${articleTypeId}/parameters`, { method: "POST", body: paramBody });
+          return api(`/article-types/${articleTypeId}/parameters/${p.id}`, { method: "PATCH", body: paramBody });
         }),
       );
       navigate("/admin/article-types");

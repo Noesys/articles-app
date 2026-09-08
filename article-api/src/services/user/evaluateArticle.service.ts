@@ -103,7 +103,7 @@ export async function evaluateArticle(
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("Article evaluation failed:", msg, error);
-    await handleEvaluationFailure(db, articleId, msg);
+    await handleEvaluationFailure(db, articleId, version, msg);
     throw error;
   }
 }

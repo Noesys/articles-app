@@ -29,6 +29,18 @@ articlesRoute.get("/", async (c) => {
   });
 });
 
+// for dashboard stats
+articlesRoute.get("/stats", async (c) => {
+  const month = c.req.query("month");
+
+  const data = await getArticleStats(c.env.DB, month);
+
+  return c.json({
+    message: "Stats fetched successfully",
+    data,
+  });
+});
+
 articlesRoute.get("/:id", async (c) => {
   const articleId = c.req.param("id");
   const db = c.env.DB;
@@ -113,18 +125,6 @@ articlesRoute.post("/:id/parameter-results", async (c) => {
     body.ai_feedback,
   );
   return c.json({ message: "Parameter results stored", data }, 201);
-});
-
-// for dashboard stats
-articlesRoute.get("/stats", async (c) => {
-  const month = c.req.query("month");
-
-  const data = await getArticleStats(c.env.DB, month);
-
-  return c.json({
-    message: "Stats fetched successfully",
-    data,
-  });
 });
 
 export default articlesRoute;
