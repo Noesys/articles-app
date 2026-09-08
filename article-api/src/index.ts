@@ -51,9 +51,9 @@ app.get("/", (c) => {
   });
 });
 
-// user routes
-app.route("/auth", authRoutes);
-app.route("/articles", articleRoutes);
+// user routes (all under /api - matches frontend API_BASE=/api and vite proxy without rewrite)
+app.route("/api/auth", authRoutes);
+app.route("/api/articles", articleRoutes);
 
 app.get("/article-types", accessAuth, async (c) => {
   const db = c.env.DB;
@@ -71,19 +71,19 @@ app.get("/article-types", accessAuth, async (c) => {
 // admin routes
 
 // user routes - for admin to fetch user data
-app.route("/api/users", usersRoute);
+app.route("/api/admin/users", usersRoute);
 
-// article routes
-app.route("/api/articles", articlesRoute);
+// article routes (distinct from user /api/articles)
+app.route("/api/admin/articles", articlesRoute);
 
 // article types route
-app.route("/api/article-types", articleTypesRoute);
+app.route("/api/admin/article-types", articleTypesRoute);
 
 // parameter route
-app.route("/api/article-types", parametersRoute);
+app.route("/api/admin/article-types", parametersRoute);
 
 // summary
-app.route("/api/insights", insightsRoute);
+app.route("/api/admin/insights", insightsRoute);
 
 app.onError((err, c) => {
   // Correlation id so we can match a support report / log line to this

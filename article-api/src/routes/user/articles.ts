@@ -23,6 +23,13 @@ function currentMonth(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
+function validateArticleSize(title: string, content: string): void {
+  const MAX_TITLE_BYTES = 500;
+  const MAX_CONTENT_BYTES = 50_000;
+  if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES) throw new AppError("Title too long", 400);
+  if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES) throw new AppError("Content too long", 400);
+}
+
 function articleToListItem(article: {
   id: string;
   title: string;
@@ -325,17 +332,7 @@ articleRoutes.post("/", async (c) => {
     articleId = requestedId;
 
     const nextVersion = existingArticle.version + 1;
-
-    const MAX_TITLE_BYTES = 500;
-    const MAX_CONTENT_BYTES = 50_000;
-
-    if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES) {
-      throw new AppError("Title too long", 400);
-    }
-
-    if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES) {
-      throw new AppError("Content too long", 400);
-    }
+    validateArticleSize(title, content);
 
     // ❌ REMOVED: Synchronous evaluation (was blocking)
     // ✅ ADDED: Background evaluation via waitUntil
@@ -380,18 +377,7 @@ articleRoutes.post("/", async (c) => {
     });
 
     articleId = newId;
-
-    // capping the title and content size to reject oversized title and content
-    const MAX_TITLE_BYTES = 500;
-    const MAX_CONTENT_BYTES = 50_000;
-
-    if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES) {
-      throw new AppError("Title too long", 400);
-    }
-
-    if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES) {
-      throw new AppError("Content too long", 400);
-    }
+    validateArticleSize(title, content);
 
     // ❌ REMOVED: Synchronous evaluation (was blocking 10-30s)
     // ✅ ADDED: Background evaluation via waitUntil

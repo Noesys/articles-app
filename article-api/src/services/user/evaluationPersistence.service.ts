@@ -118,7 +118,7 @@ export async function persistEvaluationResults(
 /**
  * Handle evaluation failure
  * Updates article status to 'failed' with a sanitized error message and
- * increments retry_count.
+ * Does NOT increment retry_count (handled in articleHistory.ts rewrite path).
  * Uses version guard to prevent overwriting newer rewrite status.
  */
 export async function handleEvaluationFailure(

@@ -11,28 +11,25 @@ export async function resolveAccessUser(
   c: Context<AppEnv>,
 ): Promise<ResolveResult> {
   
-  // if (!c.executionCtx.access) {
-  //   return { ok: false, status: 403, message: "Access required" };
-  // }
+  if (!c.executionCtx.access) {
+    return { ok: false, status: 403, message: "Access required" };
+  }
 
-  // const identity = await c.executionCtx.access.getIdentity();
+  const identity = await c.executionCtx.access.getIdentity();
 
-  // if (!identity?.email) {
-  //   return {
-  //     ok: false,
-  //     status: 401,
-  //     message: "Unauthorized: No Access identity",
-  //   };
-  // }
+  if (!identity?.email) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Unauthorized: No Access identity",
+    };
+  }
 
-  // let email = identity.email.trim().toLowerCase();
+  let email = identity.email.trim().toLowerCase();
 
   // below commented code was testing purpose
   
-  let email = undefined;
-  // console.log(!email);
-  // console.log(c.env.ENVIRONMENT);
-  // console.log(c.env.DEV_USER_MAIL)
+  // let email = undefined;
 
   if (!email && c.env.ENVIRONMENT === "development" && c.env.DEV_USER_MAIL) {
     email = c.env.DEV_USER_MAIL.trim().toLowerCase();

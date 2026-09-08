@@ -91,8 +91,8 @@ export default function ArticleTypesForm() {
       setLoading(true);
       try {
         const [t, params] = await Promise.all([
-          api<ArticleTypeResponse>(`/article-types/${id}`),
-          api<ParameterResponse[]>(`/article-types/${id}/parameters`),
+          api<ArticleTypeResponse>(`/admin/article-types/${id}`),
+          api<ParameterResponse[]>(`/admin/article-types/${id}/parameters`),
         ]);
         setForm({
           name: t.name,
@@ -203,22 +203,22 @@ export default function ArticleTypesForm() {
       });
       let articleTypeId = id;
       if (isEditing) {
-        await api(`/article-types/${id}`, { method: "PATCH", body });
+        await api(`/admin/article-types/${id}`, { method: "PATCH", body });
       } else {
-        const created: any = await apiFull(`/article-types`, { method: "POST", body });
+        const created: any = await apiFull(`/admin/article-types`, { method: "POST", body });
         articleTypeId = created.data.id;
       }
       await Promise.all(
         removedParameterIds.map((paramId) =>
-          api(`/article-types/${articleTypeId}/parameters/${paramId}`, { method: "DELETE" }),
+          api(`/admin/article-types/${articleTypeId}/parameters/${paramId}`, { method: "DELETE" }),
         ),
       );
       await Promise.all(
         form.parameters.map((p) => {
           const paramBody = JSON.stringify(parameterToBody(p));
           if (p.isNew)
-            return api(`/article-types/${articleTypeId}/parameters`, { method: "POST", body: paramBody });
-          return api(`/article-types/${articleTypeId}/parameters/${p.id}`, { method: "PATCH", body: paramBody });
+            return api(`/admin/article-types/${articleTypeId}/parameters`, { method: "POST", body: paramBody });
+          return api(`/admin/article-types/${articleTypeId}/parameters/${p.id}`, { method: "PATCH", body: paramBody });
         }),
       );
       navigate("/admin/article-types");

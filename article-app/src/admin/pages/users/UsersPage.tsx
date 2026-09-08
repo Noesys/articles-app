@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import UserCard from "../../components/users/UserCard";
+import UserCard from "@/admin/components/users/UserCard";
 import { Search } from "lucide-react";
 import { DatePicker, AutoComplete, Input } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -25,7 +25,7 @@ async function fetchUsers(
     params.set("submission_status", submissionStatus);
   }
   const qs = params.toString();
-  return api<User[]>(`/users${qs ? `?${qs}` : ""}`);
+  return api<User[]>(`/admin/users${qs ? `?${qs}` : ""}`);
 }
 
 const UsersPage = () => {
@@ -73,7 +73,7 @@ const UsersPage = () => {
   }, [showNotSubmitted, selectedMonthKey]);
 
   const handleToggleActive = async (userId: string, nextIsActive: boolean) => {
-    await api(`/users/${userId}/status`, {
+    await api(`/admin/users/${userId}/status`, {
       method: "PATCH",
       body: JSON.stringify({ is_active: nextIsActive }),
     });
@@ -89,7 +89,7 @@ const UsersPage = () => {
     userId: string,
     nextRole: "user" | "admin" | "super_admin",
   ) => {
-    await api(`/users/${userId}/role`, {
+    await api(`/admin/users/${userId}/role`, {
       method: "PATCH",
       body: JSON.stringify({ role: nextRole }),
     });
