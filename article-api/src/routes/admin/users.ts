@@ -59,17 +59,13 @@ usersRoute.get("/", async (c) => {
 // return article of a specific user GET /users/:id/articles
 usersRoute.get("/:id/articles", async (c) => {
   const userId = c.req.param("id");
-
   const month = c.req.query("month");
   const status = c.req.query("status");
   const type = c.req.query("type");
-
-  const data = await getArticlesByUser(c.env.DB, userId, month, status, type);
-
-  return c.json({
-    message: "User articles fetched successfully",
-    data,
-  });
+  const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10));
+  const { data, total } = await getArticlesByUser(c.env.DB, userId, month, status, type, page, limit);
+  return c.json({ message: "User articles fetched successfully", data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
 });
 
 // update a specific user's role
