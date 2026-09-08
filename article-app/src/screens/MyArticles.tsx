@@ -90,7 +90,19 @@ function getAiScoreColor(status: string) {
   return "#d48806";
 }
 
-const ResizeableTitle = ({ onResize, width, children, ...restProps }: { onResize?: (e: React.SyntheticEvent, data: { size: { width: number; height: number } }) => void; width?: number; children?: React.ReactNode } & React.HTMLAttributes<HTMLTableHeaderCellElement>) => {
+const ResizeableTitle = ({
+  onResize,
+  width,
+  children,
+  ...restProps
+}: {
+  onResize?: (
+    e: React.SyntheticEvent,
+    data: { size: { width: number; height: number } },
+  ) => void;
+  width?: number;
+  children?: React.ReactNode;
+} & React.HTMLAttributes<HTMLTableHeaderCellElement>) => {
   if (!width || typeof width !== "number")
     return <th {...restProps}>{children}</th>;
   return (
@@ -114,17 +126,23 @@ const ResizeableTitle = ({ onResize, width, children, ...restProps }: { onResize
 export default function MyArticles() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
 
   const currentMonth = dayjs().format("YYYY-MM");
   const monthParam = searchParams.get("month");
-  const month = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonth;
-  const focusedYear = Number(searchParams.get("year")) || Number(month.slice(0, 4));
+  const month =
+    monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonth;
+  const focusedYear =
+    Number(searchParams.get("year")) || Number(month.slice(0, 4));
   const viewAll = searchParams.get("viewAll") === "true";
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
   const typeFilter = searchParams.get("type") || "all";
   const statusFilter = searchParams.get("status") || "all";
-  const setFilterParam = (name: string, value: string, defaultValue?: string) => {
+  const setFilterParam = (
+    name: string,
+    value: string,
+    defaultValue?: string,
+  ) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
@@ -141,7 +159,9 @@ export default function MyArticles() {
     api<{ id: string; name: string }[]>("/article-types")
       .then(setArticleTypes)
       .catch((err) =>
-        setTypesError(err instanceof Error ? err.message : "Failed to load types"),
+        setTypesError(
+          err instanceof Error ? err.message : "Failed to load types",
+        ),
       );
   }, []);
 
@@ -244,7 +264,9 @@ export default function MyArticles() {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() => setFilterParam("year", String(focusedYear - 1))}
+                  onClick={() =>
+                    setFilterParam("year", String(focusedYear - 1))
+                  }
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -252,7 +274,9 @@ export default function MyArticles() {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() => setFilterParam("year", String(focusedYear + 1))}
+                  onClick={() =>
+                    setFilterParam("year", String(focusedYear + 1))
+                  }
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -269,7 +293,7 @@ export default function MyArticles() {
                     <Button
                       key={i}
                       variant={isSelected ? "default" : "ghost"}
-                    onClick={() => setFilterParam("month", m, currentMonth)}
+                      onClick={() => setFilterParam("month", m, currentMonth)}
                       className={`h-9 text-sm ${isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"}`}
                     >
                       {dayjs().month(i).format("MMM")}
@@ -388,7 +412,13 @@ export default function MyArticles() {
             </span>
             <div className="flex gap-2">
               <button
-                onClick={() => setFilterParam("page", String(Math.max(1, currentPage - 1)), "1")}
+                onClick={() =>
+                  setFilterParam(
+                    "page",
+                    String(Math.max(1, currentPage - 1)),
+                    "1",
+                  )
+                }
                 disabled={currentPage === 1}
                 className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
               >
@@ -396,7 +426,11 @@ export default function MyArticles() {
               </button>
               <button
                 onClick={() =>
-                  setFilterParam("page", String(Math.min(totalPages, currentPage + 1)), "1")
+                  setFilterParam(
+                    "page",
+                    String(Math.min(totalPages, currentPage + 1)),
+                    "1",
+                  )
                 }
                 disabled={currentPage === totalPages}
                 className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"

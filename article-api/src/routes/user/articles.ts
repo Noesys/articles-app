@@ -12,12 +12,12 @@ import {
 import { getArticleTypes } from "../../services/user/articleTypes";
 import type { AppEnv, Bindings } from "../../types/shared-types";
 import { evaluateArticle } from "../../services/user/evaluateArticle.service";
-import { userAuthMiddleware } from "../../middleware/userAuth";
 import { AppError } from "../../utils/errors";
+import { accessAuth } from "../../middleware/accessAuth";
 
 const articleRoutes = new Hono<AppEnv>();
 
-articleRoutes.use("*", userAuthMiddleware);
+articleRoutes.use("*", accessAuth);
 
 function currentMonth(): string {
   return new Date().toISOString().slice(0, 7);

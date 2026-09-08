@@ -13,11 +13,11 @@ import {
   UpdateUserRoleBody,
   UpdateUserStatusBody,
 } from "../../types/admin-types";
-import { requireAdminRoles } from "../../middleware/adminAuth";
 import { AppEnv } from "../../types/shared-types";
+import { requireRole } from "../../middleware/requireRole";
 
 const usersRoute = new Hono<AppEnv>();
-usersRoute.use("*", requireAdminRoles("admin", "super_admin"));
+usersRoute.use("*", requireRole("admin", "super_admin"));
 
 function parseUpdateUserBody(
   body: unknown,
@@ -81,6 +81,24 @@ usersRoute.patch("/:id/role", async (c) => {
     !ALLOWED_ROLES.includes(body.role as (typeof ALLOWED_ROLES)[number])
   ) {
     return c.json({ message: "Invalid role" }, 400);
+  }
+
+  const targetUser = await getUserById(c.env.DB, id);
+
+  if (!targetUser) {
+    return c.json({ message: "User not found" }, 404);
+  }
+
+  const currentUser = c.get("user");
+
+  if (
+    targetUser.auth_role === "super_admin" &&
+    currentUser.auth_role !== "super_admin"
+  ) {
+    return c.json(
+      { message: "Cannot modify super admin users" },
+      403
+    );
   }
 
   await updateUserAuthRole(c.env.DB, id, body.role);

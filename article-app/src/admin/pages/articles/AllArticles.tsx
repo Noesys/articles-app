@@ -51,7 +51,9 @@ const AllArticles = () => {
 
   const monthParam = searchParams.get("month");
   const selectedMonthKey =
-    monthParam && /^\d{4}-\d{2}$/.test(monthParam) && dayjs(`${monthParam}-01`).isValid()
+    monthParam &&
+    /^\d{4}-\d{2}$/.test(monthParam) &&
+    dayjs(`${monthParam}-01`).isValid()
       ? monthParam
       : dayjs().format("YYYY-MM");
   const selectedMonth: Dayjs = dayjs(`${selectedMonthKey}-01`).startOf("month");
@@ -68,7 +70,11 @@ const AllArticles = () => {
   const [total, setTotal] = useState(0);
   const limit = 10;
 
-  const setFilterParam = (name: string, value: string, defaultValue?: string) => {
+  const setFilterParam = (
+    name: string,
+    value: string,
+    defaultValue?: string,
+  ) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
@@ -155,7 +161,7 @@ const AllArticles = () => {
   useEffect(() => {
     fetchArticles();
   }, [fetchArticles]);
-  
+
   const filteredByAuthor = useMemo(() => {
     if (selectedAuthor === "all") return articles;
     return articles.filter((a) => a.author_name === selectedAuthor);
@@ -274,7 +280,9 @@ const AllArticles = () => {
                   <Button
                     key={i}
                     variant={isSelected ? "default" : "ghost"}
-                    onClick={() => setFilterParam("month", month.format("YYYY-MM"))}
+                    onClick={() =>
+                      setFilterParam("month", month.format("YYYY-MM"))
+                    }
                     className={`h-9 text-sm ${
                       isSelected
                         ? ""
@@ -299,7 +307,7 @@ const AllArticles = () => {
           optionFilterProp="label"
           placeholder="All Types"
           className="w-full h-9 [&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!h-9 text-sm"
-            styles={{
+          styles={{
             popup: {
               root: { background: "#fff" },
             },

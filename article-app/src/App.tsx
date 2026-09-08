@@ -1,8 +1,6 @@
 import { Loader2 } from "lucide-react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
-import { tokenManager } from "./http-client";
-import Login from "./pages/Login";
 import MyArticles from "./screens/MyArticles";
 import ArticleCreation from "./screens/ArticleCreation";
 import ArticleDetail from "./screens/ArticleDetail";
@@ -37,7 +35,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
         <Loader2 size={28} className="animate-spin text-slate-400" />
       </div>
     );
-  if (!user || tokenManager.isExpired()) return <Navigate to="/login" replace />;
+  if (!user) return <div>Not authorized</div>;
   return <>{children}</>;
 }
 
@@ -49,7 +47,7 @@ function RootRouteRedirect() {
         <Loader2 size={28} className="animate-spin text-slate-400" />
       </div>
     );
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <div>Not authorized</div>;
   if (user.auth_role === "admin" || user.auth_role === "super_admin")
     return <Navigate to="/admin/articles" replace />;
   return <MyArticles />;
@@ -59,7 +57,6 @@ export default function App() {
   return (
     // <-- No BrowserRouter here, just Routes
     <Routes>
-      <Route path="/login" element={<Login />} />
       <Route path="/" element={<RootRouteRedirect />} />
 
       <Route

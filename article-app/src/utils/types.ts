@@ -113,24 +113,9 @@ export type AuthUser = {
   auth_role: "super_admin" | "admin" | "user";
 };
 
-export type RequestOtpResponse = {
-  expires_in: number;
-  devOtp: string;
-};
-
-export type VerifyOtpResponse = {
-  token: string;
-  user: AuthUser;
-};
-
 export type MeResponse = AuthUser & { is_active: boolean };
 
 export type AuthContextValue = {
   user: AuthUser | null;
-  token: string | null;
   loading: boolean;
-  requestOTP: (email: string) => Promise<RequestOtpResponse>;
-  verifyOTP: (email: string, code: string) => Promise<void>;
-  logout: () => void;
-  isAuthenticated: () => boolean;
 };

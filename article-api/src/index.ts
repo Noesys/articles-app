@@ -8,7 +8,6 @@ import articleRoutes from "./routes/user/articles";
 // user service
 import { getArticleTypes } from "./services/user/articleTypes";
 
-import { userAuthMiddleware } from "./middleware/userAuth";
 import type { AppEnv } from "./types/shared-types";
 
 /* ADMIN ROUTES IMPORTS */
@@ -19,42 +18,31 @@ import articleTypesRoute from "./routes/admin/articleTypes";
 import parametersRoute from "./routes/admin/parameters";
 import insightsRoute from "./routes/admin/insights";
 
-import { AppError } from "./utils/errors";
+import { AppError } from "../src/utils/errors";
+import { accessAuth } from "./middleware/accessAuth";
 
 const app = new Hono<AppEnv>();
 
-app.use(
-  "*",
-  cors({
-    origin: (origin, c) => {
+app.use("*", async (c, next) => {
+  const corsMiddleware = cors({
+    origin: (origin) => {
       if (!origin) return "";
-      const raw = (c.env.CORS_ORIGINS ?? "").trim();
-      if (raw) {
-        const allowed = raw.split(",").map((s: string) => s.trim()).filter(Boolean);
-        if (allowed.includes(origin)) return origin;
-        // support wildcard suffix like .pages.dev via leading .
-        for (const pat of allowed) {
-          if (pat.startsWith(".") && origin.endsWith(pat)) return origin;
-        }
-        return "";
-      }
-      // fallback for local dev when var not set
+
       if (
         origin === "http://localhost:5173" ||
         origin === "http://localhost:5174" ||
-        origin === "https://noesys-article-platform.pages.dev" ||
-        origin.endsWith("noesys-article-platform-admin.pages.dev")
+        origin === c.env.FRONTEND_URL
       ) {
         return origin;
       }
+
       return "";
     },
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization", "Cookie"],
-    exposeHeaders: ["Set-Cookie"],
     credentials: true,
-  }),
-);
+  });
+
+  return corsMiddleware(c, next);
+});
 
 app.get("/", (c) => {
   return c.json({
@@ -67,7 +55,7 @@ app.get("/", (c) => {
 app.route("/api/auth", authRoutes);
 app.route("/api/articles", articleRoutes);
 
-app.get("/api/article-types", userAuthMiddleware, async (c) => {
+app.get("/article-types", accessAuth, async (c) => {
   const db = c.env.DB;
   const types = await getArticleTypes(db);
   return c.json({
