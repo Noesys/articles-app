@@ -15,15 +15,7 @@ import { AuthContextValue, AuthUser, MeResponse, RequestOtpResponse, VerifyOtpRe
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function isTokenExpired(token: string): boolean {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    if (!payload.exp) {
-      return false;
-    }
-    return payload.exp * 1000 < Date.now();
-  } catch {
-    return true;
-  }
+  return tokenManager.isExpired();
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -33,6 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const onLogout = () => {
+      setUser(null);
+      setToken(null);
+    };
+    window.addEventListener("auth:logout", onLogout);
     let active = true;
 
     async function validate() {
@@ -74,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
+      window.removeEventListener("auth:logout", onLogout);
     };
   }, []);
 

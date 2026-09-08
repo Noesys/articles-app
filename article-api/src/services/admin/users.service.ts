@@ -7,6 +7,7 @@ import {
   UserListItem,
   UserProfile,
 } from "../../types/admin-types";
+import { badRequest, forbidden } from "../../utils/errors";
 
 export async function getUsers(
   db: D1Database,
@@ -14,14 +15,14 @@ export async function getUsers(
   submissionStatus?: string,
 ): Promise<UserListItem[]> {
   if (month_year && !/^\d{4}-\d{2}$/.test(month_year)) {
-    throw new Error("Invalid month format. Expected YYYY-MM");
+    throw badRequest("Invalid month format. Expected YYYY-MM");
   }
 
   if (
     submissionStatus &&
     !ALLOWED_SUBMISSION_STATUSES.includes(submissionStatus as SubmissionStatus)
   ) {
-    throw new Error("Invalid submission_status");
+    throw badRequest("Invalid submission_status");
   }
 
   let stmt: D1PreparedStatement;
@@ -153,11 +154,11 @@ export async function updateUserAuthRole(
   role: string,
 ): Promise<void> {
   if (!ALLOWED_AUTH_ROLES.includes(role as AssignableAuthRole)) {
-    throw new Error("Invalid role");
+    throw badRequest("Invalid role");
   }
 
   if (role === "super_admin") {
-    throw new Error("Cannot change super_admin role");
+    throw forbidden("Cannot change super_admin role");
   }
 
   const result = await db
