@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import type { ReactNode } from "react";
+import { UnauthorizedPage } from "./UnauthorizedPage";
 
 export function RoleBasedRoute({
   children,
@@ -21,7 +22,9 @@ export function RoleBasedRoute({
   }
 
   if (!user) {
-    return <div>Not authorized</div>;
+    return (
+      <UnauthorizedPage message="You must be logged in with an authorized account to access this page." />
+    );
   }
 
   if (!allowedRoles.includes(user.auth_role)) {

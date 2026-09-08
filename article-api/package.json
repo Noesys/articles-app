@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.64",
+    "@cloudflare/workers-types": "^5.20260908.1",
     "ai": "^7.0.93",
     "hono": "^4.13.3",
     "jose": "^6.2.9",

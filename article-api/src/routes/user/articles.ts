@@ -13,6 +13,7 @@ import { getArticleTypes } from "../../services/user/articleTypes";
 import type { AppEnv, Bindings } from "../../types/shared-types";
 import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 import { AppError } from "../../utils/errors";
+import { sanitizeHtmlServer } from "../../utils/sanitize";
 import { accessAuth } from "../../middleware/accessAuth";
 
 const articleRoutes = new Hono<AppEnv>();
@@ -268,8 +269,9 @@ articleRoutes.post("/", async (c) => {
     );
   }
 
-  const { id: requestedId, article_type_id, title, content } = body;
-
+  let { id: requestedId, article_type_id, title, content } = body;
+  if (title) title = sanitizeHtmlServer(title);
+  if (content) content = sanitizeHtmlServer(content);
   if (!article_type_id || !title || !content) {
     return c.json(
       {
