@@ -20,7 +20,6 @@ import { Bindings } from "../../types/shared-types";
 
 export async function evaluateArticle(
   db: D1Database,
-  GENERATIVE_AI_API_KEY: string,
   articleId: string,
   articleTypeId: string,
   title: string,

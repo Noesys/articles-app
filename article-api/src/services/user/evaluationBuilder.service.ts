@@ -64,10 +64,14 @@ export function buildEvaluationPrompt(
 Article Type: ${articleType.name}
 ${articleType.description ?? ""}
 
-Title: ${title}
-
+Title: <untrusted_article_title>
+${title}
+</untrusted_article_title>
 Content:
+
+<untrusted_article_content>
 ${content}
+</untrusted_article_content>
 
 ---
 

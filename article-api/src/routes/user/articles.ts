@@ -13,6 +13,7 @@ import { getArticleTypes } from "../../services/user/articleTypes";
 import type { AppEnv, Bindings } from "../../types/shared-types";
 import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 import { authMiddleware } from "../../middleware/userAuth";
+import { AppError } from "../../utils/errors";
 
 const articleRoutes = new Hono<AppEnv>();
 
@@ -53,7 +54,6 @@ function articleToListItem(article: {
 // Background evaluation - single attempt via waitUntil; durable retry via Queue/cron
 async function backgroundEvaluateArticle(
   db: D1Database,
-  env: { GENERATIVE_AI_API_KEY: string },
   articleId: string,
   articleTypeId: string,
   title: string,
@@ -64,7 +64,6 @@ async function backgroundEvaluateArticle(
   try {
     await evaluateArticle(
       db,
-      env.GENERATIVE_AI_API_KEY,
       articleId,
       articleTypeId,
       title,
@@ -327,13 +326,23 @@ articleRoutes.post("/", async (c) => {
 
     const nextVersion = existingArticle.version + 1;
 
+    const MAX_TITLE_BYTES = 500;
+    const MAX_CONTENT_BYTES = 50_000;
+
+    if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES) {
+      throw new AppError("Title too long", 400);
+    }
+
+    if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES) {
+      throw new AppError("Content too long", 400);
+    }
+
     // ❌ REMOVED: Synchronous evaluation (was blocking)
     // ✅ ADDED: Background evaluation via waitUntil
     const currentVersion = existingArticle.version;
     c.executionCtx.waitUntil(
       backgroundEvaluateArticle(
         db,
-        c.env,
         articleId,
         article_type_id,
         title,
@@ -372,12 +381,23 @@ articleRoutes.post("/", async (c) => {
 
     articleId = newId;
 
+    // capping the title and content size to reject oversized title and content
+    const MAX_TITLE_BYTES = 500;
+    const MAX_CONTENT_BYTES = 50_000;
+
+    if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES) {
+      throw new AppError("Title too long", 400);
+    }
+
+    if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES) {
+      throw new AppError("Content too long", 400);
+    }
+
     // ❌ REMOVED: Synchronous evaluation (was blocking 10-30s)
     // ✅ ADDED: Background evaluation via waitUntil
     c.executionCtx.waitUntil(
       backgroundEvaluateArticle(
         db,
-        c.env,
         articleId,
         article_type_id,
         title,
