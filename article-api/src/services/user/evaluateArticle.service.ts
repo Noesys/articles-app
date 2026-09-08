@@ -16,15 +16,17 @@ import type {
   EvaluationOutcome,
   ParameterResultInput,
 } from "../../types/user-types";
+import { Bindings } from "../../types/shared-types";
 
 export async function evaluateArticle(
   db: D1Database,
-  GOOGLE_API_KEY: string,
+  GENERATIVE_AI_API_KEY: string,
   articleId: string,
   articleTypeId: string,
   title: string,
   content: string,
   version: number,
+  bindings: Bindings
 ): Promise<void> {
   try {
     const articleType = await getArticleTypeConfig(db, articleTypeId);
@@ -54,7 +56,7 @@ export async function evaluateArticle(
       content,
     );
 
-    const aiResult = await callAI(GOOGLE_API_KEY, prompt, schema);
+    const aiResult = await callAI(prompt, schema, bindings);
 
     const parameterResults: ParameterResultInput[] = scoreable.map((p, i) => {
       const key = `p${i}`;

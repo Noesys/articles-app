@@ -10,7 +10,7 @@ import {
   updateArticleForRewrite,
 } from "../../services/user/articleHistory";
 import { getArticleTypes } from "../../services/user/articleTypes";
-import type { AppEnv } from "../../types/shared-types";
+import type { AppEnv, Bindings } from "../../types/shared-types";
 import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 import { authMiddleware } from "../../middleware/userAuth";
 
@@ -53,24 +53,26 @@ function articleToListItem(article: {
 // Background evaluation with safe retry (does not affect request flow)
 async function backgroundEvaluateArticle(
   db: D1Database,
-  env: { GOOGLE_GENERATIVE_AI_API_KEY: string },
+  env: { GENERATIVE_AI_API_KEY: string },
   articleId: string,
   articleTypeId: string,
   title: string,
   content: string,
   version: number,
+  bindings: Bindings,
 ) {
   const maxAttempts = 2;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       await evaluateArticle(
         db,
-        env.GOOGLE_GENERATIVE_AI_API_KEY,
+        env.GENERATIVE_AI_API_KEY,
         articleId,
         articleTypeId,
         title,
         content,
         version,
+        bindings
       );
       return;
     } catch (err: unknown) {
@@ -347,6 +349,7 @@ articleRoutes.post("/", async (c) => {
         title,
         content,
         nextVersion,
+        c.env
       ),
     );
 
@@ -390,6 +393,7 @@ articleRoutes.post("/", async (c) => {
         title,
         content,
         1, // New articles start at version 1
+        c.env
       ),
     );
 
