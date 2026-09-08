@@ -7,11 +7,11 @@ const ArticleTypesPage = () => {
   const [types, setTypes] = useState<ArticleTypeWithPrompt[]>([]);
 
   async function deleteArticleType(id: string) {
-    await api(`/article-types/${id}`, { method: "DELETE" });
+    await api(`/admin/article-types/${id}`, { method: "DELETE" });
   }
 
   async function loadArticleTypes() {
-    const data = await api<ArticleTypeWithPrompt[]>(`/article-types`);
+    const data = await api<ArticleTypeWithPrompt[]>(`/admin/article-types`);
     setTypes(data);
   }
 

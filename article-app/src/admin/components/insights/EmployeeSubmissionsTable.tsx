@@ -41,7 +41,7 @@ export function EmployeeSubmissionsTable({
       setLoading(true);
       try {
         const data = await api<EmployeeSubmissionsResult>(
-          `/insights/employee-submissions?start=${start}&end=${end}`,
+          `/admin/insights/employee-submissions?start=${start}&end=${end}`,
         );
         setData(data);
       } finally {

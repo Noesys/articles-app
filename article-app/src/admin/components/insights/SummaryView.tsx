@@ -20,7 +20,7 @@ function NumericDistribution({
 }: {
   distribution: NumericDistributionBucket[];
 }) {
-  if (!distribution.length) return null;
+  if (!distribution?.length) return null;
   const maxCount = Math.max(...distribution.map((d) => d.count), 1);
 
   return (
@@ -53,7 +53,8 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
   const [loading, setLoading] = useState(true);
 
   async function fetchInsightsSummary(start: string, end: string) {
-    return api<ArticleTypeSummary[]>(`/insights/summary?start=${start}&end=${end}`);
+    const res = await api<ArticleTypeSummary[]>(`/admin/insights/summary?start=${start}&end=${end}`);
+    return Array.isArray(res) ? res : [];
   }
 
   useEffect(() => {
@@ -76,7 +77,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
         <Spin />
       </div>
     );
-  if (!data.length) return <Empty description="No data for this range" />;
+  if (!data?.length) return <Empty description="No data for this range" />;
 
   return (
     <ConfigProvider
@@ -110,7 +111,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
             <Table
               pagination={false}
               size="small"
-              dataSource={at.parameters.map((p) => ({
+              dataSource={(at.parameters ?? []).map((p) => ({
                 key: p.parameterId,
                 ...p,
               }))}
