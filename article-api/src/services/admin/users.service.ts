@@ -183,7 +183,9 @@ export async function getArticlesByUser(
   month?: string,
   status?: string,
   type?: string,
-): Promise<ArticleByUser[]> {
+  page = 1,
+  limit = 10,
+): Promise<{ data: ArticleByUser[]; total: number }> {
   const conditions = ["a.user_id = ?"];
   const params: unknown[] = [userId];
 
@@ -233,19 +235,14 @@ export async function getArticlesByUser(
 
   type ArticleRow = Omit<ArticleByUser, "parameters">;
 
-  const results = (
-    await db
-      .prepare(sql)
-      .bind(...params)
-      .all<ArticleRow>()
-  ).results;
-
-  return results.map(
-    (article): ArticleByUser => ({
-      ...article,
-      parameters: [],
-    }),
-  );
+  const countSql = `SELECT COUNT(*) as total FROM articles a JOIN users u ON u.id=a.user_id JOIN article_types at ON at.id=a.article_type_id WHERE ${conditions.join(" AND ")}`;
+  const totalRow = await db.prepare(countSql).bind(...params).first<{ total: number }>();
+  const total = totalRow?.total ?? 0;
+  const offset = (page - 1) * limit;
+  const pagedSql = sql + ` LIMIT ? OFFSET ?`;
+  const results = (await db.prepare(pagedSql).bind(...params, limit, offset).all<ArticleRow>()).results;
+  const data = results.map((article): ArticleByUser => ({ ...article, parameters: [] }));
+  return { data, total };
 }
 
 export async function updateUserStatus(
