@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         result.user.auth_role === "admin" ||
         result.user.auth_role === "super_admin"
       ) {
-        navigate("/admin/articles", { replace: true });
+        navigate("/admin/articles", { replace: true }); // CR16 single admin home
       } else {
         navigate("/", { replace: true });
       }
