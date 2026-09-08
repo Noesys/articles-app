@@ -1,3 +1,4 @@
+import { badRequest, conflict, notFound } from "../../utils/errors";
 import { ParameterInput, Resolved } from "../../types/admin-types"
 
 function validateScope(input: ParameterInput): string | null {
@@ -26,7 +27,7 @@ export async function getParametersByArticleType(
   articleTypeId?: string,
 ) {
   if (articleTypeId?.trim() === "" || !articleTypeId) {
-    throw new Error("article type ID is invalid");
+    throw badRequest("article type ID is invalid");
   }
   const parameters = await db
     .prepare(
@@ -106,7 +107,7 @@ export async function getParameterById(db: D1Database, parameterId: string) {
     .first();
 
   if (!parameter) {
-    throw new Error("Parameter not found");
+    throw notFound("Parameter");
   }
 
   return parameter;
@@ -128,10 +129,10 @@ async function syncParameterOptions(
   const normalized = incoming.map((o) => ({ ...o, label: o.label.trim() }));
   for (const opt of normalized) {
     if (!opt.label) {
-      throw new Error("Option label cannot be empty");
+      throw badRequest("Option label cannot be empty");
     }
     if (seenLabels.has(opt.label)) {
-      throw new Error(`Duplicate option label "${opt.label}" in request`);
+      throw conflict(`Duplicate option label "${opt.label}" in request`);
     }
     seenLabels.add(opt.label);
   }
@@ -162,9 +163,7 @@ async function syncParameterOptions(
   normalized.forEach((option, i) => {
     const sourceRow = option.id ? byId.get(option.id) : undefined;
     if (option.id && !sourceRow) {
-      throw new Error(
-        `Option id ${option.id} does not belong to parameter ${parameterId}`,
-      );
+      throw badRequest(`Option id ${option.id} does not belong to parameter ${parameterId}`);
     }
 
     const labelOwner = byLabel.get(option.label);
@@ -295,11 +294,11 @@ export async function createParameter(
 ) {
   const scopeError = validateScope(input);
   if (scopeError) {
-    throw new Error(scopeError);
+    throw badRequest(scopeError);
   }
 
   if (articleTypeId?.trim() === "" || !articleTypeId) {
-    throw new Error("article type ID is invalid");
+    throw badRequest("article type ID is invalid");
   }
 
   const articleType = await db
@@ -308,7 +307,7 @@ export async function createParameter(
     .first();
 
   if (!articleType) {
-    throw new Error("Article type not found");
+    throw notFound("Article type");
   }
 
   const existing = await db
@@ -325,9 +324,7 @@ export async function createParameter(
     .first();
 
   if (existing) {
-    throw new Error(
-      "Parameter with this name already exists for this article type",
-    );
+    throw conflict("Parameter with this name already exists for this article type");
   }
 
   const parameterId = crypto.randomUUID();
@@ -378,7 +375,7 @@ export async function updateParameter(
 ) {
   const scopeError = validateScope(input);
   if (scopeError) {
-    throw new Error(scopeError);
+    throw badRequest(scopeError);
   }
   const existing = await db
     .prepare(
@@ -388,7 +385,7 @@ export async function updateParameter(
     .first<{ article_type_id: string }>();
 
   if (!existing) {
-    throw new Error("Parameter not found");
+    throw notFound("Parameter");
   }
 
   const duplicate = await db
@@ -406,9 +403,7 @@ export async function updateParameter(
     .first();
 
   if (duplicate) {
-    throw new Error(
-      "Parameter with this name already exists for this article type",
-    );
+    throw conflict("Parameter with this name already exists for this article type");
   }
 
   const now = new Date().toISOString();
@@ -451,7 +446,7 @@ export async function deactivateParameter(db: D1Database, parameterId: string) {
     .first();
 
   if (!existing) {
-    throw new Error("Parameter not found");
+    throw notFound("Parameter");
   }
 
   await db
