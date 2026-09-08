@@ -10,7 +10,7 @@ function nameFromEmail(email: string): string {
 export async function resolveAccessUser(
   c: Context<AppEnv>,
 ): Promise<ResolveResult> {
-  
+
   if (!c.executionCtx.access) {
     return { ok: false, status: 403, message: "Access required" };
   }
@@ -28,7 +28,7 @@ export async function resolveAccessUser(
   let email = identity.email.trim().toLowerCase();
 
   // below commented code was testing purpose
-  
+
   // let email = undefined;
 
   if (!email && c.env.ENVIRONMENT === "development" && c.env.DEV_USER_MAIL) {

@@ -21,9 +21,11 @@ import insightsRoute from "./routes/admin/insights";
 import { AppError } from "../src/utils/errors";
 import { accessAuth } from "./middleware/accessAuth";
 
+import { secureHeaders } from "hono/secure-headers";
+
 const app = new Hono<AppEnv>();
 
-app.use("*", async (c, next) => {
+app.use("*", secureHeaders(), async (c, next) => {
   const corsMiddleware = cors({
     origin: (origin) => {
       if (!origin) return "";
@@ -55,7 +57,7 @@ app.get("/", (c) => {
 app.route("/api/auth", authRoutes);
 app.route("/api/articles", articleRoutes);
 
-app.get("/article-types", accessAuth, async (c) => {
+app.get("/api/article-types", accessAuth, async (c) => {
   const db = c.env.DB;
   const types = await getArticleTypes(db);
   return c.json({
