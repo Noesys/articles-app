@@ -133,8 +133,7 @@ export async function handleEvaluationFailure(
       `
         UPDATE articles
         SET status = 'failed',
-            ai_feedback = ?,
-            retry_count = retry_count + 1
+            ai_feedback = ?
         WHERE id = ? AND version = ?
       `
     )
