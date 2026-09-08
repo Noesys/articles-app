@@ -36,6 +36,7 @@ function sanitizeErrorMessage(raw: unknown, maxLen = 500): string {
 /**
  * Persist evaluation results atomically in a single batched transaction.
  * Updates the article and upserts parameter results.
+ * Uses version guard to prevent overwriting newer rewrite scores.
  */
 export async function persistEvaluationResults(
   db: D1Database,
@@ -49,7 +50,7 @@ export async function persistEvaluationResults(
   // all of the article update + result rewrites commit, or none do.
   const statements: D1PreparedStatement[] = [];
 
-  // Step 1: Update the article
+  // Step 1: Update the article — version guard prevents stale writes
   statements.push(
     db
       .prepare(
@@ -60,7 +61,7 @@ export async function persistEvaluationResults(
               status = ?,
               scored_at = ?,
               pass_threshold = ?
-          WHERE id = ?
+          WHERE id = ? AND version = ?
         `
       )
       .bind(
@@ -70,6 +71,7 @@ export async function persistEvaluationResults(
         scoredAt,
         outcome.pass_threshold,
         articleId,
+        version,
       ),
   );
 
@@ -117,10 +119,12 @@ export async function persistEvaluationResults(
  * Handle evaluation failure
  * Updates article status to 'failed' with a sanitized error message and
  * increments retry_count.
+ * Uses version guard to prevent overwriting newer rewrite status.
  */
 export async function handleEvaluationFailure(
   db: D1Database,
   articleId: string,
+  version: number,
   errorMessage: string
 ): Promise<void> {
   const safe = sanitizeErrorMessage(errorMessage);
@@ -131,9 +135,9 @@ export async function handleEvaluationFailure(
         SET status = 'failed',
             ai_feedback = ?,
             retry_count = retry_count + 1
-        WHERE id = ?
+        WHERE id = ? AND version = ?
       `
     )
-    .bind(safe, articleId)
+    .bind(safe, articleId, version)
     .run();
 }
