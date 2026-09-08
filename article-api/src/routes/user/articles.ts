@@ -174,7 +174,7 @@ articleRoutes.get("/mine/:id", async (c) => {
   const currentFeedback = isPending
     ? ""
     : article.ai_feedback ||
-      (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
+    (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
 
   // parameter results for current version
   const paramRows: {
