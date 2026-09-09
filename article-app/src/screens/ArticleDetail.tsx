@@ -23,6 +23,8 @@ import ScoringHistoryTable from "@/admin/components/articles/ScoringHistoryTable
 import FeedbackBlock from "@/admin/components/articles/FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
 import { ArticleDetailResponse } from "@/utils/types";
+import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
+import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
 
 function formatAiScore(s: number) {
   return Number.isInteger(s) ? String(s) : s.toFixed(1);
@@ -109,7 +111,13 @@ export default function ArticleDetail() {
   const POLLING_INTERVAL = 2500;
   const MAX_POLL_DURATION = 300000;
   useEffect(() => {
-    if (effectiveSnapshot || !article || currentScore !== null || TERMINAL_STATUSES.includes(article.status)) return;
+    if (
+      effectiveSnapshot ||
+      !article ||
+      currentScore !== null ||
+      TERMINAL_STATUSES.includes(article.status)
+    )
+      return;
     let stopped = false;
     let timer: number | null = null;
     const pollStart = Date.now();
@@ -133,7 +141,9 @@ export default function ArticleDetail() {
         setCurrentFeedback(result.current_feedback ?? "");
         setParameterResults(result.parameter_results ?? []);
         if (result.current_score !== null) {
-          try { sessionStorage.removeItem("toastError"); } catch {}
+          try {
+            sessionStorage.removeItem("toastError");
+          } catch {}
           if (timer) clearInterval(timer);
           return;
         }
@@ -196,7 +206,9 @@ export default function ArticleDetail() {
       );
     } catch (err) {
       console.error("Rewrite submission failed:", err);
-      setSubmitError(err instanceof Error ? err.message : "Failed to submit rewrite");
+      setSubmitError(
+        err instanceof Error ? err.message : "Failed to submit rewrite",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -401,7 +413,12 @@ export default function ArticleDetail() {
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-full px-2.5 py-1">
                       {article.article_type_name}
                     </span>
-                    <CopyButton text={content} />
+                    <ArticleCopyButton title={title} text={content} />
+                    <DownloadMarkdownButton
+                      title={title}
+                      content={content}
+                      filename="article-review.md"
+                    />
                   </div>
                 )}
                 <span className="p-1 text-slate-400">

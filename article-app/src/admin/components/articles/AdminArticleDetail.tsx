@@ -9,6 +9,8 @@ import ParameterResultsBox from "./ParameterResultsBox";
 import FeedbackBlock from "./FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
 import { HistoryItem, ArticleDetail, ParameterResult } from "@/utils/types";
+import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
+import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
 
 function formatAiScore(s: number) {
   return Number.isInteger(s) ? String(s) : s.toFixed(1);
@@ -161,8 +163,10 @@ export default function AdminArticleDetail() {
     if (!id || !versionParam) return;
     (async () => {
       try {
-        const data: any = await api(`/admin/articles/${id}/parameter-results?version=${versionParam}`);
-        const rows = Array.isArray(data) ? data : data?.data ?? data;
+        const data: any = await api(
+          `/admin/articles/${id}/parameter-results?version=${versionParam}`,
+        );
+        const rows = Array.isArray(data) ? data : (data?.data ?? data);
         if (rows) {
           setParameterResults(
             (rows as any[]).map(
@@ -316,7 +320,12 @@ export default function AdminArticleDetail() {
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-full px-2.5 py-1">
                       {article.article_type_name}
                     </span>
-                    <CopyButton text={displayContent} />
+                    <ArticleCopyButton title={`# ${displayTitle}`} text={displayContent} />
+                    <DownloadMarkdownButton
+                      title={displayTitle}
+                      content={displayContent}
+                      filename="article-review.md"
+                    />
                   </div>
                 )}
 

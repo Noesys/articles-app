@@ -132,7 +132,7 @@ export default function App() {
       <Route
         path="/admin/users"
         element={
-          <RoleBasedRoute allowedRoles={["super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
             <AdminLayout>
               <UsersPage />
             </AdminLayout>

@@ -8,15 +8,48 @@ function nameFromEmail(email: string): string {
   return email.split("@")[0] || "User";
 }
 
+/* resolve name from cloudflare access */
+async function resolveAccessName(c: Context<AppEnv>): Promise<string | null> {
+  if (c.executionCtx.access) {
+    const identity = await c.executionCtx.access.getIdentity();
+    if (identity?.name) {
+      return identity.name.trim();
+    }
+  }
+
+  const assertion = c.req.header("Cf-Access-Jwt-Assertion");
+  const teamDomain = (c.env.CF_ACCESS_TEAM_DOMAIN ?? "").replace(/\/$/, "");
+  const aud = c.env.CF_ACCESS_AUD;
+
+  if (assertion && teamDomain && aud) {
+    try {
+      const JWKS = createRemoteJWKSet(
+        new URL(`${teamDomain}/cdn-cgi/access/certs`),
+      );
+      const { payload } = await jwtVerify(assertion, JWKS, {
+        issuer: teamDomain,
+        audience: aud,
+      });
+      const p = payload as Record<string, unknown>;
+      if (typeof p.name === "string" && p.name.trim()) return p.name.trim();
+      const given = typeof p.given_name === "string" ? p.given_name : "";
+      const family = typeof p.family_name === "string" ? p.family_name : "";
+      if (given || family) return `${given} ${family}`.trim();
+    } catch {
+      // ignore — fall through to null
+    }
+  }
+
+  return null;
+}
+
 /**
  * Resolve email from Cloudflare Access.
  * Prefer ctx.access (Worker Access without static-asset router gap).
  * Fall back to Cf-Access-Jwt-Assertion — required when Static Assets sit
  * behind Cloudflare's internal router, which does not forward ctx.access.
  */
-async function resolveAccessEmail(
-  c: Context<AppEnv>,
-): Promise<string | null> {
+async function resolveAccessEmail(c: Context<AppEnv>): Promise<string | null> {
   if (c.executionCtx.access) {
     const identity = await c.executionCtx.access.getIdentity();
     if (identity?.email) {
@@ -99,7 +132,7 @@ export async function resolveAccessUser(
     await createUser(c.env.DB, {
       id: "usr_" + crypto.randomUUID(),
       email,
-      name: nameFromEmail(email),
+      name: (await resolveAccessName(c)) || nameFromEmail(email),
       auth_role: "user",
       job_role: "",
       created_at: new Date().toISOString(),

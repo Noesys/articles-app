@@ -1,6 +1,6 @@
 import { LogOut } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import logoImage from "../Logo/Noesys_logo.png";
+import logoImage from "../Logo/contiq.png";
 
 export default function Header() {
   const { user } = useAuth();
@@ -10,15 +10,14 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-      <div className="w-full px-4 md:px-8 h-14 flex items-center justify-between">
+      <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src={logoImage} alt="Logo" className="h-14 w-20 rounded-lg" />
-          <span className="font-semibold text-slate-900">Article Platform</span>
+          <img src={logoImage} alt="Logo" className="h-13 w-26" />
         </div>
         <div className="flex items-center gap-3">
           {user && (
             <span className="text-sm text-slate-500 hidden sm:block">
-              {user.email}
+              {user.name}
             </span>
           )}
           <button

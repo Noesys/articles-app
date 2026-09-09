@@ -155,17 +155,22 @@ export default function UserCard({
             </button>
           )}
 
-          {user.auth_role === "user" && (
-            <button
-              className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg"
-              onClick={() => onUserClick?.(user.id)}
-            >
-              View user articles
-            </button>
-          )}
-
-          {user.auth_role === "admin" && (
-            <>
+          {currentUser?.id !== user.id &&
+            ((currentUser?.auth_role === "super_admin" &&
+              (user.auth_role === "admin" || user.auth_role === "user")) ||
+              (currentUser?.auth_role === "admin" &&
+                user.auth_role === "user")) && (
+              <button
+                className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg"
+                onClick={() => onUserClick?.(user.id)}
+              >
+                View user articles
+              </button>
+            )}
+            
+          {user.auth_role === "admin" &&
+            user.id !== currentUser?.id &&
+            currentUser?.auth_role === "super_admin" && (
               <button
                 onClick={() => openRoleChange("user")}
                 className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors"
@@ -173,8 +178,7 @@ export default function UserCard({
                 <ArrowDownCircle size={14} />
                 Demote to User
               </button>
-            </>
-          )}
+            )}
           {/* super_admin: no promote/demote buttons at all — can't be demoted, nothing higher to promote to */}
         </div>
       </div>
@@ -209,7 +213,6 @@ export default function UserCard({
             </div>
 
             <h2 className="mt-3 font-semibold text-slate-900">
-              {/* {isActive ? "Deactivate" : "Activate"} {user.name}? */}
               {isActive && currentUser && user.email !== currentUser.email
                 ? "Deactivate"
                 : "Activate"}
