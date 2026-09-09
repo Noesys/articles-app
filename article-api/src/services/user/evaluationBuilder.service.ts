@@ -38,7 +38,12 @@ export function buildEvaluationSchema(
       .min(articleType.score_min)
       .max(articleType.score_max)
       .describe(`Overall numeric score for the article's quality.`),
-    feedback: z.string().min(1).describe(articleType.score_prompt),
+    feedback: z
+      .string()
+      .min(1)
+      .describe(
+        `${articleType.score_prompt} Format feedback in markdown with headings and each point as a bullet (use "- ").`,
+      ),
     parameters: z.object(paramShape),
   });
 }
