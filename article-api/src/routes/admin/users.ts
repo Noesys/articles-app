@@ -8,14 +8,13 @@ import {
   updateUserStatus,
 } from "../../services/admin/users.service";
 import {
-  ALLOWED_ROLES,
+  ALLOWED_AUTH_ROLES,
   UpdateUserBody,
   UpdateUserRoleBody,
   UpdateUserStatusBody,
 } from "../../types/admin-types";
 import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
-
 const usersRoute = new Hono<AppEnv>();
 usersRoute.use("*", requireRole("admin", "super_admin"));
 
@@ -63,9 +62,24 @@ usersRoute.get("/:id/articles", async (c) => {
   const status = c.req.query("status");
   const type = c.req.query("type");
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10));
-  const { data, total } = await getArticlesByUser(c.env.DB, userId, month, status, type, page, limit);
-  return c.json({ message: "User articles fetched successfully", data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  const limit = Math.min(
+    100,
+    Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10),
+  );
+  const { data, total } = await getArticlesByUser(
+    c.env.DB,
+    userId,
+    month,
+    status,
+    type,
+    page,
+    limit,
+  );
+  return c.json({
+    message: "User articles fetched successfully",
+    data,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
 });
 
 // update a specific user's role
@@ -78,7 +92,9 @@ usersRoute.patch("/:id/role", async (c) => {
   const body = await c.req.json<UpdateUserRoleBody>();
   if (
     !body.role ||
-    !ALLOWED_ROLES.includes(body.role as (typeof ALLOWED_ROLES)[number])
+    !ALLOWED_AUTH_ROLES.includes(
+      body.role as (typeof ALLOWED_AUTH_ROLES)[number],
+    )
   ) {
     return c.json({ message: "Invalid role" }, 400);
   }
@@ -95,10 +111,7 @@ usersRoute.patch("/:id/role", async (c) => {
     targetUser.auth_role === "super_admin" &&
     currentUser.auth_role !== "super_admin"
   ) {
-    return c.json(
-      { message: "Cannot modify super admin users" },
-      403
-    );
+    return c.json({ message: "Cannot modify super admin users" }, 403);
   }
 
   await updateUserAuthRole(c.env.DB, id, body.role);
