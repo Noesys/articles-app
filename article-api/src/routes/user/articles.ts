@@ -27,8 +27,10 @@ function currentMonth(): string {
 function validateArticleSize(title: string, content: string): void {
   const MAX_TITLE_BYTES = 500;
   const MAX_CONTENT_BYTES = 50_000;
-  if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES) throw new AppError("Title too long", 400);
-  if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES) throw new AppError("Content too long", 400);
+  if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES)
+    throw new AppError("Title too long", 400);
+  if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES)
+    throw new AppError("Content too long", 400);
 }
 
 function articleToListItem(article: {
@@ -175,7 +177,7 @@ articleRoutes.get("/mine/:id", async (c) => {
   const currentFeedback = isPending
     ? ""
     : article.ai_feedback ||
-    (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
+      (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
 
   // parameter results for current version
   const paramRows: {
@@ -282,6 +284,8 @@ articleRoutes.post("/", async (c) => {
     );
   }
 
+  validateArticleSize(title, content);
+
   const now = new Date().toISOString();
   const month_year = now.slice(0, 7);
 
@@ -334,7 +338,6 @@ articleRoutes.post("/", async (c) => {
     articleId = requestedId;
 
     const nextVersion = existingArticle.version + 1;
-    validateArticleSize(title, content);
 
     // ❌ REMOVED: Synchronous evaluation (was blocking)
     // ✅ ADDED: Background evaluation via waitUntil
@@ -379,7 +382,6 @@ articleRoutes.post("/", async (c) => {
     });
 
     articleId = newId;
-    validateArticleSize(title, content);
 
     // ❌ REMOVED: Synchronous evaluation (was blocking 10-30s)
     // ✅ ADDED: Background evaluation via waitUntil

@@ -14,7 +14,7 @@ import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 
 const articlesRoute = new Hono<AppEnv>();
-// articlesRoute.use("*", requireRole("admin", "super_admin"));
+articlesRoute.use("*", requireRole("admin", "super_admin"));
 
 articlesRoute.get("/", async (c) => {
   const month = c.req.query("month");
