@@ -250,6 +250,13 @@ articleRoutes.post("/", async (c) => {
   const user = c.get("user");
   const db = c.env.DB;
 
+  const MAX_BODY_BYTES = 100 * 1024;
+
+  const contentLength = c.req.header("content-length");
+  if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
+    return c.json({ success: false, message: "Request body too large" }, 413);
+  }
+
   type CreateArticleBody = {
     id?: string;
     article_type_id?: string;
