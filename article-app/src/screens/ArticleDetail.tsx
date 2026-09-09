@@ -106,6 +106,8 @@ export default function ArticleDetail() {
     effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
 
+  const isFailed = displayStatus === "failed";
+
   // Poll every 2.5s while scoring; stops on terminal status/complete/timeout
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
   const POLLING_INTERVAL = 2500;
@@ -345,34 +347,48 @@ export default function ArticleDetail() {
             </p>
 
             <div className="flex items-center gap-3">
-              {displayScore === null ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
-                  <Loader2 size={16} className="animate-spin text-slate-400" />
-                  <span>Scoring...</span>
-                </div>
-              ) : (
-                <>
-                  <p className="text-3xl font-semibold text-slate-900">
-                    {hasScore ? formatAiScore(displayScore!) : "—"}
+              <div className="flex items-center gap-3">
+                {isFailed ? (
+                  <div className="py-2">
+                    <p className="font-medium text-red-600">
+                      Evaluation failed
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      We couldn't evaluate this article. Please rewrite the
+                      article and submit it again.
+                    </p>
+                  </div>
+                ) : displayScore === null ? (
+                  <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
+                    <Loader2
+                      size={16}
+                      className="animate-spin text-slate-400"
+                    />
+                    <span>Scoring...</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-3xl font-semibold text-slate-900">
+                      {hasScore ? formatAiScore(displayScore!) : "—"}
+                      <span className="text-base text-slate-400 font-normal">
+                        {" "}
+                        / 10
+                      </span>
+                    </p>
 
-                    <span className="text-base text-slate-400 font-normal">
-                      {" "}
-                      / 10
-                    </span>
-                  </p>
-
-                  {hasScore && (
-                    <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${getScoreBarColor(displayStatus)}`}
-                        style={{
-                          width: `${(Math.min(displayScore!, 10) / 10) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
+                    {hasScore && (
+                      <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${getScoreBarColor(displayStatus)}`}
+                          style={{
+                            width: `${(Math.min(displayScore!, 10) / 10) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -386,7 +402,12 @@ export default function ArticleDetail() {
               {displayFeedback && <CopyButton text={displayFeedback} />}
             </div>
 
-            {displayScore === null ? (
+            {isFailed ? (
+              <p className="text-sm text-red-600">
+                Evaluation failed. Please rewrite the article and submit it
+                again.
+              </p>
+            ) : displayScore === null ? (
               <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                 <Loader2 size={16} className="animate-spin text-slate-400" />
                 <span>Scoring...</span>

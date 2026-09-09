@@ -44,7 +44,6 @@ function getInitials(name: string) {
 
 export default function UserCard({
   user,
-  submissionStatus,
   onToggleActive,
   onRoleChange,
   onUserClick,
@@ -133,16 +132,20 @@ export default function UserCard({
 
         {/* Action */}
         <div className="flex flex-col gap-1.5 shrink-0">
-          {currentUser?.id !== user.id && (
-            <button
-              onClick={() => setModalOpen(true)}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors
-              ${isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
-            >
-              {isActive ? <UserX size={14} /> : <UserCheck size={14} />}
-              {isActive ? "Deactivate" : "Activate"}
-            </button>
-          )}
+          {currentUser?.id !== user.id &&
+            ((currentUser?.auth_role === "super_admin" &&
+              (user.auth_role === "admin" || user.auth_role === "user")) ||
+              (currentUser?.auth_role === "admin" &&
+                user.auth_role === "user")) && (
+              <button
+                onClick={() => setModalOpen(true)}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors
+      ${isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"}`}
+              >
+                {isActive ? <UserX size={14} /> : <UserCheck size={14} />}
+                {isActive ? "Deactivate" : "Activate"}
+              </button>
+            )}
 
           {/* promote/demote, hidden entirely for super_admin */}
           {user.auth_role === "user" && (
@@ -159,7 +162,7 @@ export default function UserCard({
             ((currentUser?.auth_role === "super_admin" &&
               (user.auth_role === "admin" || user.auth_role === "user")) ||
               (currentUser?.auth_role === "admin" &&
-                user.auth_role === "user")) && (
+                (user.auth_role === "admin" || user.auth_role === "user"))) && (
               <button
                 className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg"
                 onClick={() => onUserClick?.(user.id)}
@@ -167,7 +170,7 @@ export default function UserCard({
                 View user articles
               </button>
             )}
-            
+
           {user.auth_role === "admin" &&
             user.id !== currentUser?.id &&
             currentUser?.auth_role === "super_admin" && (

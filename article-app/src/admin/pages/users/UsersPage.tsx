@@ -35,7 +35,9 @@ const UsersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const monthParam = searchParams.get("month");
   const selectedMonthKey =
-    monthParam && /^\d{4}-\d{2}$/.test(monthParam) && dayjs(`${monthParam}-01`).isValid()
+    monthParam &&
+    /^\d{4}-\d{2}$/.test(monthParam) &&
+    dayjs(`${monthParam}-01`).isValid()
       ? monthParam
       : dayjs().format("YYYY-MM");
   const selectedMonth: Dayjs = dayjs(`${selectedMonthKey}-01`).startOf("month");
@@ -44,7 +46,11 @@ const UsersPage = () => {
   const navigate = useNavigate();
   const search = searchParams.get("q") || "";
   const showNotSubmitted = searchParams.get("status") === "not_submitted";
-  const setFilterParam = (name: string, value: string, defaultValue?: string) => {
+  const setFilterParam = (
+    name: string,
+    value: string,
+    defaultValue?: string,
+  ) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
@@ -62,9 +68,7 @@ const UsersPage = () => {
     setError(null);
 
     fetchUsers(
-      showNotSubmitted && selectedMonth
-        ? selectedMonthKey
-        : undefined,
+      showNotSubmitted && selectedMonth ? selectedMonthKey : undefined,
       showNotSubmitted ? "not_submitted" : undefined,
     )
       .then(setUsers)
@@ -78,10 +82,11 @@ const UsersPage = () => {
       body: JSON.stringify({ is_active: nextIsActive }),
     });
 
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === userId ? { ...u, is_active: nextIsActive ? 1 : 0 } : u,
-      ),
+    setUsers(
+      (prev) =>
+        nextIsActive
+          ? prev.map((u) => (u.id === userId ? { ...u, is_active: 1 } : u))
+          : prev.filter((u) => u.id !== userId), 
     );
   };
 
@@ -184,7 +189,9 @@ const UsersPage = () => {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() => setFilterParam("year", String(focusedYear - 1))}
+                  onClick={() =>
+                    setFilterParam("year", String(focusedYear - 1))
+                  }
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -194,7 +201,9 @@ const UsersPage = () => {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() => setFilterParam("year", String(focusedYear + 1))}
+                  onClick={() =>
+                    setFilterParam("year", String(focusedYear + 1))
+                  }
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -217,7 +226,9 @@ const UsersPage = () => {
                     <Button
                       key={i}
                       variant={isSelected ? "default" : "ghost"}
-                      onClick={() => setFilterParam("month", month.format("YYYY-MM"))}
+                      onClick={() =>
+                        setFilterParam("month", month.format("YYYY-MM"))
+                      }
                       className={`h-9 text-sm ${
                         isSelected
                           ? ""
