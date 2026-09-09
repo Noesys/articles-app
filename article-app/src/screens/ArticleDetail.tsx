@@ -189,7 +189,11 @@ export default function ArticleDetail() {
           "Article rewrite submitted! Scoring in progress...",
         );
       } catch {}
-      navigate("/");
+      navigate(
+        user?.auth_role === "admin" || user?.auth_role === "super_admin"
+          ? "/admin/my-article"
+          : "/",
+      );
     } catch (err) {
       console.error("Rewrite submission failed:", err);
       setSubmitError(err instanceof Error ? err.message : "Failed to submit rewrite");

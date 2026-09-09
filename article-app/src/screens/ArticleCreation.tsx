@@ -303,9 +303,16 @@ export default function ArticleCreation() {
       });
       try {
         sessionStorage.removeItem("toastError");
-        sessionStorage.setItem("toast", "Article submitted! Scoring in progress...");
+        sessionStorage.setItem(
+          "toast",
+          "Article submitted! Scoring in progress...",
+        );
       } catch {}
-      navigate("/");
+      navigate(
+        user?.auth_role === "admin" || user?.auth_role === "super_admin"
+          ? "/admin/my-article"
+          : "/",
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit article");
       setSubmitting(false);
