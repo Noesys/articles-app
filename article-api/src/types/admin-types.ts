@@ -191,8 +191,6 @@ export interface UpdateUserStatusBody {
   is_active: boolean;
 }
 
-export const ALLOWED_ROLES = ["user", "admin", "super_admin"] as const;
-
 // insights
 export interface DateRange {
   start: string; // 'YYYY-MM'
