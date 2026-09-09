@@ -1,6 +1,5 @@
 export type Bindings = {
   DB: D1Database;
-  JWT_SECRET: string;
   DEV_USER_MAIL?: string;
   ENVIRONMENT?: string;
   GENERATIVE_AI_API_KEY: string;
