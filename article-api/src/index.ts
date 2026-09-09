@@ -46,7 +46,8 @@ app.use("*", secureHeaders(), async (c, next) => {
   return corsMiddleware(c, next);
 });
 
-app.get("/", (c) => {
+// Health under /api so SPA assets can own "/"
+app.get("/api/health", (c) => {
   return c.json({
     success: true,
     message: "API is running",
@@ -86,6 +87,14 @@ app.route("/api/admin/article-types", parametersRoute);
 
 // summary
 app.route("/api/admin/insights", insightsRoute);
+
+// SPA / static assets (run_worker_first = true)
+app.all("*", async (c) => {
+  if (!c.env.ASSETS) {
+    return c.json({ success: false, message: "Assets binding missing" }, 500);
+  }
+  return c.env.ASSETS.fetch(c.req.raw);
+});
 
 app.onError((err, c) => {
   // Correlation id so we can match a support report / log line to this

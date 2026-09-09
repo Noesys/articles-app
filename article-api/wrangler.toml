@@ -2,34 +2,44 @@ name = "article-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-30"
 compatibility_flags = ["nodejs_compat"]
- 
+
 [[d1_databases]]
 binding = "DB"
-database_name = "noesys-dev"
-database_id = "83331df4-d437-4c67-92e4-313065a15762"
+database_name = "noesys-articles"
+database_id = "acc066a7-2084-4d5e-89b0-90c20c4ceb6c"
 migrations_dir = "src/migrations"
- 
+
 [ai]
 binding = "AI"
- 
+
+[assets]
+directory = "../article-app/dist"
+not_found_handling = "single-page-application"
+binding = "ASSETS"
+# Run Worker first so Access can attach ctx.access; SPA served via ASSETS binding
+run_worker_first = true
+
 [vars]
 ENVIRONMENT = "production"
-AI_PROVIDER = "workers-ai"
-AI_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8-fast"
-ALLOWED_EMAIL_DOMAIN="noesyssoftware.com"
- 
+AI_PROVIDER = "google"
+AI_MODEL = "gemini-3-flash-preview"
+ALLOWED_EMAIL_DOMAIN = "noesyssoftware.com"
+# Hostname Access app (article-submission) — JWT identity fallback for Static Assets
+CF_ACCESS_TEAM_DOMAIN = "https://noesys.cloudflareaccess.com"
+CF_ACCESS_AUD = "c0e82ee6d75b083b709c6a3b76705b2bdec24d75efdf7dc53676fe8e8a7e0d68"
+
 [env.development]
 routes = [
   { pattern = "api.localhost/*", zone_name = "localhost" }
 ]
- 
+
 [env.development.vars]
 ENVIRONMENT = "development"
 ALLOWED_EMAIL_DOMAIN="noesyssoftware.com"
-DEV_USER_MAIL="vikas@noesyssoftware.com"
- 
+DEV_USER_MAIL="naresh@noesyssoftware.com"
+
 [access.dev]
 aud = "article-app"
- 
+
 [access.dev.identity]
-email = "vikas@noesyssoftware.com"
+email = "naresh@noesyssoftware.com"

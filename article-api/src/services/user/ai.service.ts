@@ -14,10 +14,16 @@ function getLanguageModel(env: Bindings) {
     }
     case "google":
     default: {
+      if (!env.GENERATIVE_AI_API_KEY) {
+        throw new Error("GENERATIVE_AI_API_KEY is not configured");
+      }
+      // Accept AI Gateway style "google/gemini-3-flash" or native "gemini-3-flash-preview"
+      const raw = env.AI_MODEL ?? "gemini-3-flash-preview";
+      const modelId = raw.includes("/") ? raw.split("/").pop()! : raw;
       const google = createGoogleGenerativeAI({
         apiKey: env.GENERATIVE_AI_API_KEY,
       });
-      return google(env.AI_MODEL ?? "gemini-3.5-flash-lite");
+      return google(modelId);
     }
   }
 }

@@ -1,5 +1,6 @@
 // middleware/accessAuth.ts
 import type { Context, Next } from "hono";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { AppEnv, ResolveResult } from "../types/shared-types";
 import { findUserByEmail, createUser } from "../services/user/users";
 
@@ -7,33 +8,74 @@ function nameFromEmail(email: string): string {
   return email.split("@")[0] || "User";
 }
 
+/**
+ * Resolve email from Cloudflare Access.
+ * Prefer ctx.access (Worker Access without static-asset router gap).
+ * Fall back to Cf-Access-Jwt-Assertion — required when Static Assets sit
+ * behind Cloudflare's internal router, which does not forward ctx.access.
+ */
+async function resolveAccessEmail(
+  c: Context<AppEnv>,
+): Promise<string | null> {
+  if (c.executionCtx.access) {
+    const identity = await c.executionCtx.access.getIdentity();
+    if (identity?.email) {
+      return identity.email.trim().toLowerCase();
+    }
+  }
+
+  const assertion = c.req.header("Cf-Access-Jwt-Assertion");
+  const teamDomain = (c.env.CF_ACCESS_TEAM_DOMAIN ?? "").replace(/\/$/, "");
+  const aud = c.env.CF_ACCESS_AUD;
+
+  if (assertion && teamDomain && aud) {
+    try {
+      const JWKS = createRemoteJWKSet(
+        new URL(`${teamDomain}/cdn-cgi/access/certs`),
+      );
+      const { payload } = await jwtVerify(assertion, JWKS, {
+        issuer: teamDomain,
+        audience: aud,
+      });
+      if (typeof payload.email === "string" && payload.email) {
+        return payload.email.trim().toLowerCase();
+      }
+    } catch (err) {
+      console.error("[accessAuth] JWT verification failed:", err);
+      // fall through to header / other paths
+    }
+  }
+
+  // Cloudflare strips client-sent Cf-Access-* headers and sets them at the edge.
+  // Safe to use when an Access JWT assertion is also present on the request.
+  const headerEmail = c.req.header("Cf-Access-Authenticated-User-Email");
+  if (headerEmail && assertion) {
+    return headerEmail.trim().toLowerCase();
+  }
+
+  if (c.env.ENVIRONMENT === "development" && c.env.DEV_USER_MAIL) {
+    return c.env.DEV_USER_MAIL.trim().toLowerCase();
+  }
+
+  return null;
+}
+
 export async function resolveAccessUser(
   c: Context<AppEnv>,
 ): Promise<ResolveResult> {
+  const hasAccessContext = Boolean(c.executionCtx.access);
+  const hasAssertion = Boolean(c.req.header("Cf-Access-Jwt-Assertion"));
 
-  if (!c.executionCtx.access) {
-    return { ok: false, status: 403, message: "Access required" };
+  if (!hasAccessContext && !hasAssertion) {
+    // Local wrangler access.dev injects ctx.access; without it and without JWT → deny
+    if (c.env.ENVIRONMENT === "development" && c.env.DEV_USER_MAIL) {
+      // allow resolveAccessEmail to use DEV_USER_MAIL below
+    } else {
+      return { ok: false, status: 403, message: "Access required" };
+    }
   }
 
-  const identity = await c.executionCtx.access.getIdentity();
-
-  if (!identity?.email) {
-    return {
-      ok: false,
-      status: 401,
-      message: "Unauthorized: No Access identity",
-    };
-  }
-
-  let email = identity.email.trim().toLowerCase();
-
-  // below commented code was testing purpose
-
-  // let email = undefined;
-
-  if (!email && c.env.ENVIRONMENT === "development" && c.env.DEV_USER_MAIL) {
-    email = c.env.DEV_USER_MAIL.trim().toLowerCase();
-  }
+  const email = await resolveAccessEmail(c);
 
   if (!email) {
     return {

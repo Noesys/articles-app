@@ -11,7 +11,8 @@
   "scripts": {
     "dev": "npm run dev --workspaces",
     "build": "npm run build --workspace=article-app",
-    "lint": "npm run lint --workspaces"
+    "lint": "npm run lint --workspaces",
+    "deploy": "npm run build --workspace=article-app && npm run deploy --workspace=article-api"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
@@ -45,5 +46,8 @@
     "tailwindcss": "^4.3.3",
     "turndown": "^7.2.4",
     "workers-ai-provider": "^4.0.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.63.1"
   }
 }
