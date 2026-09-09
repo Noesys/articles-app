@@ -14,8 +14,8 @@ binding = "AI"
  
 [vars]
 ENVIRONMENT = "production"
-AI_PROVIDER = "google"
-AI_MODEL = "gemini-3.6-flash"
+AI_PROVIDER = "workers-ai"
+AI_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8-fast"
 ALLOWED_EMAIL_DOMAIN="noesyssoftware.com"
  
 [env.development]
