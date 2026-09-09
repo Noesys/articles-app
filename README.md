@@ -8,140 +8,148 @@ Monorepo for the article platform with user and admin applications.
 - workers/ - Cloudflare Workers
 - packages/ - Shared packages
 - infra/ - Infrastructure and migrations
-  
+
 # Noesys Article Platform - User API
 
-## DBML 
+## DBML
 
 ```dbml
-
 Table users {
-id text [pk]
-email text [unique, not null]
-name text [not null]
-auth_role text [not null, note: 'super_admin | admin | user']
-job_role text [not null]
-created_at text [not null]
-is_active int [not null, default: 1, note: '1=active, 0=inactive']
-
-entra_id text [unique]
+  id text [pk]
+  email text [unique, not null]
+  name text [not null]
+  auth_role text [not null, note: 'super_admin | admin | user']
+  job_role text [not null]
+  created_at text [not null]
+  created_by text [ref: > users.id]
+  is_active int [not null, default: 1, note: '1=active, 0=inactive']
 }
 
 Table article_types {
-id text [pk]
-name text [unique, not null, note: 'e.g. Marketing, Software, HR']
-description text
-is_active int [not null, default: 1, note: '1=active, 0=inactive']
-
-pass_threshold real [not null, note: 'article passes if ai_score >= this']
-score_prompt text [not null, note: 'AI instruction for producing the main score']
-score_min real [not null, default: 0]
-score_max real [not null, default: 10]
-created_by text [not null, ref: > users.id]
-created_at text [not null]
-updated_at text [not null]
+  id text [pk]
+  name text [unique, not null, note: 'e.g. Marketing, Software, HR']
+  description text
+  is_active int [not null, default: 1, note: '1=active, 0=inactive']
+  pass_threshold real [not null, default: 5.0, note: 'article passes if ai_score >= this']
+  score_prompt text [not null, default: '', note: 'AI instruction for producing the main score']
+  score_min real [not null, default: 0]
+  score_max real [not null, default: 10]
+  created_by text [not null, ref: > users.id]
+  created_at text [not null]
+  updated_at text [not null]
 }
 
 Table parameters {
-id text [pk]
-article_type_id text [not null, ref: > article_types.id]
-name text [not null, note: 'e.g. Grammar, Theme']
-prompt text [not null, note: 'AI instruction for evaluating this specific parameter']
-scope_type text [not null, note: 'numeric | option']
-min_value real [note: 'required when scope_type = numeric']
-max_value real [note: 'required when scope_type = numeric']
+  id text [pk]
+  article_type_id text [not null, ref: > article_types.id]
+  name text [not null, note: 'e.g. Grammar, Theme']
+  prompt text [not null, note: 'AI instruction for evaluating this specific parameter']
+  scope_type text [not null, note: 'numeric | option']
+  min_value real [note: 'required when scope_type = numeric']
+  max_value real [note: 'required when scope_type = numeric']
+  is_active int [not null, default: 1]
+  sort_order int [not null, default: 0]
+  created_by text [not null, ref: > users.id]
+  created_at text [not null]
+  updated_at text [not null]
 
-is_active int [not null, default: 1]
-
-sort_order int [not null, default: 0]
-
-created_by text [not null, ref: > users.id]
-created_at text [not null]
-updated_at text [not null]
-
-indexes {
-(article_type_id, name) [unique]
-}
+  indexes {
+    (article_type_id, name) [unique]
+  }
 }
 
 Table parameter_options {
-id text [pk]
-parameter_id text [not null, ref: > parameters.id]
-label text [not null, note: 'e.g. "High", "Low", "Recreate"']
-sort_order int [not null, default: 0]
-is_active int [not null, default: 1]
+  id text [pk]
+  parameter_id text [not null, ref: > parameters.id]
+  label text [not null, note: 'e.g. "High", "Low", "Recreate"']
+  is_active int [not null, default: 1]
+  sort_order int [not null, default: 0]
+  created_at text [not null]
 
-Indexes {
-(parameter_id, label) [unique]
-}
+  indexes {
+    (parameter_id, label) [unique]
+  }
 }
 
 Table articles {
-id text [pk]
-user_id text [not null, ref: > users.id]
-article_type_id text [not null, ref: > article_types.id]
-title text [not null]
-content text [not null]
-status text [not null, note: 'approved | rewrite_required | pending']
-
-pass_threshold real
-
-ai_feedback text [note: 'overall AI feedback, separate from per-parameter feedback if any']
-ai_score real [note: "the article's score against article_types.score_prompt / score_min / score_max. null until scored. sole driver of status"]
-version int [not null, default: 1, note: 'increments on every rewrite']
-submitted_at text [not null]
-scored_at text
-month_year text [not null, note: 'e.g. 2026-08']
-retry_count int [not null, default: 0]
-
+  id text [pk]
+  user_id text [not null, ref: > users.id]
+  article_type_id text [not null, ref: > article_types.id]
+  title text [not null]
+  content text [not null]
+  status text [not null, note: 'approved | rewrite_required | pending']
+  pass_threshold real
+  ai_feedback text [note: 'overall AI feedback, separate from per-parameter feedback if any']
+  ai_score real [note: "the article's score against article_types.score_prompt / score_min / score_max. null until scored. sole driver of status"]
+  version int [not null, default: 1, note: 'increments on every rewrite']
+  submitted_at text [not null]
+  scored_at text
+  month_year text [not null, note: 'e.g. 2026-08']
+  retry_count int [not null, default: 0]
+  created_at text
+  updated_at text
 }
 
 Table article_parameter_results {
-id text [pk]
-article_id text [not null, ref: > articles.id]
-parameter_id text [not null, ref: > parameters.id]
-value text [not null, note: 'numeric value or option label']
+  id text [pk]
+  article_id text [not null, ref: > articles.id]
+  parameter_id text [not null, ref: > parameters.id]
+  value text [not null, note: 'numeric value or option label']
+  option_id text [ref: > parameter_options.id, note: 'set when parameter.scope_type = option']
+  numeric_value real
+  version int [not null, note: 'matches articles.version at time of scoring']
+  scored_at text [not null]
 
-option_id text [ref: > parameter_options.id, note: 'set when parameter.scope_type = option']
-numeric_value real
-
-version int [not null, note: 'matches articles.version at time of scoring']
-scored_at text [not null]
-
-Indexes {
-(article_id, parameter_id, version) [unique]
-(parameter_id, value)
-}
+  indexes {
+    (article_id, parameter_id, version) [unique]
+    (parameter_id, value)
+  }
 }
 
 Table article_history {
-id text [pk]
-article_id text [not null, ref: > articles.id]
-article_type_id text [not null, ref: > article_types.id]
-title text [not null]
-content text [not null]
-ai_feedback text
-ai_score real
-status text
-version int [not null, note: 'version number at the time this snapshot was taken']
-submitted_at text [not null]
-scored_at text
-snapshotted_at text [not null, note: 'when this row was written to history']
+  id text [pk]
+  article_id text [not null, ref: > articles.id]
+  article_type_id text [not null, ref: > article_types.id]
+  title text [not null]
+  content text [not null]
+  ai_feedback text
+  ai_score real
+  status text
+  pass_threshold real
+  version int [not null, note: 'version number at the time this snapshot was taken']
+  submitted_at text [not null]
+  scored_at text
+  snapshotted_at text [not null, note: 'when this row was written to history']
 }
 
 Table otp_codes {
-id text [pk]
-email text [not null]
-code text [not null]
-purpose text [not null, default: 'login', note: 'e.g. login']
-expires_at text [not null]
-created_at text [not null]
-used_at text
+  id text [pk]
+  email text [not null]
+  code text [not null]
+  purpose text [not null, default: 'login', note: 'e.g. login']
+  expires_at text [not null]
+  created_at text [not null]
+  used_at text
 
-Indexes {
-email
-(email, code)
+  indexes {
+    email
+    (email, code)
+  }
 }
+
+Table prompts {
+  id text [pk]
+  article_type_id text [unique, not null, ref: > article_types.id]
+  content text [not null]
+  created_by text [not null, ref: > users.id]
+  created_at text [not null]
+  updated_at text [not null]
+}
+
+Table system_settings {
+  key text [pk]
+  value text [not null]
+  updated_at text
 }
 ```
 
