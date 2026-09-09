@@ -2,33 +2,34 @@ name = "article-api"
 main = "src/index.ts"
 compatibility_date = "2024-12-30"
 compatibility_flags = ["nodejs_compat"]
-
+ 
 [[d1_databases]]
 binding = "DB"
 database_name = "noesys-dev"
 database_id = "83331df4-d437-4c67-92e4-313065a15762"
 migrations_dir = "src/migrations"
-
+ 
 [ai]
 binding = "AI"
-
+ 
 [vars]
 ENVIRONMENT = "production"
-AI_PROVIDER = "workers-ai"
-AI_MODEL = "@cf/meta/llama-3.1-8b-instruct-fp8-fast"
-
+AI_PROVIDER = "google"
+AI_MODEL = "gemini-3.6-flash"
+ALLOWED_EMAIL_DOMAIN="noesyssoftware.com"
+ 
 [env.development]
 routes = [
   { pattern = "api.localhost/*", zone_name = "localhost" }
 ]
-
+ 
 [env.development.vars]
 ENVIRONMENT = "development"
 ALLOWED_EMAIL_DOMAIN="noesyssoftware.com"
 DEV_USER_MAIL="vikas@noesyssoftware.com"
-
+ 
 [access.dev]
 aud = "article-app"
-
+ 
 [access.dev.identity]
 email = "vikas@noesyssoftware.com"

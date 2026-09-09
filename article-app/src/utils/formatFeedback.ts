@@ -4,9 +4,23 @@ function stripOverallScore(feedback: string): string {
     .filter((l) => !/^\s*Overall\s*Score\s*:/i.test(l.trim()))
     .join("\n");
 }
+function normalizeInlineFeedback(feedback: string): string {
+  // AI often returns single-paragraph: "Strengths: 1. ... 2. ... Weaknesses: 1. ..."
+  // Convert to line-delimited form so header/list detection works.
+  let s = feedback.replace(/\r\n/g, "\n").trim();
+  // Ensure Strengths:/Weaknesses:/Suggestions: etc start on new line
+  s = s.replace(/(?<!\n)\s*(Strengths|Weaknesses|Suggestions|Improvements|Areas for Improvement)\s*:\s*/gi, "\n$1:\n");
+  // Put each numbered item on its own line
+  s = s.replace(/\s+(\d+)\.\s+/g, "\n$1. ");
+  // Collapse 3+ newlines
+  s = s.replace(/\n{3,}/g, "\n\n");
+  return s.trim();
+}
+
 export function formatFeedbackAsMarkdown(feedback: string): string {
   if (!feedback) return "";
   feedback = stripOverallScore(feedback);
+  feedback = normalizeInlineFeedback(feedback);
 
   // Already markdown-formatted? leave as-is.
   if (/^#{2,3}\s/m.test(feedback) || /^\s*-\s/m.test(feedback)) {
