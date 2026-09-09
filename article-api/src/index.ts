@@ -18,7 +18,7 @@ import articleTypesRoute from "./routes/admin/articleTypes";
 import parametersRoute from "./routes/admin/parameters";
 import insightsRoute from "./routes/admin/insights";
 
-import { AppError } from "../src/utils/errors";
+import { AppError } from "./utils/errors";
 import { accessAuth } from "./middleware/accessAuth";
 
 import { secureHeaders } from "hono/secure-headers";
