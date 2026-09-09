@@ -27,16 +27,27 @@ function parseUpdateUserBody(
 
   const raw = body as Record<string, unknown>;
 
-  if (!raw.name || !raw.job_role || raw.is_active === undefined) {
+  if (
+    typeof raw.name !== "string" ||
+    typeof raw.job_role !== "string" ||
+    typeof raw.is_active !== "boolean"
+  ) {
+    return { success: false };
+  }
+
+  const name = raw.name.trim();
+  const job_role = raw.job_role.trim();
+
+  if (!name || !job_role) {
     return { success: false };
   }
 
   return {
     success: true,
     data: {
-      name: raw.name as string,
-      job_role: raw.job_role as string,
-      is_active: raw.is_active as boolean,
+      name,
+      job_role,
+      is_active: raw.is_active,
     },
   };
 }
@@ -150,7 +161,7 @@ usersRoute.patch("/:id", async (c) => {
 
   const parsed = parseUpdateUserBody(body);
   if (!parsed.success) {
-    return c.json({ message: "Invalid role" }, 400); // kept original (misleading) message
+    return c.json({ message: "Invalid user data" }, 400);
   }
 
   const { name, job_role, is_active } = parsed.data;
