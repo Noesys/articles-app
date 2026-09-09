@@ -272,8 +272,7 @@ articleRoutes.post("/", async (c) => {
   }
 
   let { id: requestedId, article_type_id, title, content } = body;
-  if (title) title = sanitizeHtmlServer(title);
-  if (content) content = sanitizeHtmlServer(content);
+
   if (!article_type_id || !title || !content) {
     return c.json(
       {
@@ -285,6 +284,9 @@ articleRoutes.post("/", async (c) => {
   }
 
   validateArticleSize(title, content);
+
+  title = sanitizeHtmlServer(title);
+  content = sanitizeHtmlServer(content);
 
   const now = new Date().toISOString();
   const month_year = now.slice(0, 7);
