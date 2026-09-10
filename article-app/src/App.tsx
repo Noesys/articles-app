@@ -1,28 +1,37 @@
 import { Loader2 } from "lucide-react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
-import MyArticles from "./screens/MyArticles";
-import ArticleCreation from "./screens/ArticleCreation";
-import ArticleDetail from "./screens/ArticleDetail";
-
-import type { ReactNode } from "react";
 import { RoleBasedRoute } from "./components/RoleBasedRoute";
 import { UnauthorizedPage } from "./components/UnauthorizedPage";
-import AllArticles from "./admin/pages/articles/AllArticles";
-import UsersPage from "./admin/pages/users/UsersPage";
-import ArticleTypesPage from "./admin/pages/articleTypes/ArticleTypesPage";
-
 import AdminHeader from "./admin/components/AdminHeader";
-import AdminArticleDetail from "./admin/components/articles/AdminArticleDetail";
-import ArticleTypesForm from "./admin/components/articleTypes/ArticleTypesForm";
-import InsightsPage from "./admin/pages/insights/InsightsPage";
+
+const MyArticles = lazy(() => import("./screens/MyArticles"));
+const ArticleCreation = lazy(() => import("./screens/ArticleCreation"));
+const ArticleDetail = lazy(() => import("./screens/ArticleDetail"));
+const AllArticles = lazy(() => import("./admin/pages/articles/AllArticles"));
+const UsersPage = lazy(() => import("./admin/pages/users/UsersPage"));
+const ArticleTypesPage = lazy(() => import("./admin/pages/articleTypes/ArticleTypesPage"));
+const AdminArticleDetail = lazy(() => import("./admin/components/articles/AdminArticleDetail"));
+const ArticleTypesForm = lazy(() => import("./admin/components/articleTypes/ArticleTypesForm"));
+const InsightsPage = lazy(() => import("./admin/pages/insights/InsightsPage"));
+
+function PageFallback() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center bg-slate-50">
+      <Loader2 size={28} className="animate-spin text-slate-400" />
+    </div>
+  );
+}
 
 function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col lg:flex-row">
       <div className="flex-1 min-w-0 flex flex-col">
         <AdminHeader />
-        <div className="flex-1 min-w-0">{children}</div>
+        <div className="flex-1 min-w-0">
+          <Suspense fallback={<PageFallback />}>{children}</Suspense>
+        </div>
       </div>
     </div>
   );
@@ -37,7 +46,7 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
       </div>
     );
   if (!user) return <UnauthorizedPage />;
-  return <>{children}</>;
+  return <Suspense fallback={<PageFallback />}>{children}</Suspense>;
 }
 
 function RootRouteRedirect() {
@@ -51,12 +60,15 @@ function RootRouteRedirect() {
   if (!user) return <UnauthorizedPage />;
   if (user.auth_role === "admin" || user.auth_role === "super_admin")
     return <Navigate to="/admin/articles" replace />;
-  return <MyArticles />;
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <MyArticles />
+    </Suspense>
+  );
 }
 
 export default function App() {
   return (
-    // <-- No BrowserRouter here, just Routes
     <Routes>
       <Route path="/" element={<RootRouteRedirect />} />
 
@@ -85,7 +97,6 @@ export default function App() {
         }
       />
 
-      {/* Admin Routes */}
       <Route
         path="/admin/my-article"
         element={

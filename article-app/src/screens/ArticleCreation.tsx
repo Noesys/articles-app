@@ -1,5 +1,5 @@
 import Header from "../components/Header";
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Select,
@@ -13,8 +13,17 @@ import { api } from "../http-client";
 import TurndownService from "turndown";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminHeader from "@/admin/components/AdminHeader";
-import TiptapEditor from "@/components/editor/TiptapEditor";
-import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
+
+const TiptapEditor = lazy(() => import("@/components/editor/TiptapEditor"));
+const ArticleViewer = lazy(() => import("@/components/shadcnEditor/ArticleViewer"));
+
+function EditorFallback() {
+  return (
+    <div className="min-h-[240px] flex items-center justify-center rounded-lg border border-slate-200 bg-white">
+      <Loader2 size={22} className="animate-spin text-slate-400" />
+    </div>
+  );
+}
 
 const turndown = new TurndownService({
   headingStyle: "atx",
@@ -394,14 +403,15 @@ export default function ArticleCreation() {
                   </button>
                 </div>
 
-                {editorView === "editor" && (
-                  <TiptapEditor
-                    value={values.content}
-                    onChange={(content) => setValues({ ...values, content })}
-                  />
-                )}
-
-                {editorView === "preview" && <ArticleViewer content={values.content} />}
+                <Suspense fallback={<EditorFallback />}>
+                  {editorView === "editor" && (
+                    <TiptapEditor
+                      value={values.content}
+                      onChange={(content) => setValues({ ...values, content })}
+                    />
+                  )}
+                  {editorView === "preview" && <ArticleViewer content={values.content} />}
+                </Suspense>
               </div>
             </div>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 import { ChevronLeft, Edit3, X, Check, Loader2, ChevronDown, ChevronUp } from "lucide-react";
@@ -8,8 +8,6 @@ import { api } from "../http-client";
 import "react-resizable/css/styles.css";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminHeader from "@/admin/components/AdminHeader";
-import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
-import TiptapEditor from "@/components/editor/TiptapEditor";
 import ParameterResultsBox from "@/admin/components/articles/ParameterResultsBox";
 import ScoringHistoryTable from "@/admin/components/articles/ScoringHistoryTable";
 import FeedbackBlock from "@/admin/components/articles/FeedbackBlock";
@@ -17,6 +15,17 @@ import CopyButton from "@/admin/utils/CopyButton";
 import { ArticleDetailResponse } from "@/utils/types";
 import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
 import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
+
+const TiptapEditor = lazy(() => import("@/components/editor/TiptapEditor"));
+const ArticleViewer = lazy(() => import("@/components/shadcnEditor/ArticleViewer"));
+
+function EditorFallback() {
+  return (
+    <div className="min-h-[200px] flex items-center justify-center rounded-lg border border-slate-200 bg-white">
+      <Loader2 size={22} className="animate-spin text-slate-400" />
+    </div>
+  );
+}
 
 function formatAiScore(s: number) {
   return Number.isInteger(s) ? String(s) : s.toFixed(1);
@@ -437,14 +446,18 @@ export default function ArticleDetail() {
                     </div>
 
                     <div className="mx-5">
-                      {editorView === "editor" && (
-                        <TiptapEditor value={content} onChange={setContent} />
-                      )}
+                      <Suspense fallback={<EditorFallback />}>
+                        {editorView === "editor" && (
+                          <TiptapEditor value={content} onChange={setContent} />
+                        )}
+                        {editorView === "preview" && <ArticleViewer content={content} />}
+                      </Suspense>
                     </div>
-                    {editorView === "preview" && <ArticleViewer content={content} />}
                   </div>
                 ) : (
-                  <ArticleViewer content={content} />
+                  <Suspense fallback={<EditorFallback />}>
+                    <ArticleViewer content={content} />
+                  </Suspense>
                 )}
 
                 {submitError && <p className="mt-3 text-sm text-red-600">{submitError}</p>}
