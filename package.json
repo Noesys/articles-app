@@ -50,10 +50,12 @@
     "@types/dompurify": "^3.0.5",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/turndown": "^5.0.6",
+    "esbuild": "^0.28.2",
     "oxfmt": "^0.67.0",
     "oxlint": "^1.82.0"
   },
   "optionalDependencies": {
+    "@esbuild/darwin-arm64": "^0.28.2",
     "@rolldown/binding-darwin-arm64": "^1.2.8",
     "@rollup/rollup-darwin-arm64": "^4.63.1"
   },

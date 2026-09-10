@@ -1,13 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
-import UserCard from "@/admin/components/users/UserCard";
 import { Search } from "lucide-react";
-import { AutoComplete } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import dayjs, { type Dayjs } from "dayjs";
-
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+
+import UsersTable from "@/admin/components/users/UsersTable";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import {
+  Autocomplete,
+  AutocompleteContent,
+  AutocompleteEmpty,
+  AutocompleteInput,
+  AutocompleteItem,
+  AutocompleteList,
+} from "@/components/reui/autocomplete";
 import { User } from "@/admin/utils/types";
 import { api } from "@/http-client";
 
@@ -20,6 +27,12 @@ async function fetchUsers(month?: string, submissionStatus?: "not_submitted"): P
   const qs = params.toString();
   return api<User[]>(`/admin/users${qs ? `?${qs}` : ""}`);
 }
+
+const ROLE_ORDER = {
+  super_admin: 0,
+  admin: 1,
+  user: 2,
+} as const;
 
 const UsersPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -85,59 +98,59 @@ const UsersPage = () => {
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, auth_role: nextRole } : u)));
   };
 
-  const ROLE_ORDER = {
-    super_admin: 0,
-    admin: 1,
-    user: 2,
-  };
-
   const filteredUsers = useMemo(() => {
     return users
       .filter((u) => u.name.toLowerCase().includes(search.trim().toLowerCase()))
       .sort((a, b) => {
         const roleDiff = ROLE_ORDER[a.auth_role] - ROLE_ORDER[b.auth_role];
-
         if (roleDiff !== 0) return roleDiff;
-
         return a.name.localeCompare(b.name);
       });
   }, [users, search]);
+
+  const searchItems = useMemo(
+    () =>
+      users.map((u) => ({
+        id: u.id,
+        value: u.name,
+      })),
+    [users],
+  );
 
   return (
     <div className="w-full px-4 md:px-8 py-5">
       <h1 className="text-3xl font-semibold">Users List</h1>
       <div className="flex gap-3 my-6 items-center">
         <div className="flex-1 relative">
-          <AutoComplete
+          <Autocomplete
+            items={searchItems}
             value={search}
-            onChange={(value) => setFilterParam("q", value)}
-            options={
-              search.trim()
-                ? filteredUsers.map((u) => ({
-                    value: u.name,
-                    label: u.name,
-                    key: u.id,
-                  }))
-                : []
-            }
-            onSelect={(value) => setFilterParam("q", value)}
-            style={{ width: "100%" }}
+            onValueChange={(value) => setFilterParam("q", value ?? "")}
+            itemToStringValue={(item) => (typeof item === "string" ? item : item.value)}
           >
-            <div className="flex items-center gap-2 mb-4 w-full">
-              <div className="relative flex-1">
-                <Search
-                  size={15}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-
-                <input
-                  type="text"
-                  placeholder="Search title..."
-                  className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-9"
-                />
-              </div>
+            <div className="relative">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10 pointer-events-none"
+              />
+              <AutocompleteInput
+                placeholder="Search users..."
+                size="lg"
+                className="pl-9 bg-white"
+                showClear
+              />
             </div>
-          </AutoComplete>
+            <AutocompleteContent>
+              <AutocompleteEmpty>No users found.</AutocompleteEmpty>
+              <AutocompleteList>
+                {(item) => (
+                  <AutocompleteItem key={item.id} value={item}>
+                    {item.value}
+                  </AutocompleteItem>
+                )}
+              </AutocompleteList>
+            </AutocompleteContent>
+          </Autocomplete>
         </div>
         <button
           onClick={handleToggleNotSubmitted}
@@ -189,9 +202,7 @@ const UsersPage = () => {
               <div className="grid grid-cols-3 gap-2">
                 {Array.from({ length: 12 }).map((_, i) => {
                   const month = dayjs().year(focusedYear).month(i).startOf("month");
-
                   const isSelected = selectedMonth.format("YYYY-MM") === month.format("YYYY-MM");
-
                   const isCurrent = dayjs().format("YYYY-MM") === month.format("YYYY-MM");
 
                   return (
@@ -199,7 +210,7 @@ const UsersPage = () => {
                       key={i}
                       variant={isSelected ? "default" : "ghost"}
                       onClick={() => setFilterParam("month", month.format("YYYY-MM"))}
-                      className={`h-9 text-sm ${
+                      className={`h-9 text-sm relative ${
                         isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"
                       }`}
                     >
@@ -216,31 +227,16 @@ const UsersPage = () => {
         )}
       </div>
 
-      {loading && <p className="text-sm text-slate-400">Loading users...</p>}
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
 
-      {/* <div className="flex items-center justify-center">
-        <div className="grid lg:grid-cols-3 grid-cols-1 gap-2">
-          {filteredUsers.map((m) => (
-            <UserCard key={m.id} user={m} />
-          ))}
-        </div>
-      </div> */}
-
-      {!loading && !error && (
-        <div className="w-full">
-          <div className="grid lg:grid-cols-3 grid-cols-1 gap-3 w-full">
-            {filteredUsers.map((u) => (
-              <UserCard
-                key={u.id}
-                user={u}
-                onToggleActive={handleToggleActive}
-                onUserClick={(id) => navigate(`/admin/${id}/articles`)}
-                onRoleChange={handleRoleChange}
-              />
-            ))}
-          </div>
-        </div>
+      {!error && (
+        <UsersTable
+          users={filteredUsers}
+          loading={loading}
+          onToggleActive={handleToggleActive}
+          onUserClick={(id) => navigate(`/admin/${id}/articles`)}
+          onRoleChange={handleRoleChange}
+        />
       )}
     </div>
   );
