@@ -43,8 +43,10 @@ export async function getArticles(
       a.version,
       a.submitted_at,
 
-      u.id AS user_id,
-      u.name AS author_name,
+      COALESCE(u.id, 'emp_' || a.emp_id) AS user_id,
+      COALESCE(u.name, a.employee_email) AS author_name,
+      COALESCE(u.email, a.employee_email) AS author_email,
+      u.job_role AS job_role,
 
       at.id AS article_type_id,
       at.name AS article_type_name,
@@ -63,7 +65,7 @@ export async function getArticles(
 
     FROM articles a
 
-    JOIN users u
+    LEFT JOIN users u
       ON u.id = a.user_id
 
     JOIN article_types at
@@ -81,12 +83,15 @@ export async function getArticles(
     GROUP BY
       a.id,
       u.id,
-      at.id
+      at.id,
+      a.employee_email,
+      a.emp_id,
+      u.job_role
 
     ORDER BY a.submitted_at DESC
   `;
 
-  const countSql = `SELECT COUNT(DISTINCT a.id) as total FROM articles a JOIN users u ON u.id=a.user_id JOIN article_types at ON at.id=a.article_type_id ${whereClause}`;
+  const countSql = `SELECT COUNT(DISTINCT a.id) as total FROM articles a JOIN article_types at ON at.id=a.article_type_id ${whereClause}`;
   const totalRow = await db.prepare(countSql).bind(...params).first<{ total: number }>();
   const total = totalRow?.total ?? 0;
   const offset = (page - 1) * limit;
@@ -129,12 +134,12 @@ export async function getArticleById(
       SELECT
   a.*,
   at.name AS article_type_name,
-  u.name AS author_name,
-  u.email AS author_email,
+  COALESCE(u.name, a.employee_email) AS author_name,
+  COALESCE(u.email, a.employee_email) AS author_email,
   u.job_role
 FROM articles a
-INNER JOIN users u
-  ON a.user_id = u.id
+LEFT JOIN users u
+  ON u.id = a.user_id
 INNER JOIN article_types at
   ON at.id = a.article_type_id
 WHERE a.id = ?
