@@ -7,18 +7,19 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+  Contiq design tokens (Phase A)
+  - Primary: indigo globally
+  - Radius: sm-first (--radius = --radius-sm); dialogs may use rounded-md
+  - Borders: soft slate #e2e8f0 — never black/currentColor on DataGrid
+  - Motion: component-level only; no route fade
+  See docs/contiq-ui-modernization-plan.md
+*/
+
 html,
 body,
 #root {
   height: 100%;
-}
-
-body {
-  margin: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer base {
@@ -28,38 +29,71 @@ body {
   }
 
   :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    /* Surfaces */
+    --background: #ffffff;
+    --foreground: #0f172a; /* slate-900 */
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+
+    /* Contiq indigo primary (not near-black) */
+    --primary: #4f46e5; /* indigo-600 */
+    --primary-foreground: #ffffff;
+
+    --secondary: #f8fafc; /* slate-50 */
+    --secondary-foreground: #0f172a;
+    --muted: #f8fafc;
+    --muted-foreground: #64748b; /* slate-500 */
+    --accent: #eef2ff; /* indigo-50 */
+    --accent-foreground: #3730a3; /* indigo-800 */
+
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.91 0.004 286); /* ~slate-200 */
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+
+    /* Soft slate border lock */
+    --border: #e2e8f0; /* slate-200 */
+    --input: #e2e8f0;
+    --ring: color-mix(in oklab, #4f46e5 45%, transparent);
+
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
+
+    /* Radius: sm-first scale */
+    --radius-sm: 0.375rem; /* 6px — primary */
+    --radius: 0.375rem; /* base = sm */
+    --radius-md: 0.5rem; /* 8px — dialogs / hierarchy only */
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.625rem;
+
+    /* Layout rhythm */
+    --header-height: 3.25rem;
+    --page-pad-x: 1rem;
+    --page-pad-x-md: 2rem;
+    --page-pad-y: 1.25rem;
+    --section-gap: 1.25rem;
+
+    /* Tinted slate shadows (not pure black) */
+    --shadow-card:
+      0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+    --shadow-overlay:
+      0 4px 6px rgb(15 23 42 / 0.04), 0 10px 24px rgb(15 23 42 / 0.08);
+
+    /* Motion */
+    --ease-out-contiq: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-fast: 120ms;
+    --duration-med: 200ms;
+
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar-primary: #4f46e5;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #eef2ff;
+    --sidebar-accent-foreground: #3730a3;
+    --sidebar-border: #e2e8f0;
+    --sidebar-ring: color-mix(in oklab, #4f46e5 45%, transparent);
   }
 
   .dark {
@@ -69,8 +103,8 @@ body {
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
+    --primary: #818cf8; /* indigo-400 — dormant dark */
+    --primary-foreground: #0f172a;
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.269 0 0);
@@ -80,7 +114,7 @@ body {
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --ring: color-mix(in oklab, #818cf8 45%, transparent);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -104,6 +138,9 @@ body {
 
   body {
     margin: 0;
+    font-family: "Geist Variable", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     color: #1e293b;
     background-color: #f3f4f6;
   }
@@ -120,17 +157,15 @@ body {
     --border: #e2e8f0;
   }
 
-  /* User-side: darker fonts, slightly larger, no secondary washout */
-  .ant-typography,
-  .ant-table,
-  .ant-table-cell,
-  .ant-empty-description {
-    color: #1e293b !important;
-    font-size: 14px;
-  }
-  .ant-table-thead > tr > th {
-    font-size: 13.5px !important;
-    font-weight: 700 !important;
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -139,9 +174,9 @@ body {
   --tw-prose-body: #334155;
   --tw-prose-headings: #0f172a;
   --tw-prose-bold: #0f172a;
-  --tw-prose-links: #0369a1;
+  --tw-prose-links: #4f46e5;
   --tw-prose-quotes: #475569;
-  --tw-prose-quote-borders: #cbd5e1;
+  --tw-prose-quote-borders: #e2e8f0;
   --tw-prose-code: #1e293b;
   --tw-prose-pre-bg: #0f172a;
   --tw-prose-th-borders: #e2e8f0;
@@ -170,8 +205,9 @@ body {
   --destructive-foreground: var(--color-red-800);
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-900);
-  --info: var(--color-violet-500);
-  --info-foreground: var(--color-violet-900);
+  /* info → Contiq indigo (not violet / AI-purple) */
+  --info: #4f46e5;
+  --info-foreground: #312e81;
   --warning: var(--color-yellow-500);
   --warning-foreground: var(--color-yellow-900);
   --invert: var(--color-zinc-900);
@@ -182,8 +218,8 @@ body {
   --destructive-foreground: var(--color-red-600);
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-600);
-  --info: var(--color-violet-500);
-  --info-foreground: var(--color-violet-600);
+  --info: #818cf8;
+  --info-foreground: #c7d2fe;
   --warning: var(--color-yellow-500);
   --warning-foreground: var(--color-yellow-600);
   --invert: var(--color-zinc-700);
@@ -222,10 +258,11 @@ body {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --radius-sm: calc(var(--radius) * 0.8);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) * 1.2);
-  --radius-xl: calc(var(--radius) * 1.6);
+  /* sm-first: expose absolute radii (override calc-from-radius defaults) */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
@@ -235,4 +272,6 @@ body {
   --color-warning-foreground: var(--warning-foreground);
   --color-invert: var(--invert);
   --color-invert-foreground: var(--invert-foreground);
+  /* Shadows / motion / layout rhythm live on :root as --shadow-card,
+     --shadow-overlay, --ease-out-contiq, --duration-*, --page-pad-*, etc. */
 }
