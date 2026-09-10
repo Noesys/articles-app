@@ -177,7 +177,7 @@ articleRoutes.get("/mine/:id", async (c) => {
   const currentFeedback = isPending
     ? ""
     : article.ai_feedback ||
-      (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
+    (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
 
   // parameter results for current version
   const paramRows: {
@@ -327,9 +327,9 @@ articleRoutes.post("/", async (c) => {
           .bind(historyId, now, requestedId),
         db
           .prepare(
-            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=?`,
+            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=?, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=?`,
           )
-          .bind(title, content, rewriteMonth, requestedId),
+          .bind(title, content, now, rewriteMonth, requestedId),
       ]);
     } catch {
       // Fallback to sequential if batch not supported in local D1
@@ -340,6 +340,7 @@ articleRoutes.post("/", async (c) => {
         title,
         content,
         rewriteMonth,
+        now,
         user.id,
       );
     }

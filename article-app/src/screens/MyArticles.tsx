@@ -27,9 +27,9 @@ import {
   Empty,
   Select as AntSelect,
   Tooltip,
+  Pagination,
   theme as antdTheme,
 } from "antd";
-import { ClockCircleOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { Resizable } from "react-resizable";
 import "react-resizable/css/styles.css";
@@ -147,6 +147,8 @@ export default function MyArticles() {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
       else next.set(name, value);
+      // Repaginate: filter change should reset to page 1 (mirrors admin/articles)
+      if (name === "type" || name === "status") next.delete("page");
       return next;
     });
   };
@@ -177,7 +179,7 @@ export default function MyArticles() {
     refetch();
   }, [refetch]);
 
-  const totalPages = pagination.totalPages || 1;
+  const limit = 10;
 
   const filteredArticles = useMemo(() => {
     let out = articles;
@@ -404,40 +406,16 @@ export default function MyArticles() {
           viewAll={viewAll}
         />
 
-        {/* Pagination */}
-        {viewAll && totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
-            <span className="text-[13.5px] text-slate-700 font-medium">
-              Page {currentPage} of {totalPages}
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() =>
-                  setFilterParam(
-                    "page",
-                    String(Math.max(1, currentPage - 1)),
-                    "1",
-                  )
-                }
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <button
-                onClick={() =>
-                  setFilterParam(
-                    "page",
-                    String(Math.min(totalPages, currentPage + 1)),
-                    "1",
-                  )
-                }
-                disabled={currentPage === totalPages}
-                className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+        {/* Pagination - antd, matches admin/articles */}
+        {viewAll && pagination.total > limit && (
+          <div className="flex justify-end mt-4">
+            <Pagination
+              current={currentPage}
+              total={pagination.total}
+              pageSize={limit}
+              onChange={(p) => setFilterParam("page", String(p), "1")}
+              showSizeChanger={false}
+            />
           </div>
         )}
       </div>
@@ -459,6 +437,11 @@ function MyArticlesTable({
   viewAll: boolean;
 }) {
   const [columns, setColumns] = useState<ColumnsType<ArticleListItem>>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [articles, month]);
 
   useEffect(() => {
     const fs = 13;
@@ -562,22 +545,22 @@ function MyArticlesTable({
 
   const handleResize =
     (index: number) =>
-    (_: unknown, { size }: { size: { width: number } }) => {
-      setColumns((cur) => {
-        const next = [...cur];
-        next[index] = { ...next[index], width: size.width };
-        return next;
-      });
-    };
+      (_: unknown, { size }: { size: { width: number } }) => {
+        setColumns((cur) => {
+          const next = [...cur];
+          next[index] = { ...next[index], width: size.width };
+          return next;
+        });
+      };
   const mergedColumns = columns.map((col, idx) => ({
     ...col,
     ...(typeof col.width === "number"
       ? {
-          onHeaderCell: () => ({
-            width: col.width,
-            onResize: handleResize(idx),
-          }),
-        }
+        onHeaderCell: () => ({
+          width: col.width,
+          onResize: handleResize(idx),
+        }),
+      }
       : {}),
   }));
 
@@ -609,7 +592,16 @@ function MyArticlesTable({
           dataSource={articles}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 10, hideOnSinglePage: true }}
+          pagination={
+            viewAll
+              ? false
+              : {
+                current: currentPage,
+                pageSize: 10,
+                onChange: (page) => setCurrentPage(page),
+                hideOnSinglePage: true,
+              }
+          }
           scroll={{ x: 925 }}
           onRow={(record) => ({
             onClick: () => onRowClick(record.id),

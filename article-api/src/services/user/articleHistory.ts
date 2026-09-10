@@ -100,10 +100,9 @@ export async function updateArticleForRewrite(
   title: string,
   content: string,
   monthYear: string,
+  now: string,
   userId?: string
 ): Promise<void> {
-  // Defense-in-depth: when userId is provided, the UPDATE matches no rows
-  // if the article does not belong to the user.
   await db
     .prepare(
       `
@@ -116,7 +115,7 @@ export async function updateArticleForRewrite(
           ai_score = NULL,
           ai_feedback = NULL,
           pass_threshold = NULL,
-          submitted_at = CURRENT_TIMESTAMP,
+          submitted_at = ?,
           scored_at = NULL,
           month_year = ?,
           retry_count = retry_count + 1
@@ -124,6 +123,6 @@ export async function updateArticleForRewrite(
         ${userId ? "AND user_id = ?" : ""}
       `
     )
-    .bind(...(userId ? [title, content, monthYear, articleId, userId] : [title, content, monthYear, articleId]))
+    .bind(...(userId ? [title, content, now, monthYear, articleId, userId] : [title, content, now, monthYear, articleId]))
     .run();
 }
