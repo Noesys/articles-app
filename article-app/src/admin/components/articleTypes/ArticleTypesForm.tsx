@@ -23,6 +23,7 @@ import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ColumnDef, useTable } from "@tanstack/react-table";
 import {
   contiqTableContainerClassName,
+  contiqTableClassNames,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 
@@ -484,6 +485,7 @@ function ParametersTable({
         </span>
       }
       tableLayout={contiqTableLayout}
+        tableClassNames={contiqTableClassNames}
     >
       <DataGridContainer className={contiqTableContainerClassName}>
         <DataGridScrollArea>

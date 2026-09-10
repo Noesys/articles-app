@@ -27,6 +27,7 @@ import {
 } from "@tanstack/react-table";
 import {
   contiqTableContainerClassName,
+  contiqTableClassNames,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
@@ -283,6 +284,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
         onRowClick={onRowClick ? (row) => onRowClick(row.id) : undefined}
         emptyMessage="No articles found"
         tableLayout={contiqTableLayout}
+        tableClassNames={contiqTableClassNames}
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>

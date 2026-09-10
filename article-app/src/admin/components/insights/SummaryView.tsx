@@ -34,6 +34,7 @@ import {
 } from "@/admin/utils/types";
 import {
   contiqTableContainerClassName,
+  contiqTableClassNames,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { api } from "@/http-client";
@@ -147,7 +148,8 @@ function ParametersTable({ parameters }: { parameters: ParameterSummary[] }) {
   });
 
   return (
-    <DataGrid table={table} recordCount={parameters.length} tableLayout={contiqTableLayout}>
+    <DataGrid table={table} recordCount={parameters.length} tableLayout={contiqTableLayout}
+        tableClassNames={contiqTableClassNames}>
       <DataGridContainer className={contiqTableContainerClassName}>
         <DataGridScrollArea>
           <DataGridTable />

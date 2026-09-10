@@ -16,6 +16,7 @@ import { ColumnDef, useTable } from "@tanstack/react-table";
 import { EmployeeSubmissionRow, EmployeeSubmissionsResult } from "@/admin/utils/types";
 import {
   contiqTableContainerClassName,
+  contiqTableClassNames,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { api } from "@/http-client";
@@ -128,6 +129,7 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
         columnsPinnable: true,
         footerBackground: true,
       }}
+      tableClassNames={contiqTableClassNames}
     >
       <DataGridContainer className={contiqTableContainerClassName}>
         <DataGridScrollArea>

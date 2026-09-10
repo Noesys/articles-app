@@ -12,6 +12,7 @@ import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ColumnDef, SortingState, useTable } from "@tanstack/react-table";
 import {
   contiqTableLayout,
+  contiqTableClassNames,
 } from "@/admin/utils/contiq-data-grid";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
@@ -174,6 +175,7 @@ export default function ScoringHistoryTable({
         recordCount={history.length}
         emptyMessage="No scoring history yet."
         tableLayout={contiqTableLayout}
+        tableClassNames={contiqTableClassNames}
       >
         <DataGridContainer className="border-0 rounded-none shadow-none">
           <DataGridScrollArea>

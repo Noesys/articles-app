@@ -35,6 +35,7 @@ import { api } from "@/http-client";
 import { ArticleListItem } from "@/utils/types";
 import {
   contiqTableContainerClassName,
+  contiqTableClassNames,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
@@ -504,6 +505,7 @@ function MyArticlesTable({
         viewAll ? "No articles found." : `No articles for ${dayjs(month).format("MMMM-YYYY")}.`
       }
       tableLayout={contiqTableLayout}
+        tableClassNames={contiqTableClassNames}
     >
       <div className="w-full space-y-2.5">
         <DataGridContainer className={contiqTableContainerClassName}>

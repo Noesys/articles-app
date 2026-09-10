@@ -43,7 +43,7 @@ body {
     --accent: oklch(0.97 0 0);
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
+    --border: oklch(0.91 0.004 286); /* ~slate-200 */
     --input: oklch(0.922 0 0);
     --ring: oklch(0.708 0 0);
     --chart-1: oklch(0.87 0 0);
@@ -106,6 +106,18 @@ body {
     margin: 0;
     color: #1e293b;
     background-color: #f3f4f6;
+  }
+
+  /* DataGrid cells use border-e/border-b without a color class; force soft slate
+     so they don't inherit currentColor (near-black) via table preflight. */
+  [data-slot="data-grid"] table,
+  [data-slot="data-grid"] th,
+  [data-slot="data-grid"] td {
+    border-color: var(--border, #e2e8f0);
+  }
+
+  [data-slot="data-grid"] {
+    --border: #e2e8f0;
   }
 
   /* User-side: darker fonts, slightly larger, no secondary washout */

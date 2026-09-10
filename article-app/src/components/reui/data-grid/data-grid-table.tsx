@@ -785,7 +785,7 @@ function DataGridTableBase({ children }: { children: ReactNode }) {
         props.tableLayout?.width === "auto" ? "table-auto" : "table-fixed",
         !props.tableLayout?.columnsResizable && "",
         !props.tableLayout?.columnsDraggable &&
-          "border-separate border-spacing-0",
+          "border-separate border-spacing-0 border-border",
         props.tableClassNames?.base
       )}
       style={

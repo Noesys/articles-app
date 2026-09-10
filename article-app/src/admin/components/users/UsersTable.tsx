@@ -35,6 +35,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AuthRole, User } from "@/admin/utils/types";
 import {
   contiqTableContainerClassName,
+  contiqTableClassNames,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
@@ -300,6 +301,7 @@ export default function UsersTable({
         recordCount={users.length}
         isLoading={loading}
         tableLayout={contiqTableLayout}
+        tableClassNames={contiqTableClassNames}
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
