@@ -1,6 +1,18 @@
-import { useEffect, useState } from "react";
-import { Table, Spin, ConfigProvider, theme as antdTheme } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { useEffect, useMemo, useState } from "react";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  DataGrid,
+  DataGridContainer,
+  dataGridFeatures,
+  type DataGridFeatures,
+} from "@/components/reui/data-grid/data-grid";
+import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
+import {
+  DataGridTable,
+  DataGridTableFootRow,
+  DataGridTableFootRowCell,
+} from "@/components/reui/data-grid/data-grid-table";
+import { ColumnDef, useTable } from "@tanstack/react-table";
 import { EmployeeSubmissionRow, EmployeeSubmissionsResult } from "@/admin/utils/types";
 import { api } from "@/http-client";
 
@@ -31,10 +43,10 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
     async function loadEmployeeSubmissions() {
       setLoading(true);
       try {
-        const data = await api<EmployeeSubmissionsResult>(
+        const result = await api<EmployeeSubmissionsResult>(
           `/admin/insights/employee-submissions?start=${start}&end=${end}`,
         );
-        setData(data);
+        setData(result);
       } finally {
         setLoading(false);
       }
@@ -43,77 +55,99 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
     loadEmployeeSubmissions();
   }, [start, end]);
 
-  if (loading) return <Spin className="mt-10 flex justify-center" />;
+  const columns = useMemo<ColumnDef<DataGridFeatures, EmployeeSubmissionRow>[]>(() => {
+    if (!data) return [];
+    return [
+      {
+        accessorKey: "name",
+        header: "Name",
+        size: 180,
+        enablePinning: true,
+      },
+      {
+        accessorKey: "jobRole",
+        header: "Department",
+        size: 120,
+      },
+      ...data.months.map((m) => ({
+        id: `month-${m}`,
+        accessorFn: (row: EmployeeSubmissionRow) => row.monthly[m] ?? 0,
+        header: formatMonth(m),
+        size: 80,
+        cell: ({ getValue }: { getValue: () => unknown }) => {
+          const val = getValue() as number;
+          return <span className="block text-center">{val || "-"}</span>;
+        },
+      })),
+      {
+        accessorKey: "total",
+        header: "Total",
+        size: 80,
+        enablePinning: true,
+        cell: ({ getValue }) => (
+          <span className="block text-center">{getValue() as number}</span>
+        ),
+      },
+    ];
+  }, [data]);
+
+  const rows = data?.rows ?? [];
+  const pageSize = Math.max(rows.length, 1);
+
+  const table = useTable({
+    features: dataGridFeatures,
+    columns,
+    data: rows,
+    pageCount: 1,
+    getRowId: (row) => row.userId,
+    state: {
+      pagination: { pageIndex: 0, pageSize },
+      columnPinning: { start: ["name"], end: ["total"] },
+    },
+  });
+
+  if (loading) {
+    return (
+      <div className="mt-10 flex justify-center">
+        <Spinner className="size-6" />
+      </div>
+    );
+  }
   if (!data) return null;
 
-  const columns: ColumnsType<EmployeeSubmissionRow> = [
-    { title: "Name", dataIndex: "name", fixed: "left", width: 180 },
-    { title: "Department", dataIndex: "jobRole", width: 120 },
-    ...data.months.map((m) => ({
-      title: formatMonth(m),
-      dataIndex: ["monthly", m],
-      width: 80,
-      align: "center" as const,
-      render: (val: number) => val || "-",
-    })),
-    {
-      title: "Total",
-      dataIndex: "total",
-      fixed: "right",
-      width: 80,
-      align: "center" as const,
-    },
-  ];
-
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: antdTheme.defaultAlgorithm,
-        token: { colorPrimary: "#534ab7", borderRadius: 8 },
-        components: {
-          Table: {
-            headerBg: "#e2e8f0",
-            headerColor: "#1e293b",
-            headerSplitColor: "#cbd5e1",
-          },
-        },
+    <DataGrid
+      table={table}
+      recordCount={rows.length}
+      tableLayout={{
+        cellBorder: true,
+        dense: true,
+        columnsPinnable: true,
+        footerBackground: true,
       }}
     >
-      <div
-        style={{
-          background: "var(--ant-color-bg-container)",
-          border: "1px solid var(--ant-color-border-secondary)",
-          borderRadius: 12,
-          overflow: "hidden",
-        }}
-      >
-        <style>{`.employee-summary-row td{ background:#e2e8f0 !important; }`}</style>
-        <Table
-          rowKey="userId"
-          columns={columns}
-          dataSource={data.rows}
-          pagination={false}
-          scroll={{ x: "max-content" }}
-          summary={() => (
-            <Table.Summary fixed>
-              <Table.Summary.Row className="employee-summary-row">
-                <Table.Summary.Cell index={0} colSpan={2}>
+      <DataGridContainer className="rounded-xl border border-border bg-background overflow-hidden">
+        <DataGridScrollArea>
+          <DataGridTable
+            footerContent={
+              <DataGridTableFootRow>
+                <DataGridTableFootRowCell colSpan={2} className="bg-slate-200">
                   <span className="text-slate-700">Total: </span>
                   <span className="font-bold text-slate-700">{data.rows.length}</span>
-                </Table.Summary.Cell>
-                {data.months.map((m, i) => (
-                  <Table.Summary.Cell key={m} index={i + 2} align="center">
+                </DataGridTableFootRowCell>
+                {data.months.map((m) => (
+                  <DataGridTableFootRowCell key={m} className="bg-slate-200 text-center">
                     <span className="font-bold text-slate-700">{data.monthlyTotals[m]}</span>
-                  </Table.Summary.Cell>
+                  </DataGridTableFootRowCell>
                 ))}
-                <Table.Summary.Cell index={data.months.length + 2} align="center">
+                <DataGridTableFootRowCell className="bg-slate-200 text-center">
                   <span className="font-bold text-slate-700">{data.grandTotal}</span>
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            </Table.Summary>
-          )}
-        />
-      </div>
-    </ConfigProvider>
+                </DataGridTableFootRowCell>
+              </DataGridTableFootRow>
+            }
+          />
+        </DataGridScrollArea>
+      </DataGridContainer>
+    </DataGrid>
   );
 }

@@ -7,43 +7,52 @@ import { useMyArticles } from "../hooks/useMyArticles";
 import { useAuth } from "../contexts/AuthContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { api } from "@/http-client";
+import { FilterSelect } from "@/components/ui/filter-select";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
-  ConfigProvider,
-  Table,
-  Tag,
-  Progress,
-  Typography,
-  Empty,
-  Select as AntSelect,
   Tooltip,
-  theme as antdTheme,
-} from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { Resizable } from "react-resizable";
-import "react-resizable/css/styles.css";
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  DataGrid,
+  DataGridContainer,
+  dataGridFeatures,
+  type DataGridFeatures,
+} from "@/components/reui/data-grid/data-grid";
+import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
+import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
+import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
+import {
+  ColumnDef,
+  PaginationState,
+  SortingState,
+  useTable,
+} from "@tanstack/react-table";
+import { api } from "@/http-client";
 import { ArticleListItem } from "@/utils/types";
-
-const { Text } = Typography;
+import { cn } from "@/lib/utils";
 
 type ArticleStatus = "accepted" | "rejected" | "scoring";
 
-const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-  accepted: { color: "green", label: "Accepted" },
-  rejected: { color: "red", label: "Rejected" },
-  scoring: { color: "default", label: "Scoring..." },
+const STATUS_CONFIG: Record<string, { className: string; label: string }> = {
+  accepted: { className: "bg-emerald-50 text-emerald-700", label: "Accepted" },
+  rejected: { className: "bg-red-50 text-red-600", label: "Rejected" },
+  scoring: { className: "bg-slate-100 text-slate-600", label: "Scoring..." },
 };
 
 function getDisplayStatus(article: { status: string; ai_score: number | null }): {
   key: ArticleStatus;
   label: string;
-  color: string;
+  className: string;
 } {
   if (article.status === "failed") {
     return {
       key: "rejected",
       label: "Failed",
-      color: "orange",
+      className: "bg-orange-50 text-orange-700",
     };
   }
 
@@ -55,7 +64,7 @@ function getDisplayStatus(article: { status: string; ai_score: number | null }):
     return {
       key: "scoring",
       label: STATUS_CONFIG.scoring.label,
-      color: STATUS_CONFIG.scoring.color,
+      className: STATUS_CONFIG.scoring.className,
     };
   }
 
@@ -63,46 +72,35 @@ function getDisplayStatus(article: { status: string; ai_score: number | null }):
     return {
       key: "accepted",
       label: STATUS_CONFIG.accepted.label,
-      color: STATUS_CONFIG.accepted.color,
+      className: STATUS_CONFIG.accepted.className,
     };
   }
 
   return {
     key: "rejected",
     label: STATUS_CONFIG.rejected.label,
-    color: STATUS_CONFIG.rejected.color,
+    className: STATUS_CONFIG.rejected.className,
   };
 }
 
-function getAiScoreColor(status: string) {
-  if (status === "approved") return "#389e0d";
-  if (status === "rewrite_required" || status === "failed") return "#cf1322";
-  return "#d48806";
+function getAiScoreClasses(status: string) {
+  if (status === "approved") {
+    return {
+      text: "text-emerald-700",
+      bar: "[&_[data-slot=progress-indicator]]:bg-emerald-600",
+    };
+  }
+  if (status === "rewrite_required" || status === "failed") {
+    return {
+      text: "text-red-600",
+      bar: "[&_[data-slot=progress-indicator]]:bg-red-600",
+    };
+  }
+  return {
+    text: "text-amber-600",
+    bar: "[&_[data-slot=progress-indicator]]:bg-amber-500",
+  };
 }
-
-const ResizeableTitle = ({
-  onResize,
-  width,
-  children,
-  ...restProps
-}: {
-  onResize?: (e: React.SyntheticEvent, data: { size: { width: number; height: number } }) => void;
-  width?: number;
-  children?: React.ReactNode;
-} & React.HTMLAttributes<HTMLTableHeaderCellElement>) => {
-  if (!width || typeof width !== "number") return <th {...restProps}>{children}</th>;
-  return (
-    <Resizable
-      width={width}
-      height={10}
-      onResize={onResize}
-      draggableOpts={{ enableUserSelectHack: false }}
-      handle={<span className="column-resize-handle" onClick={(e) => e.stopPropagation()} />}
-    >
-      <th {...restProps}>{children}</th>
-    </Resizable>
-  );
-};
 
 export default function MyArticles() {
   const navigate = useNavigate();
@@ -197,7 +195,6 @@ export default function MyArticles() {
       {user?.auth_role === "user" && <Header />}
 
       <div className="w-full px-4 md:px-8 py-5">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-semibold text-slate-900">My Articles</h1>
@@ -211,7 +208,6 @@ export default function MyArticles() {
           </button>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           <Popover>
             <PopoverTrigger asChild>
@@ -252,7 +248,7 @@ export default function MyArticles() {
                       key={i}
                       variant={isSelected ? "default" : "ghost"}
                       onClick={() => setFilterParam("month", m, currentMonth)}
-                      className={`h-9 text-sm ${isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"}`}
+                      className={`h-9 text-sm relative ${isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"}`}
                     >
                       {dayjs().month(i).format("MMM")}
                       {isCurrent && (
@@ -280,52 +276,26 @@ export default function MyArticles() {
             {viewAll ? "Current Month" : "View All"}
           </button>
 
-          <AntSelect
+          <FilterSelect
             value={typeFilter}
-            onChange={(value) => setFilterParam("type", value, "all")}
-            showSearch
-            optionFilterProp="label"
+            onValueChange={(value) => setFilterParam("type", value, "all")}
             placeholder="Filter by Type"
-            style={{ width: 180, height: 36 }}
-            className="[&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!h-9"
-            styles={{
-              popup: {
-                root: { background: "#fff" },
-              },
-            }}
+            className="w-[180px]"
             options={[
               { value: "all", label: "All Types" },
               ...articleTypes.map((t) => ({ value: t.id, label: t.name })),
             ]}
-            filterOption={(input, option) =>
-              String(option?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
           />
-          <AntSelect
+          <FilterSelect
             value={statusFilter}
-            onChange={(value) => setFilterParam("status", value, "all")}
-            showSearch
-            optionFilterProp="label"
+            onValueChange={(value) => setFilterParam("status", value, "all")}
             placeholder="Filter by Status"
-            style={{ width: 180, height: 36 }}
-            className="[&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!h-9"
-            styles={{
-              popup: {
-                root: { background: "#fff" },
-              },
-            }}
+            className="w-[180px]"
             options={[
               { value: "all", label: "All Status" },
               { value: "accepted", label: "Accepted" },
               { value: "rejected", label: "Rejected" },
             ]}
-            filterOption={(input, option) =>
-              String(option?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
           />
         </div>
 
@@ -353,7 +323,6 @@ export default function MyArticles() {
           </div>
         )}
 
-        {/* Table — same antd Table as admin ArticlesTable */}
         <MyArticlesTable
           articles={filteredArticles}
           loading={loading}
@@ -362,7 +331,6 @@ export default function MyArticles() {
           viewAll={viewAll}
         />
 
-        {/* Pagination */}
         {viewAll && totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
             <span className="text-[13.5px] text-slate-700 font-medium">
@@ -406,166 +374,129 @@ function MyArticlesTable({
   month: string;
   viewAll: boolean;
 }) {
-  const [columns, setColumns] = useState<ColumnsType<ArticleListItem>>([]);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [sorting, setSorting] = useState<SortingState>([{ id: "created", desc: true }]);
 
-  useEffect(() => {
-    const fs = 13;
-    const cols: ColumnsType<ArticleListItem> = [
+  const columns = useMemo<ColumnDef<DataGridFeatures, ArticleListItem>[]>(
+    () => [
       {
-        title: "Title",
-        dataIndex: "title",
-        key: "title",
-        ellipsis: { showTitle: false },
-        width: 340,
-        render: (v: string) => (
-          <Tooltip title={v}>
-            <Text ellipsis style={{ color: "#1e293b", fontWeight: 600, fontSize: fs }}>
-              {v}
-            </Text>
-          </Tooltip>
-        ),
-      },
-      {
-        title: "Type",
-        dataIndex: "type",
-        key: "type",
-        width: 130,
-        render: (v: string) => (
-          <Tag bordered={false} style={{ color: "#334155", fontSize: fs }}>
-            {v}
-          </Tag>
-        ),
-      },
-      {
-        title: "Version",
-        dataIndex: "version",
-        key: "version",
-        width: 85,
-        render: (v: number) => (
-          <Text className="text-slate-700" style={{ fontSize: fs }}>
-            v{v}
-          </Text>
-        ),
-      },
-      {
-        title: "AI Score",
-        dataIndex: "ai_score",
-        key: "ai_score",
-        width: 130,
-        render: (score: number | null, record: ArticleListItem) =>
-          score === null ? (
-            <Text style={{ color: "#334155", fontSize: fs }}>—</Text>
-          ) : (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-              <Progress
-                percent={Math.min(Math.max(score, 0), 10) * 10}
-                size="small"
-                showInfo={false}
-                strokeColor={getAiScoreColor(record.status)}
-                style={{ width: 56 }}
-              />
-              <Text strong style={{ color: getAiScoreColor(record.status), fontSize: fs }}>
-                {score}
-              </Text>
-            </span>
-          ),
-      },
-      {
-        title: "Status",
-        dataIndex: "status",
-        key: "status",
-        width: 115,
-        render: (_: string, record: ArticleListItem) => {
-          const cfg = getDisplayStatus(record);
+        accessorKey: "title",
+        header: "Title",
+        size: 340,
+        cell: ({ getValue }) => {
+          const title = getValue() as string;
           return (
-            <Tag color={cfg.color} style={{ fontSize: fs }}>
-              {cfg.label}
-            </Tag>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="block truncate font-semibold text-slate-800 text-[13px]">
+                    {title}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{title}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         },
       },
       {
-        title: "Created",
-        dataIndex: "created",
-        key: "created",
-        width: 125,
-        render: (d: string) => (
-          <Text style={{ color: "#334155", fontSize: fs }}>{dayjs(d).format("MMM D, YYYY")}</Text>
+        accessorKey: "type",
+        header: "Type",
+        size: 130,
+        cell: ({ getValue }) => (
+          <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-normal">
+            {getValue() as string}
+          </Badge>
         ),
-        defaultSortOrder: "descend" as const,
       },
-    ];
-    setColumns(cols);
-  }, []);
+      {
+        accessorKey: "version",
+        header: "Version",
+        size: 85,
+        cell: ({ getValue }) => (
+          <span className="text-slate-700 text-[13px]">v{getValue() as number}</span>
+        ),
+      },
+      {
+        accessorKey: "ai_score",
+        header: "AI Score",
+        size: 130,
+        cell: ({ row }) => {
+          const score = row.original.ai_score;
+          if (score === null) return <span className="text-slate-700 text-[13px]">—</span>;
+          const classes = getAiScoreClasses(row.original.status);
+          return (
+            <span className="inline-flex items-center gap-2">
+              <Progress
+                value={Math.min(Math.max(score, 0), 10) * 10}
+                className={cn("w-14 h-1.5", classes.bar)}
+              />
+              <span className={cn("font-semibold text-[13px]", classes.text)}>{score}</span>
+            </span>
+          );
+        },
+      },
+      {
+        id: "status",
+        accessorFn: (row) => getDisplayStatus(row).key,
+        header: "Status",
+        size: 115,
+        cell: ({ row }) => {
+          const cfg = getDisplayStatus(row.original);
+          return (
+            <Badge variant="secondary" className={cfg.className}>
+              {cfg.label}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "created",
+        header: "Created",
+        size: 125,
+        cell: ({ getValue }) => (
+          <span className="text-slate-700 text-[13px]">
+            {dayjs(getValue() as string).format("MMM D, YYYY")}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
 
-  const handleResize =
-    (index: number) =>
-    (_: unknown, { size }: { size: { width: number } }) => {
-      setColumns((cur) => {
-        const next = [...cur];
-        next[index] = { ...next[index], width: size.width };
-        return next;
-      });
-    };
-  const mergedColumns = columns.map((col, idx) => ({
-    ...col,
-    ...(typeof col.width === "number"
-      ? {
-          onHeaderCell: () => ({
-            width: col.width,
-            onResize: handleResize(idx),
-          }),
-        }
-      : {}),
-  }));
+  const table = useTable({
+    features: dataGridFeatures,
+    columns,
+    data: articles,
+    pageCount: Math.ceil((articles.length || 0) / pagination.pageSize) || 1,
+    getRowId: (row) => row.id,
+    state: { pagination, sorting },
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
+  });
 
   return (
-    <ConfigProvider
-      theme={{
-        algorithm: antdTheme.defaultAlgorithm,
-        token: { colorPrimary: "#534ab7", borderRadius: 8 },
-        components: {
-          Table: {
-            headerBg: "#e2e8f0",
-            headerColor: "#1e293b",
-            headerSplitColor: "#cbd5e1",
-          },
-        },
-      }}
+    <DataGrid
+      table={table}
+      recordCount={articles.length}
+      isLoading={loading}
+      onRowClick={(row) => onRowClick(row.id)}
+      emptyMessage={
+        viewAll ? "No articles found." : `No articles for ${dayjs(month).format("MMMM-YYYY")}.`
+      }
+      tableLayout={{ cellBorder: true, dense: true }}
     >
-      <div
-        style={{
-          background: "var(--ant-color-bg-container)",
-          border: "1px solid var(--ant-color-border-secondary)",
-          borderRadius: 12,
-          overflow: "hidden",
-        }}
-      >
-        <Table<ArticleListItem>
-          components={{ header: { cell: ResizeableTitle } }}
-          columns={mergedColumns}
-          dataSource={articles}
-          rowKey="id"
-          loading={loading}
-          pagination={{ pageSize: 10, hideOnSinglePage: true }}
-          scroll={{ x: 925 }}
-          onRow={(record) => ({
-            onClick: () => onRowClick(record.id),
-            style: { cursor: "pointer", background: "#ffffff" },
-          })}
-          locale={{
-            emptyText: (
-              <Empty
-                description={
-                  viewAll
-                    ? "No articles found."
-                    : `No articles for ${dayjs(month).format("MMMM-YYYY")}.`
-                }
-              />
-            ),
-          }}
-        />
+      <div className="w-full space-y-2.5">
+        <DataGridContainer className="rounded-xl border border-border bg-background overflow-hidden">
+          <DataGridScrollArea>
+            <DataGridTable />
+          </DataGridScrollArea>
+        </DataGridContainer>
+        {articles.length > pagination.pageSize && <DataGridPagination />}
       </div>
-    </ConfigProvider>
+    </DataGrid>
   );
 }

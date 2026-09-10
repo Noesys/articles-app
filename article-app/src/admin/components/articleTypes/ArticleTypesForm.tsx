@@ -1,7 +1,6 @@
-import { useEffect, useState, WheelEvent } from "react";
+import { useEffect, useMemo, useState, WheelEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Plus, Pencil, Trash2 } from "lucide-react";
-import { ConfigProvider, Table, theme as antdTheme } from "antd";
 import Button from "../../components/ui/Button";
 import DeleteConfirmation from "./DeleteConfirmation";
 import { api, apiFull } from "@/http-client";
@@ -13,6 +12,15 @@ import {
   ParameterResponse,
 } from "@/admin/utils/types";
 import ArticleTypesParameterModal from "./ArticleTypesParameterModal";
+import {
+  DataGrid,
+  DataGridContainer,
+  dataGridFeatures,
+  type DataGridFeatures,
+} from "@/components/reui/data-grid/data-grid";
+import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
+import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
+import { ColumnDef, useTable } from "@tanstack/react-table";
 
 const EMPTY_FORM: FormState = {
   name: "",
@@ -325,96 +333,11 @@ export default function ArticleTypesForm() {
             </Button>
           </div>
 
-          <ConfigProvider
-            theme={{
-              algorithm: antdTheme.defaultAlgorithm,
-              token: { colorPrimary: "#534ab7", borderRadius: 8 },
-              components: {
-                Table: {
-                  headerBg: "#e2e8f0",
-                  headerColor: "#1e293b",
-                  headerSplitColor: "#cbd5e1",
-                },
-              },
-            }}
-          >
-            <Table
-              dataSource={form.parameters}
-              rowKey="id"
-              pagination={false}
-              locale={{
-                emptyText: (
-                  <span className="text-sm text-slate-400 italic">
-                    No parameters yet — optional, but useful for multi-criteria scoring.
-                  </span>
-                ),
-              }}
-              columns={[
-                {
-                  title: "Name",
-                  dataIndex: "name",
-                  key: "name",
-                  render: (v: string) =>
-                    v || <span className="text-slate-300 italic">Untitled</span>,
-                },
-                {
-                  title: "Prompt",
-                  dataIndex: "prompt",
-                  key: "prompt",
-                  ellipsis: true,
-                  render: (v: string) =>
-                    v || <span className="text-slate-300 italic">No prompt</span>,
-                },
-                {
-                  title: "Range / Options",
-                  key: "range",
-                  render: (_: unknown, r: ParameterDraft) =>
-                    r.scopeType === "numeric" ? (
-                      <Badge variant="indigo">
-                        {r.minValue}–{r.maxValue}
-                      </Badge>
-                    ) : (
-                      <div className="flex gap-1 flex-wrap">
-                        {r.options.map((op, i) => (
-                          <Badge variant="indigo" key={i}>
-                            {op.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    ),
-                },
-                {
-                  title: "",
-                  key: "actions",
-                  width: 80,
-                  render: (_: unknown, r: ParameterDraft) => (
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(r)}
-                        className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPendingDelete(r)}
-                        className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  ),
-                },
-              ]}
-              style={{
-                background: "#fff",
-                border: "1px solid #e2e8f0",
-                borderRadius: 12,
-                overflow: "hidden",
-              }}
-            />
-          </ConfigProvider>
+          <ParametersTable
+            parameters={form.parameters}
+            onEdit={openEditModal}
+            onDelete={setPendingDelete}
+          />
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
@@ -449,5 +372,120 @@ export default function ArticleTypesForm() {
         closeModal={closeModal}
       />
     </div>
+  );
+}
+
+function ParametersTable({
+  parameters,
+  onEdit,
+  onDelete,
+}: {
+  parameters: ParameterDraft[];
+  onEdit: (p: ParameterDraft) => void;
+  onDelete: (p: ParameterDraft) => void;
+}) {
+  const columns = useMemo<ColumnDef<DataGridFeatures, ParameterDraft>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ getValue }) => {
+          const v = getValue() as string;
+          return v || <span className="text-slate-300 italic">Untitled</span>;
+        },
+      },
+      {
+        accessorKey: "prompt",
+        header: "Prompt",
+        cell: ({ getValue }) => {
+          const v = getValue() as string;
+          return (
+            <span className="block truncate">
+              {v || <span className="text-slate-300 italic">No prompt</span>}
+            </span>
+          );
+        },
+      },
+      {
+        id: "range",
+        header: "Range / Options",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const r = row.original;
+          if (r.scopeType === "numeric") {
+            return (
+              <Badge variant="indigo">
+                {r.minValue}–{r.maxValue}
+              </Badge>
+            );
+          }
+          return (
+            <div className="flex gap-1 flex-wrap">
+              {r.options.map((op, i) => (
+                <Badge variant="indigo" key={i}>
+                  {op.label}
+                </Badge>
+              ))}
+            </div>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: "",
+        size: 80,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => onEdit(row.original)}
+              className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(row.original)}
+              className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [onEdit, onDelete],
+  );
+
+  const pageSize = Math.max(parameters.length, 1);
+  const table = useTable({
+    features: dataGridFeatures,
+    columns,
+    data: parameters,
+    pageCount: 1,
+    getRowId: (row) => row.id,
+    state: {
+      pagination: { pageIndex: 0, pageSize },
+    },
+  });
+
+  return (
+    <DataGrid
+      table={table}
+      recordCount={parameters.length}
+      emptyMessage={
+        <span className="text-sm text-slate-400 italic">
+          No parameters yet — optional, but useful for multi-criteria scoring.
+        </span>
+      }
+      tableLayout={{ cellBorder: true, dense: true }}
+    >
+      <DataGridContainer className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <DataGridScrollArea>
+          <DataGridTable />
+        </DataGridScrollArea>
+      </DataGridContainer>
+    </DataGrid>
   );
 }

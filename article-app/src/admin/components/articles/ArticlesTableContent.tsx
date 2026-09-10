@@ -1,56 +1,79 @@
 import { ArticleStatus, ArticleSummary } from "@/admin/utils/types";
-import { ClockCircleOutlined } from "@ant-design/icons";
-import { ColumnsType } from "antd/es/table";
-import { Search } from "lucide-react";
-import {
-  Table,
-  Tag,
-  Avatar,
-  Progress,
-  Typography,
-  Space,
-  Empty,
-  Card,
-  Row,
-  Col,
-  Tooltip,
-} from "antd";
+import { Clock, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { formatDateToUSLocale } from "@/admin/utils/date";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  DataGrid,
+  DataGridContainer,
+  dataGridFeatures,
+  type DataGridFeatures,
+} from "@/components/reui/data-grid/data-grid";
+import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
+import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
+import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
+import {
+  ColumnDef,
+  PaginationState,
+  SortingState,
+  useTable,
+} from "@tanstack/react-table";
+import { cn } from "@/lib/utils";
 
 type ArticlesTableProps = {
   articles: ArticleSummary[];
   onRowClick?: (id: string) => void;
 };
 
-const { Text } = Typography;
-
-function getAiScoreColor(status: ArticleStatus) {
-  if (status === "approved") return "#389e0d";
-  if (status === "rewrite_required" || status === "failed") return "#cf1322";
-  return "#d48806";
+function getAiScoreClasses(status: ArticleStatus) {
+  if (status === "approved") {
+    return {
+      text: "text-emerald-700",
+      bar: "[&_[data-slot=progress-indicator]]:bg-emerald-600",
+    };
+  }
+  if (status === "rewrite_required" || status === "failed") {
+    return {
+      text: "text-red-600",
+      bar: "[&_[data-slot=progress-indicator]]:bg-red-600",
+    };
+  }
+  return {
+    text: "text-amber-600",
+    bar: "[&_[data-slot=progress-indicator]]:bg-amber-500",
+  };
 }
 
-const STATUS_CONFIG: Record<ArticleStatus, { color: string; label: string; icon?: boolean }> = {
+const STATUS_CONFIG: Record<
+  ArticleStatus,
+  { className: string; label: string; icon?: boolean }
+> = {
   approved: {
-    color: "green",
+    className: "bg-emerald-50 text-emerald-700",
     label: "Accepted",
   },
   rewrite_required: {
-    color: "red",
+    className: "bg-red-50 text-red-600",
     label: "Rejected",
   },
   pending: {
-    color: "gold",
+    className: "bg-amber-50 text-amber-700 gap-1",
     label: "Pending",
     icon: true,
   },
   failed: {
-    color: "orange",
+    className: "bg-orange-50 text-orange-700",
     label: "Failed",
   },
   unknown: {
-    color: "default",
+    className: "bg-slate-100 text-slate-600",
     label: "Unavailable",
   },
 };
@@ -69,15 +92,12 @@ function getNameInitials(name: string) {
 }
 
 export default function ArticlesTableContent({ articles, onRowClick }: ArticlesTableProps) {
-  const [columns, setColumns] = useState<ColumnsType<ArticleSummary>>([]);
-
   const [titleFilter, setTitleFilter] = useState("");
-
-  const [visibleRows, setVisibleRows] = useState<ArticleSummary[]>(articles);
-
-  useEffect(() => {
-    setVisibleRows(articles);
-  }, [articles]);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [sorting, setSorting] = useState<SortingState>([{ id: "submitted_at", desc: true }]);
 
   const locallyFilteredArticles = useMemo(() => {
     const normalizedTitle = titleFilter.trim().toLowerCase();
@@ -85,233 +105,187 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
     return articles.filter((article) => article.title.toLowerCase().includes(normalizedTitle));
   }, [articles, titleFilter]);
 
-  useEffect(() => {
-    setVisibleRows(locallyFilteredArticles);
-  }, [locallyFilteredArticles]);
-
   const dashboard = useMemo(() => {
-    const total = visibleRows.length;
-
-    const approved = visibleRows.filter((article) => article.status === "approved").length;
-
-    const pending = visibleRows.filter((article) => article.status === "pending").length;
-
-    const rewriteRequired = visibleRows.filter(
-      (article) => article.status === "rewrite_required",
+    const total = locallyFilteredArticles.length;
+    const approved = locallyFilteredArticles.filter((a) => a.status === "approved").length;
+    const pending = locallyFilteredArticles.filter((a) => a.status === "pending").length;
+    const rewriteRequired = locallyFilteredArticles.filter(
+      (a) => a.status === "rewrite_required",
     ).length;
-
-    const scored = visibleRows.filter((article) => article.ai_score !== null);
-
+    const scored = locallyFilteredArticles.filter((a) => a.ai_score !== null);
     const averageScore =
       scored.length > 0
-        ? scored.reduce((sum, article) => sum + (article.ai_score ?? 0), 0) / scored.length
+        ? scored.reduce((sum, a) => sum + (a.ai_score ?? 0), 0) / scored.length
         : null;
 
-    return {
-      total,
-      approved,
-      pending,
-      rewriteRequired,
-      averageScore,
-    };
-  }, [visibleRows]);
+    return { total, approved, pending, rewriteRequired, averageScore };
+  }, [locallyFilteredArticles]);
 
-  useEffect(() => {
-    const fs = 13;
-    const initialColumns: ColumnsType<ArticleSummary> = [
+  const columns = useMemo<ColumnDef<DataGridFeatures, ArticleSummary>[]>(
+    () => [
       {
-        title: "Title",
-        dataIndex: "title",
-        key: "title",
-        ellipsis: { showTitle: false },
-        width: 340,
-        render: (title: string) => (
-          <Tooltip title={title}>
-            <Text
-              ellipsis
-              className="font-medium"
-              style={{
-                color: "var(--ant-color-link, #2f54eb)",
-                fontSize: fs,
-              }}
-            >
-              {title}
-            </Text>
-          </Tooltip>
-        ),
-      },
-      {
-        title: "Author",
-        dataIndex: "author_name",
-        key: "author_name",
-        width: 160,
-        ellipsis: true,
-        render: (name: string) => (
-          <Space size={8}>
-            <Avatar size={26} style={{ backgroundColor: "#7f77dd", fontSize: 11 }}>
-              {getNameInitials(name)}
-            </Avatar>
-            <Text ellipsis style={{ fontSize: fs }}>
-              {name}
-            </Text>
-          </Space>
-        ),
-      },
-      {
-        title: "Type",
-        dataIndex: "article_type_name",
-        key: "type",
-        width: 130,
-        render: (type: string) => (
-          <Tag bordered={false} style={{ fontSize: fs }}>
-            {type}
-          </Tag>
-        ),
-      },
-      {
-        title: "Status",
-        dataIndex: "status",
-        key: "status",
-        width: 115,
-        render: (status: ArticleStatus) => {
-          const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.unknown;
+        accessorKey: "title",
+        header: "Title",
+        size: 340,
+        cell: ({ getValue }) => {
+          const title = getValue() as string;
           return (
-            <Tag
-              color={cfg.color}
-              icon={cfg.icon ? <ClockCircleOutlined /> : undefined}
-              style={{ fontSize: fs }}
-            >
-              {cfg.label}
-            </Tag>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="block truncate font-medium text-indigo-600 text-[13px]">
+                    {title}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{title}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         },
       },
       {
-        title: "Version",
-        dataIndex: "version",
-        key: "version",
-        width: 85,
-        render: (version: number) => <Text className="text-sm">v{version}</Text>,
-      },
-
-      {
-        title: "AI Score",
-        dataIndex: "ai_score",
-        key: "ai_score",
-        width: 130,
-        render: (score: number | null, record: ArticleSummary) =>
-          score === null ? (
-            <Text style={{ fontSize: fs }}>—</Text>
-          ) : (
-            <Space size={8} align="center">
-              <Progress
-                percent={Math.min(Math.max(score, 0), 10) * 10}
-                size="small"
-                showInfo={false}
-                strokeColor={getAiScoreColor(record.status)}
-                style={{ width: 56 }}
-              />
-              <Text strong style={{ color: getAiScoreColor(record.status), fontSize: fs }}>
-                {score}
-              </Text>
-            </Space>
-          ),
+        accessorKey: "author_name",
+        header: "Author",
+        size: 160,
+        cell: ({ getValue }) => {
+          const name = getValue() as string;
+          return (
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="size-[26px] shrink-0 rounded-full bg-[#7f77dd] text-white text-[11px] font-medium flex items-center justify-center">
+                {getNameInitials(name)}
+              </div>
+              <span className="truncate text-[13px]">{name}</span>
+            </div>
+          );
+        },
       },
       {
-        title: "Created",
-        dataIndex: "submitted_at",
-        key: "created_at",
-        width: 125,
-        render: (date: string) => (
-          <Text style={{ fontSize: fs }}>{formatDateToUSLocale(date)}</Text>
+        accessorKey: "article_type_name",
+        header: "Type",
+        size: 130,
+        cell: ({ getValue }) => (
+          <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-normal">
+            {getValue() as string}
+          </Badge>
         ),
-        defaultSortOrder: "descend",
       },
-    ];
-    setColumns(initialColumns);
-  }, []);
+      {
+        accessorKey: "status",
+        header: "Status",
+        size: 115,
+        cell: ({ getValue }) => {
+          const status = getValue() as ArticleStatus;
+          const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.unknown;
+          return (
+            <Badge variant="secondary" className={cfg.className}>
+              {cfg.icon ? <Clock className="size-3" /> : null}
+              {cfg.label}
+            </Badge>
+          );
+        },
+      },
+      {
+        accessorKey: "version",
+        header: "Version",
+        size: 85,
+        cell: ({ getValue }) => <span className="text-sm">v{getValue() as number}</span>,
+      },
+      {
+        accessorKey: "ai_score",
+        header: "AI Score",
+        size: 130,
+        cell: ({ row }) => {
+          const score = row.original.ai_score;
+          if (score === null) return <span className="text-[13px]">—</span>;
+          const classes = getAiScoreClasses(row.original.status);
+          return (
+            <span className="inline-flex items-center gap-2">
+              <Progress
+                value={Math.min(Math.max(score, 0), 10) * 10}
+                className={cn("w-14 h-1.5", classes.bar)}
+              />
+              <span className={cn("font-semibold text-[13px]", classes.text)}>{score}</span>
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "submitted_at",
+        header: "Created",
+        size: 125,
+        cell: ({ getValue }) => (
+          <span className="text-[13px]">{formatDateToUSLocale(getValue() as string)}</span>
+        ),
+      },
+    ],
+    [],
+  );
+
+  const table = useTable({
+    features: dataGridFeatures,
+    columns,
+    data: locallyFilteredArticles,
+    pageCount: Math.ceil((locallyFilteredArticles.length || 0) / pagination.pageSize) || 1,
+    getRowId: (row) => row.id,
+    state: { pagination, sorting },
+    onPaginationChange: setPagination,
+    onSortingChange: setSorting,
+  });
+
+  useEffect(() => {
+    setPagination((p) => ({ ...p, pageIndex: 0 }));
+  }, [titleFilter]);
 
   return (
     <div className="space-y-4">
-      {/* Dashboard - full width, reduced height */}
-      <Row gutter={[12, 12]}>
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <Card size="small" styles={{ body: { padding: "10px 14px" } }}>
-            <Text type="secondary" className="text-xs">
-              Total Articles
-            </Text>
-            <div className="text-xl font-semibold mt-0.5">{dashboard.total}</div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <Card size="small" styles={{ body: { padding: "10px 14px" } }}>
-            <Text type="secondary" className="text-xs">
-              Accepted
-            </Text>
-            <div className="text-xl font-semibold text-emerald-600 mt-0.5">
-              {dashboard.approved}
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <Card size="small" styles={{ body: { padding: "10px 14px" } }}>
-            <Text type="secondary" className="text-xs">
-              Pending
-            </Text>
-            <div className="text-xl font-semibold text-amber-600 mt-0.5">{dashboard.pending}</div>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6} lg={6}>
-          <Card size="small" styles={{ body: { padding: "10px 14px" } }}>
-            <Text type="secondary" className="text-xs">
-              Rejected
-            </Text>
-            <div className="text-xl font-semibold text-red-600 mt-0.5">
-              {dashboard.rewriteRequired}
-            </div>
-          </Card>
-        </Col>
-      </Row>
-
-      <div>
-        <div className="flex items-center gap-2 mb-4 w-full">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-
-            <input
-              type="text"
-              value={titleFilter}
-              onChange={(e) => setTitleFilter(e.target.value)}
-              placeholder="Search title..."
-              className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-9"
-            />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="rounded-lg border border-border bg-background px-3.5 py-2.5">
+          <div className="text-xs text-muted-foreground">Total Articles</div>
+          <div className="text-xl font-semibold mt-0.5">{dashboard.total}</div>
+        </div>
+        <div className="rounded-lg border border-border bg-background px-3.5 py-2.5">
+          <div className="text-xs text-muted-foreground">Accepted</div>
+          <div className="text-xl font-semibold text-emerald-600 mt-0.5">{dashboard.approved}</div>
+        </div>
+        <div className="rounded-lg border border-border bg-background px-3.5 py-2.5">
+          <div className="text-xs text-muted-foreground">Pending</div>
+          <div className="text-xl font-semibold text-amber-600 mt-0.5">{dashboard.pending}</div>
+        </div>
+        <div className="rounded-lg border border-border bg-background px-3.5 py-2.5">
+          <div className="text-xs text-muted-foreground">Rejected</div>
+          <div className="text-xl font-semibold text-red-600 mt-0.5">
+            {dashboard.rewriteRequired}
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4"></div>
-
-        <Table<ArticleSummary>
-          components={{}}
-          columns={columns}
-          dataSource={locallyFilteredArticles}
-          rowKey="id"
-          pagination={{
-            pageSize: 10,
-            hideOnSinglePage: true,
-          }}
-          scroll={{ x: 1085 }}
-          onRow={(record) => ({
-            onClick: () => onRowClick?.(record.id),
-            className: onRowClick ? "cursor-pointer" : "cursor-default",
-          })}
-          locale={{
-            emptyText: <Empty description="No articles found" />,
-          }}
+      <div className="relative flex-1">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type="text"
+          value={titleFilter}
+          onChange={(e) => setTitleFilter(e.target.value)}
+          placeholder="Search title..."
+          className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-9"
         />
       </div>
+
+      <DataGrid
+        table={table}
+        recordCount={locallyFilteredArticles.length}
+        onRowClick={onRowClick ? (row) => onRowClick(row.id) : undefined}
+        emptyMessage="No articles found"
+        tableLayout={{ cellBorder: true, dense: true }}
+      >
+        <div className="w-full space-y-2.5">
+          <DataGridContainer className="rounded-xl border border-border bg-background overflow-hidden">
+            <DataGridScrollArea>
+              <DataGridTable />
+            </DataGridScrollArea>
+          </DataGridContainer>
+          {locallyFilteredArticles.length > pagination.pageSize && <DataGridPagination />}
+        </div>
+      </DataGrid>
     </div>
   );
 }
