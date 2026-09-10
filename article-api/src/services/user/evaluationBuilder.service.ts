@@ -8,41 +8,55 @@ export function getScoreableParameters(
   );
 }
 
+function shortDescribe(name: string, prompt: string, max = 160): string {
+  const trimmed = prompt.replace(/\s+/g, " ").trim();
+  const body =
+    trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
+  return body ? `${name}: ${body}` : name;
+}
+
 export function buildEvaluationSchema(
   articleType: ArticleTypeConfig,
   parameters: ParameterConfig[],
 ) {
   const paramShape: Record<string, z.ZodType<string | number>> = {};
+  // D1 may surface numeric columns as numbers or numeric strings
+  const scoreMin = Number(articleType.score_min);
+  const scoreMax = Number(articleType.score_max);
 
   parameters.forEach((p, i) => {
     const key = `p${i}`; // safe identifier, no hyphens
     if (p.scope_type === "numeric") {
-      const min = p.min_value ?? 0;
-      const max = p.max_value ?? 10;
-      paramShape[key] = z
+      const min = Number(p.min_value ?? 0);
+      const max = Number(p.max_value ?? 10);
+      // coerce: Gemini sometimes returns numeric strings
+      paramShape[key] = z.coerce
         .number()
         .min(min)
         .max(max)
-        .describe(`${p.name}: ${p.prompt}`);
+        .describe(shortDescribe(p.name, p.prompt));
     } else {
       const labels = p.options.map((o) => o.label);
       paramShape[key] = z
         .enum(labels as [string, ...string[]])
-        .describe(`${p.name}: ${p.prompt}`);
+        .describe(shortDescribe(p.name, p.prompt));
     }
   });
 
+  // Keep schema descriptions short — full score_prompt lives in the user prompt.
+  // Embedding multi-KB prompts in JSON Schema .describe() caused Gemini structured
+  // output to fail validation ("No object generated: response did not match schema").
   return z.object({
-    score: z
+    score: z.coerce
       .number()
-      .min(articleType.score_min)
-      .max(articleType.score_max)
-      .describe(`Overall numeric score for the article's quality.`),
+      .min(scoreMin)
+      .max(scoreMax)
+      .describe(`Overall numeric score (${scoreMin}-${scoreMax}).`),
     feedback: z
       .string()
       .min(1)
       .describe(
-        `${articleType.score_prompt} Format feedback in markdown with headings and each point as a bullet (use "- ").`,
+        "Markdown feedback with headings; each point as a bullet (use \"- \"). Follow the scoring instructions in the user prompt.",
       ),
     parameters: z.object(paramShape),
   });
