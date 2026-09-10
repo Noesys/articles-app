@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
@@ -114,4 +115,36 @@ body {
     font-size: 13.5px !important;
     font-weight: 700 !important;
   }
+}
+
+/* Markdown (ReactMarkdown + prose): reinforce tables/lists for assessment feedback */
+.markdown-content.prose {
+  --tw-prose-body: #334155;
+  --tw-prose-headings: #0f172a;
+  --tw-prose-bold: #0f172a;
+  --tw-prose-links: #0369a1;
+  --tw-prose-quotes: #475569;
+  --tw-prose-quote-borders: #cbd5e1;
+  --tw-prose-code: #1e293b;
+  --tw-prose-pre-bg: #0f172a;
+  --tw-prose-th-borders: #e2e8f0;
+  --tw-prose-td-borders: #e2e8f0;
+  --tw-prose-bullets: #64748b;
+  --tw-prose-counters: #64748b;
+}
+
+.markdown-content.prose :where(table) {
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-content.prose :where(th),
+.markdown-content.prose :where(td) {
+  padding: 0.625rem 0.75rem;
+}
+
+.markdown-content.prose :where(thead th) {
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-weight: 600;
 }
