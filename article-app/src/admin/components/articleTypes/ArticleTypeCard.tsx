@@ -2,6 +2,7 @@ import { ChevronDown, Clock, FileText, Pencil, Tag, Trash2 } from "lucide-react"
 import { formatDateToUSLocale } from "../../utils/date";
 import Badge from "../ui/Badge";
 import { ArticleTypeWithPrompt, ParameterOptionDraft } from "@/admin/utils/types";
+import MarkdownContent from "@/components/markdown/MarkdownContent";
 
 type ArticleTypeCardProps = {
   type: ArticleTypeWithPrompt;
@@ -129,9 +130,9 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                 Scoring Prompt
               </div>
               {type.score_prompt ? (
-                <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed bg-white border border-slate-200 rounded-lg p-3 max-h-85 overflow-y-auto shadow-sm">
+                <MarkdownContent className="bg-white p-3 rounded-lg border border-slate-200 max-h-85 overflow-y-auto shadow-sm">
                   {type.score_prompt}
-                </pre>
+                </MarkdownContent>
               ) : (
                 <p className="text-sm text-slate-400 italic">
                   No prompt has been configured for this type yet.
@@ -162,7 +163,9 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                         <div className="min-w-0 flex-1">
                           <h4 className="font-medium text-slate-900">{param.name}</h4>
 
-                          <p className="mt-1 text-sm text-slate-500">{param.prompt}</p>
+                          {param.prompt ? (
+                            <MarkdownContent className="mt-1">{param.prompt}</MarkdownContent>
+                          ) : null}
                         </div>
 
                         <Badge variant="indigo">{param.scopeType.toUpperCase()}</Badge>
