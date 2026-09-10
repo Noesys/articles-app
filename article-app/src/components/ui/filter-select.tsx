@@ -16,6 +16,7 @@ type FilterSelectProps = {
   placeholder?: string;
   className?: string;
   triggerClassName?: string;
+  "aria-label"?: string;
 };
 
 /** Full-width filter dropdown used on admin list pages. */
@@ -26,19 +27,21 @@ export function FilterSelect({
   placeholder,
   className,
   triggerClassName,
+  "aria-label": ariaLabel,
 }: FilterSelectProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger
+        aria-label={ariaLabel ?? placeholder}
         className={cn(
-          "w-full h-9 bg-white border-slate-300 rounded-lg shadow-none",
+          "h-9 w-full rounded-sm border-border bg-white shadow-none",
           triggerClassName,
           className,
         )}
       >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent className="bg-white max-h-48">
+      <SelectContent className="max-h-48 rounded-sm bg-white">
         {options.map((opt) => (
           <SelectItem key={opt.value} value={opt.value}>
             {opt.label}

@@ -1,11 +1,10 @@
 import Header from "../components/Header";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, ChevronLeft, ChevronRight, Calendar, Loader2 } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Loader2, FileText } from "lucide-react";
 import dayjs from "dayjs";
 import { useMyArticles } from "../hooks/useMyArticles";
 import { useAuth } from "../contexts/AuthContext";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +38,10 @@ import {
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
+import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
+import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import EmptyState from "@/admin/components/ui/EmptyState";
 
 type ArticleStatus = "accepted" | "rejected" | "scoring";
 
@@ -124,7 +127,6 @@ export default function MyArticles() {
   const currentMonth = dayjs().format("YYYY-MM");
   const monthParam = searchParams.get("month");
   const month = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonth;
-  const focusedYear = Number(searchParams.get("year")) || Number(month.slice(0, 4));
   const viewAll = searchParams.get("viewAll") === "true";
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
   const typeFilter = searchParams.get("type") || "all";
@@ -176,7 +178,6 @@ export default function MyArticles() {
     return out;
   }, [articles, typeFilter, statusFilter, articleTypes]);
 
-  // toast from creation (consume once, clear stale timeout marker on success)
   const [toast, setToast] = useState<string | null>(() => {
     try {
       const t = sessionStorage.getItem("toast");
@@ -208,74 +209,35 @@ export default function MyArticles() {
     <div className="min-h-screen bg-[#f3f4f6]">
       {user?.auth_role === "user" && <Header />}
 
-      <div className="w-full px-4 md:px-8 py-5">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-semibold text-slate-900">My Articles</h1>
-          </div>
-          <button
-            onClick={() => navigate("/articles/new")}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors"
-          >
-            <Plus size={16} />
-            New Article
-          </button>
-        </div>
+      <PageShell>
+        <PageHeader
+          title="My articles"
+          subtitle={
+            !loading
+              ? `${filteredArticles.length} ${filteredArticles.length === 1 ? "article" : "articles"}`
+              : undefined
+          }
+          actions={
+            <Button type="button" size="lg" onClick={() => navigate("/articles/new")}>
+              <Plus size={16} />
+              New article
+            </Button>
+          }
+        />
 
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="justify-between font-normal w-[180px] h-9 bg-white border border-slate-300 rounded-lg text-sm shadow-none"
-                disabled={viewAll}
-              >
-                {dayjs(month).format("MMMM YYYY")}
-                <Calendar className="h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-3">
-              <div className="flex items-center justify-between mb-3">
-                <Button
-                  variant="ghost"
-                  className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() => setFilterParam("year", String(focusedYear - 1))}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="font-bold text-sm">{focusedYear}</div>
-                <Button
-                  variant="ghost"
-                  className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() => setFilterParam("year", String(focusedYear + 1))}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {Array.from({ length: 12 }).map((_, i) => {
-                  const m = dayjs().year(focusedYear).month(i).format("YYYY-MM");
-                  const isSelected = month === m;
-                  const isCurrent = dayjs().format("YYYY-MM") === m;
-                  return (
-                    <Button
-                      key={i}
-                      variant={isSelected ? "default" : "ghost"}
-                      onClick={() => setFilterParam("month", m, currentMonth)}
-                      className={`h-9 text-sm relative ${isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"}`}
-                    >
-                      {dayjs().month(i).format("MMM")}
-                      {isCurrent && (
-                        <span className="absolute top-1 right-1 h-1 w-1 rounded-full bg-primary" />
-                      )}
-                    </Button>
-                  );
-                })}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <button
+        <FilterToolbar>
+          <MonthYearPicker
+            label="Month"
+            value={month}
+            onChange={(ym) => setFilterParam("month", ym, currentMonth)}
+            disabled={viewAll}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            aria-pressed={viewAll}
+            className="h-9 border-border bg-white text-slate-600"
             onClick={() => {
               setSearchParams((current) => {
                 const next = new URLSearchParams(current);
@@ -285,57 +247,56 @@ export default function MyArticles() {
                 return next;
               });
             }}
-            className="h-9 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg px-3 hover:bg-slate-50 transition-colors"
           >
-            {viewAll ? "Current Month" : "View All"}
-          </button>
+            {viewAll ? "Current month" : "View all"}
+          </Button>
 
           <FilterSelect
             value={typeFilter}
             onValueChange={(value) => setFilterParam("type", value, "all")}
-            placeholder="Filter by Type"
+            placeholder="Filter by type"
+            aria-label="Article type"
             className="w-[180px]"
             options={[
-              { value: "all", label: "All Types" },
+              { value: "all", label: "All types" },
               ...articleTypes.map((t) => ({ value: t.id, label: t.name })),
             ]}
           />
           <FilterSelect
             value={statusFilter}
             onValueChange={(value) => setFilterParam("status", value, "all")}
-            placeholder="Filter by Status"
+            placeholder="Filter by status"
+            aria-label="Status"
             className="w-[180px]"
             options={[
-              { value: "all", label: "All Status" },
+              { value: "all", label: "All statuses" },
               { value: "accepted", label: "Accepted" },
               { value: "rejected", label: "Rejected" },
             ]}
           />
-        </div>
+        </FilterToolbar>
 
-        {typesError && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
-            {typesError}
-          </div>
-        )}
+        {typesError && <InlineAlert>{typesError}</InlineAlert>}
         {toast && (
-          <div
-            className={`mb-4 rounded-lg border px-4 py-3 text-sm ${toast.toLowerCase().includes("timed out") || toast.toLowerCase().includes("failed") ? "bg-red-50 border-red-200 text-red-600" : "bg-emerald-50 border-emerald-200 text-emerald-700"}`}
+          <InlineAlert
+            variant={
+              toast.toLowerCase().includes("timed out") || toast.toLowerCase().includes("failed")
+                ? "error"
+                : "success"
+            }
           >
             {toast}
-          </div>
+          </InlineAlert>
         )}
         {isPolling && (
-          <div className="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center gap-1">
-            <Loader2 size={12} className="animate-spin" /> Processing your submission —
-            auto-refreshing...
-          </div>
+          <InlineAlert variant="warning" role="status">
+            <span className="inline-flex items-center gap-1.5">
+              <Loader2 size={12} className="animate-spin" aria-hidden />
+              Processing your submission — auto-refreshing…
+            </span>
+          </InlineAlert>
         )}
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
-            {error}
-          </div>
-        )}
+        {error && <InlineAlert>{error}</InlineAlert>}
 
         <MyArticlesTable
           articles={filteredArticles}
@@ -343,34 +304,43 @@ export default function MyArticles() {
           onRowClick={(id) => navigate(`/articles/${id}`)}
           month={month}
           viewAll={viewAll}
+          onCreate={() => navigate("/articles/new")}
         />
 
         {viewAll && totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
-            <span className="text-[13.5px] text-slate-700 font-medium">
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-sm font-medium text-slate-700">
               Page {currentPage} of {totalPages}
             </span>
             <div className="flex gap-2">
-              <button
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Previous page"
                 onClick={() => setFilterParam("page", String(Math.max(1, currentPage - 1)), "1")}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+                className="border-border"
               >
                 <ChevronLeft size={16} />
-              </button>
-              <button
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                aria-label="Next page"
                 onClick={() =>
                   setFilterParam("page", String(Math.min(totalPages, currentPage + 1)), "1")
                 }
                 disabled={currentPage === totalPages}
-                className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+                className="border-border"
               >
                 <ChevronRight size={16} />
-              </button>
+              </Button>
             </div>
           </div>
         )}
-      </div>
+      </PageShell>
     </div>
   );
 }
@@ -381,12 +351,14 @@ function MyArticlesTable({
   onRowClick,
   month,
   viewAll,
+  onCreate,
 }: {
   articles: ArticleListItem[];
   loading: boolean;
   onRowClick: (id: string) => void;
   month: string;
   viewAll: boolean;
+  onCreate: () => void;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -406,7 +378,7 @@ function MyArticlesTable({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="block truncate font-semibold text-slate-800 text-[13px]">
+                  <span className="block truncate text-[13px] font-semibold text-slate-800">
                     {title}
                   </span>
                 </TooltipTrigger>
@@ -423,7 +395,7 @@ function MyArticlesTable({
         cell: ({ getValue }) => (
           <Badge
             variant="outline"
-            className="bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
+            className="border-transparent bg-slate-50 font-medium text-slate-700 ring-1 ring-slate-200/80"
           >
             {getValue() as string}
           </Badge>
@@ -434,24 +406,26 @@ function MyArticlesTable({
         header: "Version",
         size: 85,
         cell: ({ getValue }) => (
-          <span className="text-slate-700 text-[13px]">v{getValue() as number}</span>
+          <span className="text-[13px] text-slate-700">v{getValue() as number}</span>
         ),
       },
       {
         accessorKey: "ai_score",
-        header: "AI Score",
+        header: "AI score",
         size: 130,
         cell: ({ row }) => {
           const score = row.original.ai_score;
-          if (score === null) return <span className="text-slate-700 text-[13px]">—</span>;
+          if (score === null) return <span className="text-[13px] text-slate-700">—</span>;
           const classes = getAiScoreClasses(row.original.status);
           return (
             <span className="inline-flex items-center gap-2">
               <Progress
                 value={Math.min(Math.max(score, 0), 10) * 10}
-                className={cn("w-14 h-1.5", classes.bar)}
+                className={cn("h-1.5 w-14", classes.bar)}
               />
-              <span className={cn("font-semibold text-[13px]", classes.text)}>{score}</span>
+              <span className={cn("text-[13px] font-semibold tabular-nums", classes.text)}>
+                {score}
+              </span>
             </span>
           );
         },
@@ -475,7 +449,7 @@ function MyArticlesTable({
         header: "Created",
         size: 125,
         cell: ({ getValue }) => (
-          <span className="text-slate-700 text-[13px]">
+          <span className="text-[13px] text-slate-700">
             {dayjs(getValue() as string).format("MMM D, YYYY")}
           </span>
         ),
@@ -495,17 +469,34 @@ function MyArticlesTable({
     onSortingChange: setSorting,
   });
 
+  if (!loading && articles.length === 0) {
+    return (
+      <EmptyState
+        icon={<FileText size={20} />}
+        title={viewAll ? "No articles yet" : `No articles for ${dayjs(month).format("MMMM YYYY")}`}
+        description="Write an article to get started."
+        action={
+          <Button type="button" onClick={onCreate}>
+            <Plus size={16} />
+            New article
+          </Button>
+        }
+      />
+    );
+  }
+
   return (
     <DataGrid
       table={table}
       recordCount={articles.length}
       isLoading={loading}
+      loadingMode="skeleton"
       onRowClick={(row) => onRowClick(row.id)}
       emptyMessage={
-        viewAll ? "No articles found." : `No articles for ${dayjs(month).format("MMMM-YYYY")}.`
+        viewAll ? "No articles found." : `No articles for ${dayjs(month).format("MMMM YYYY")}.`
       }
       tableLayout={contiqTableLayout}
-        tableClassNames={contiqTableClassNames}
+      tableClassNames={contiqTableClassNames}
     >
       <div className="w-full space-y-2.5">
         <DataGridContainer className={contiqTableContainerClassName}>

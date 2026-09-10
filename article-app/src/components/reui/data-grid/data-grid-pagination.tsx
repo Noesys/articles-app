@@ -87,8 +87,8 @@ function DataGridPagination(props: DataGridPaginationProps): JSX.Element {
           variant="ghost"
           aria-label={i18n.labels.goToPage(i + 1)}
           aria-current={pageIndex === i ? "page" : undefined}
-          className={cn(btnBaseClasses, "text-muted-foreground", {
-            "bg-slate-900 text-white hover:bg-slate-800 hover:text-white":
+          className={cn(btnBaseClasses, "rounded-sm text-muted-foreground", {
+            "bg-slate-200 text-slate-900 hover:bg-slate-200 hover:text-slate-900":
               pageIndex === i,
           })}
           onClick={() => {

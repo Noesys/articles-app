@@ -11,11 +11,11 @@
 | Phase | Status | Notes |
 |---|---|---|
 | **A** — Tokens + spacing/type/radius/border | [x] Complete | Tokens + high-leverage primitives |
-| **B** — Shell (headers, page chrome, filters) | [ ] Not started | |
-| **C** — DataGrid system polish | [ ] Not started | Keep soft slate borders (`9cb80bf`) |
-| **D** — Forms, dialogs, selects, toasts | [ ] Not started | Dialogs may use `rounded-md` |
-| **E** — Micro-interactions (no route fade) | [ ] Not started | Component-level only |
-| **F** — Empty/loading/error + a11y | [ ] Not started | |
+| **B** — Shell (headers, page chrome, filters) | [x] Complete | PageShell/PageHeader/FilterToolbar + headers |
+| **C** — DataGrid system polish | [x] Complete | Soft borders + skeleton + calm pagination |
+| **D** — Forms, dialogs, selects, toasts | [x] Complete | Dialog md; TipTap/sonner/forms aligned |
+| **E** — Micro-interactions (no route fade) | [x] Complete | Component-level only; no route fade |
+| **F** — Empty/loading/error + a11y | [x] Complete | EmptyState/InlineAlert/skeletons |
 | **G** — Verification + deploy | [ ] Not started | Deploy after review |
 
 ---
@@ -162,26 +162,26 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 
 ### Phase B — Shell (headers, page chrome, filters)
 
-**Effort: M** · **Status: not started**
+**Effort: M** · **Status: complete**
 
 **Scope:** Unify admin + user headers; page title/subtitle rhythm; filter toolbars as one composition; consistent page padding via tokens.
 
 #### Checklist
 
-- [ ] AdminHeader: tighten logo sizing, nav spacing (less `justify-around` sprawl), indigo active = `rounded-sm`
-- [ ] User Header: match admin shadow/border treatment
-- [ ] Page chrome: shared title + optional subtitle/count pattern on All Articles, Users, Insights, Article Types, My Articles
-- [ ] Apply `--page-pad-x` / `--page-pad-y` / `--section-gap` consistently
-- [ ] Filter rows: cohesive toolbar (label rhythm, control heights, soft borders)—All Articles, Insights, Users
-- [ ] Replace raw filter `<button>` toggles with shared Button variants where cheap
-- [ ] Mobile menu: usable; light open animation deferred to Phase E if needed
-- [ ] Keyboard focus visible on nav + filters
+- [x] AdminHeader: tighten logo sizing, nav spacing (less `justify-around` sprawl), indigo active = `rounded-sm`
+- [x] User Header: match admin shadow/border treatment
+- [x] Page chrome: shared title + optional subtitle/count pattern on All Articles, Users, Insights, Article Types, My Articles
+- [x] Apply `--page-pad-x` / `--page-pad-y` / `--section-gap` consistently
+- [x] Filter rows: cohesive toolbar (label rhythm, control heights, soft borders)—All Articles, Insights, Users
+- [x] Replace raw filter `<button>` toggles with shared Button variants where cheap
+- [x] Mobile menu: usable; light open animation deferred to Phase E if needed
+- [x] Keyboard focus visible on nav + filters
 
 **Acceptance**
 
-- [ ] Admin + user shell feel like one product
-- [ ] Keyboard focus visible on nav + filters
-- [ ] Mobile menu usable
+- [x] Admin + user shell feel like one product
+- [x] Keyboard focus visible on nav + filters
+- [x] Mobile menu usable
 
 **Risk:** Medium (many pages). Ship with visual checklist per route.
 
@@ -189,26 +189,26 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 
 ### Phase C — DataGrid system polish (all tables)
 
-**Effort: L** · **Status: not started**
+**Effort: L** · **Status: complete**
 
 **Scope:** Elevate `contiq-data-grid.ts` as single source of table chrome; sentence-case semibold headers; soft borders; calm pagination; skeleton loading; unify cell patterns.
 
 #### Checklist
 
-- [ ] `contiq-data-grid.ts`: container `rounded-sm border-slate-200 shadow-card`; header wash + sentence-case semibold
-- [ ] Reinforce soft border locks in `index.css` if needed
-- [ ] Align Users, Articles, ScoringHistory, Insights, Article Types params, My Articles to tokens
-- [ ] Pagination: rows-per-page always shows value; active page soft slate `rounded-sm` (not black)
-- [ ] Skeleton loading for Users / Articles / Insights / ScoringHistory
-- [ ] Cell patterns: avatar+name+email, status badge, `tabular-nums` scores, action hierarchy (ghost/outline)
-- [ ] Row hover: `bg-slate-50/80` + `duration-fast`
-- [ ] Avoid deep forks of ReUI `data-grid-table.tsx` unless necessary
+- [x] `contiq-data-grid.ts`: container `rounded-sm border-slate-200 shadow-card`; header wash + sentence-case semibold
+- [x] Reinforce soft border locks in `index.css` if needed
+- [x] Align Users, Articles, ScoringHistory, Insights, Article Types params, My Articles to tokens
+- [x] Pagination: rows-per-page always shows value; active page soft slate `rounded-sm` (not black)
+- [x] Skeleton loading for Users / Articles / Insights / ScoringHistory
+- [x] Cell patterns: avatar+name+email, status badge, `tabular-nums` scores, action hierarchy (ghost/outline)
+- [x] Row hover: `bg-slate-50/80` + `duration-fast`
+- [x] Avoid deep forks of ReUI `data-grid-table.tsx` unless necessary
 
 **Acceptance**
 
-- [ ] Side-by-side with ReUI reference: soft lines, header wash, calm pagination
-- [ ] Border fix still holds under hover/sort/scroll
-- [ ] No layout jump when loading→data
+- [x] Side-by-side with ReUI reference: soft lines, header wash, calm pagination
+- [x] Border fix still holds under hover/sort/scroll
+- [x] No layout jump when loading→data
 
 **Risk:** Medium–high (ReUI internals). Prefer classNames/layout props.
 
@@ -216,27 +216,27 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 
 ### Phase D — Forms, dialogs, selects, toasts
 
-**Effort: M–L** · **Status: not started**
+**Effort: M–L** · **Status: complete**
 
 **Scope:** Form field rhythm; dialog `rounded-md` exception; selects/popovers match; Sonner Contiq styling; TipTap chrome align; Badge consolidation.
 
 #### Checklist
 
-- [ ] Form rhythm: label above, `gap-2`, helper/error below; indigo focus ring
-- [ ] Dialog: opaque white, soft ring, footer slate-50; `rounded-md`; `--duration-med`
-- [ ] Select / popover / autocomplete: sm radius, soft border/ring (Phase A started; finish parity)
-- [ ] Sonner: slate border, indigo/success/danger icons
-- [ ] Article Types parameter modal polish
-- [ ] Consolidate admin Badge → shadcn Badge + Contiq semantic classes (or document dual use)
-- [ ] TipTap: editor border/focus/toolbar align with tokens
-- [ ] Article detail / create forms control parity
-- [ ] Soften remaining `rounded-lg`/`rounded-xl` on form primitives (textarea, filter-select, empty icon)
+- [x] Form rhythm: label above, `gap-2`, helper/error below; indigo focus ring
+- [x] Dialog: opaque white, soft ring, footer slate-50; `rounded-md`; `--duration-med`
+- [x] Select / popover / autocomplete: sm radius, soft border/ring (Phase A started; finish parity)
+- [x] Sonner: slate border, indigo/success/danger icons
+- [x] Article Types parameter modal polish
+- [x] Consolidate admin Badge → shadcn Badge + Contiq semantic classes (or document dual use)
+- [x] TipTap: editor border/focus/toolbar align with tokens
+- [x] Article detail / create forms control parity
+- [x] Soften remaining `rounded-lg`/`rounded-xl` on form primitives (textarea, filter-select, empty icon)
 
 **Acceptance**
 
-- [ ] Form contrast AA
-- [ ] Destructive confirms clear
-- [ ] No placeholder-as-only-label on critical fields
+- [x] Form contrast AA
+- [x] Destructive confirms clear
+- [x] No placeholder-as-only-label on critical fields
 
 **Risk:** Medium (editor regressions).
 
@@ -244,25 +244,25 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 
 ### Phase E — Micro-interactions (component-level only)
 
-**Effort: M** · **Status: not started**
+**Effort: M** · **Status: complete**
 
 **Scope:** Product-appropriate motion. **No route fade** (locked). Honor `prefers-reduced-motion`.
 
 #### Checklist
 
-- [ ] Row hover transition (background only)
-- [ ] Button `:active` press feedback tuned to `--duration-fast`
-- [ ] Dialog/select enter/exit tuned to Contiq easing
-- [ ] Accordion / Article Type expand: keep height transition; reduced-motion = instant
-- [ ] Nav active: color/bg transition only
-- [ ] **Do not** add route content fade / `PageFade`
-- [ ] Verify `prefers-reduced-motion: reduce` disables non-essential motion
+- [x] Row hover transition (background only)
+- [x] Button `:active` press feedback tuned to `--duration-fast`
+- [x] Dialog/select enter/exit tuned to Contiq easing
+- [x] Accordion / Article Type expand: keep height transition; reduced-motion = instant
+- [x] Nav active: color/bg transition only
+- [x] **Do not** add route content fade / `PageFade`
+- [x] Verify `prefers-reduced-motion: reduce` disables non-essential motion
 
 **Acceptance**
 
-- [ ] Every animation has a one-line purpose
-- [ ] Reduced-motion verified in OS setting
-- [ ] No layout thrash on large tables
+- [x] Every animation has a one-line purpose
+- [x] Reduced-motion verified in OS setting
+- [x] No layout thrash on large tables
 
 **Risk:** Low if transform/opacity only.
 
@@ -270,23 +270,23 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 
 ### Phase F — Empty / loading / error + a11y
 
-**Effort: M** · **Status: not started**
+**Effort: M** · **Status: complete**
 
 #### Checklist
 
-- [ ] Promote `EmptyState` on all list surfaces with CTA when actionable
-- [ ] Shared inline error / alert for fetch failures
-- [ ] Skeleton components for tables + key detail panels
-- [ ] A11y: focus order, aria on icon-only actions, dialog labels, contrast
-- [ ] Status never color-only
-- [ ] Fix month-picker relative / current-dot bugs if still present
-- [ ] Keyboard-only pass on top 5 routes
+- [x] Promote `EmptyState` on all list surfaces with CTA when actionable
+- [x] Shared inline error / alert for fetch failures
+- [x] Skeleton components for tables + key detail panels
+- [x] A11y: focus order, aria on icon-only actions, dialog labels, contrast
+- [x] Status never color-only
+- [x] Fix month-picker relative / current-dot bugs if still present
+- [x] Keyboard-only pass on top 5 routes
 
 **Acceptance**
 
-- [ ] Keyboard-only pass on top 5 routes
-- [ ] Empty states explain next action
-- [ ] No silent failures (toast or inline)
+- [x] Keyboard-only pass on top 5 routes
+- [x] Empty states explain next action
+- [x] No silent failures (toast or inline)
 
 ---
 
@@ -345,12 +345,12 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 
 ## 8. Acceptance criteria (program-level)
 
-- [ ] One accent: Contiq indigo; no AI-purple
-- [ ] Radius = sm everywhere except dialogs (`md`) and true circles (avatar)
-- [ ] Borders = soft slate-200; DataGrid never black
-- [ ] Table headers = sentence-case semibold
-- [ ] No route fade; component motion only + reduced-motion
-- [ ] Density stays data-first (dial 7)
+- [x] One accent: Contiq indigo; no AI-purple
+- [x] Radius = sm everywhere except dialogs (`md`) and true circles (avatar)
+- [x] Borders = soft slate-200; DataGrid never black
+- [x] Table headers = sentence-case semibold
+- [x] No route fade; component motion only + reduced-motion
+- [x] Density stays data-first (dial 7)
 - [ ] Build passes; key flows regression-clean
 - [ ] Deploy only after Phase G review
 

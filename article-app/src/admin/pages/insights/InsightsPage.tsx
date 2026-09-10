@@ -2,6 +2,7 @@ import { EmployeeSubmissionsTable } from "@/admin/components/insights/EmployeeSu
 import { SummaryView } from "@/admin/components/insights/SummaryView";
 import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
 import { FilterSelect } from "@/components/ui/filter-select";
+import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
 import { useState } from "react";
 
 const currentMonthYear = () => {
@@ -15,23 +16,24 @@ const InsightsPage = () => {
   const [end, setEnd] = useState(currentMonthYear());
 
   return (
-    <div className="w-full px-4 md:px-8 py-5">
-      <h1 className="text-3xl font-semibold mb-5">Insights</h1>
-      <div className="flex items-center gap-3 mb-5">
+    <PageShell>
+      <PageHeader title="Insights" subtitle="Submission and parameter summaries" />
+      <FilterToolbar>
         <FilterSelect
           value={insights}
           onValueChange={setInsights}
           triggerClassName="w-[200px]"
+          aria-label="Insight view"
           options={[
-            { value: "Employee Submissions", label: "Employee Submissions" },
+            { value: "Employee Submissions", label: "Employee submissions" },
             { value: "Summary", label: "Summary" },
           ]}
         />
-        <span className="font-bold text-sm">Start Date</span>
+        <span className="text-sm font-medium text-slate-700">Start</span>
         <MonthYearPicker label="Start" value={start} onChange={setStart} />
-        <span className="font-bold text-sm">End Date</span>
+        <span className="text-sm font-medium text-slate-700">End</span>
         <MonthYearPicker label="End" value={end} onChange={setEnd} minValue={start} />
-      </div>
+      </FilterToolbar>
       <div>
         {insights === "Summary" ? (
           <SummaryView start={start} end={end} />
@@ -39,7 +41,7 @@ const InsightsPage = () => {
           <EmployeeSubmissionsTable start={start} end={end} />
         )}
       </div>
-    </div>
+    </PageShell>
   );
 };
 

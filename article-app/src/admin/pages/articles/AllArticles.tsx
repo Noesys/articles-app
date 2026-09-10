@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ArticlesTable from "../../components/articles/ArticlesTable";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import dayjs, { type Dayjs } from "dayjs";
+import dayjs from "dayjs";
 import { api, apiFull } from "@/http-client";
 
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { SimplePagination } from "@/components/ui/simple-pagination";
 import { ArticleSummary } from "@/admin/utils/types";
+import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
+import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
 
 type ArticleTypeOption = {
   id: string;
@@ -17,22 +20,10 @@ type ArticleTypeOption = {
 };
 
 const STATUS_OPTIONS = [
-  {
-    value: "all",
-    label: "All Statuses",
-  },
-  {
-    value: "approved",
-    label: "Accepted",
-  },
-  {
-    value: "pending",
-    label: "Pending",
-  },
-  {
-    value: "rewrite_required",
-    label: "Rejected",
-  },
+  { value: "all", label: "All statuses" },
+  { value: "approved", label: "Accepted" },
+  { value: "pending", label: "Pending" },
+  { value: "rewrite_required", label: "Rejected" },
 ];
 
 const AllArticles = () => {
@@ -41,9 +32,7 @@ const AllArticles = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
-
   const [articleTypes, setArticleTypes] = useState<ArticleTypeOption[]>([]);
-
   const [userName, setUserName] = useState("");
 
   const monthParam = searchParams.get("month");
@@ -51,8 +40,6 @@ const AllArticles = () => {
     monthParam && /^\d{4}-\d{2}$/.test(monthParam) && dayjs(`${monthParam}-01`).isValid()
       ? monthParam
       : dayjs().format("YYYY-MM");
-  const selectedMonth: Dayjs = dayjs(`${selectedMonthKey}-01`).startOf("month");
-  const focusedYear = Number(searchParams.get("year")) || selectedMonth.year();
   const selectedStatus = searchParams.get("status") || "all";
   const selectedType = searchParams.get("type") || "all";
   const selectedAuthor = searchParams.get("author") || "all";
@@ -76,19 +63,8 @@ const AllArticles = () => {
 
   const fetchArticleTypes = useCallback(async () => {
     try {
-      const response = await api<
-        Array<{
-          id: string;
-          name: string;
-        }>
-      >("/admin/article-types");
-
-      setArticleTypes(
-        response.map((type) => ({
-          id: type.id,
-          name: type.name,
-        })),
-      );
+      const response = await api<Array<{ id: string; name: string }>>("/admin/article-types");
+      setArticleTypes(response.map((type) => ({ id: type.id, name: type.name })));
     } catch (err) {
       console.error("Failed to load article types:", err);
     }
@@ -104,13 +80,8 @@ const AllArticles = () => {
       params.set("page", String(page));
       params.set("limit", String(limit));
 
-      if (selectedStatus !== "all") {
-        params.set("status", selectedStatus);
-      }
-
-      if (selectedType !== "all") {
-        params.set("type", selectedType);
-      }
+      if (selectedStatus !== "all") params.set("status", selectedStatus);
+      if (selectedType !== "all") params.set("type", selectedType);
 
       const path = id
         ? `/admin/users/${id}/articles?${params.toString()}`
@@ -129,9 +100,7 @@ const AllArticles = () => {
       }
     } catch (err) {
       console.error("Failed to load articles:", err);
-
       setError(err instanceof Error ? err.message : "Failed to load articles");
-
       setArticles([]);
     } finally {
       setLoading(false);
@@ -163,25 +132,20 @@ const AllArticles = () => {
       case "score_desc":
         sorted.sort((a, b) => (b.ai_score ?? -1) - (a.ai_score ?? -1));
         break;
-
       case "score_asc":
         sorted.sort((a, b) => (a.ai_score ?? -1) - (b.ai_score ?? -1));
         break;
-
       case "version_desc":
         sorted.sort((a, b) => b.version - a.version);
         break;
-
       case "version_asc":
         sorted.sort((a, b) => a.version - b.version);
         break;
-
       case "created_asc":
         sorted.sort(
           (a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime(),
         );
         break;
-
       case "created_desc":
       default:
         sorted.sort(
@@ -195,135 +159,79 @@ const AllArticles = () => {
 
   const isUserView = Boolean(id);
   return (
-    <div className="w-full px-4 md:px-8 py-5">
+    <PageShell>
       {isUserView && (
-        <button
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/admin/users"))}
-          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-4"
+          className="mb-3 -ml-2 text-slate-500 hover:text-slate-700"
         >
           <ChevronLeft size={14} /> Back to Users
-        </button>
+        </Button>
       )}
-      <div className="mb-5">
-        <h1 className="text-3xl font-semibold text-slate-900">
-          {id ? `${userName || "User"}'s Articles` : "All Articles"}
-        </h1>
-      </div>
+      <PageHeader
+        title={id ? `${userName || "User"}'s articles` : "All articles"}
+        subtitle={!loading && !error ? `${total} total` : undefined}
+      />
 
-      {/* Filters - hide author dropdown in user view */}
-      <div className={`grid gap-3 mb-5 ${isUserView ? "grid-cols-4" : "grid-cols-5"}`}>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="justify-between font-normal w-full h-9 bg-white border border-slate-300 rounded-lg text-sm shadow-none"
-            >
-              {selectedMonth.format("MMMM YYYY")}
-              <Calendar className="h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-
-          <PopoverContent className="w-64 p-3">
-            <div className="flex items-center justify-between mb-3">
-              <Button
-                variant="ghost"
-                className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                onClick={() => setFilterParam("year", String(focusedYear - 1))}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-
-              <div className="font-bold text-sm">{focusedYear}</div>
-
-              <Button
-                variant="ghost"
-                className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                onClick={() => setFilterParam("year", String(focusedYear + 1))}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              {Array.from({ length: 12 }).map((_, i) => {
-                const month = dayjs().year(focusedYear).month(i).startOf("month");
-
-                const isSelected = selectedMonth.format("YYYY-MM") === month.format("YYYY-MM");
-
-                const isCurrent = dayjs().format("YYYY-MM") === month.format("YYYY-MM");
-
-                return (
-                  <Button
-                    key={i}
-                    variant={isSelected ? "default" : "ghost"}
-                    onClick={() => setFilterParam("month", month.format("YYYY-MM"))}
-                    className={`h-9 text-sm ${
-                      isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"
-                    }`}
-                  >
-                    {month.format("MMM")}
-                    {isCurrent && (
-                      <span className="absolute top-1 right-1 h-1 w-1 rounded-full bg-primary" />
-                    )}
-                  </Button>
-                );
-              })}
-            </div>
-          </PopoverContent>
-        </Popover>
-
+      <FilterToolbar className={isUserView ? "grid grid-cols-2 gap-3 sm:grid-cols-4" : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"}>
+        <MonthYearPicker
+          label="Month"
+          value={selectedMonthKey}
+          onChange={(ym) => setFilterParam("month", ym)}
+          triggerClassName="w-full"
+        />
         <FilterSelect
           value={selectedType}
           onValueChange={(value) => setFilterParam("type", value, "all")}
-          placeholder="All Types"
+          placeholder="All types"
+          aria-label="Article type"
           options={[
-            { value: "all", label: "All Types" },
-            ...articleTypes.map((type) => ({
-              value: type.id,
-              label: type.name,
-            })),
+            { value: "all", label: "All types" },
+            ...articleTypes.map((type) => ({ value: type.id, label: type.name })),
           ]}
         />
         <FilterSelect
           value={selectedStatus}
           onValueChange={(value) => setFilterParam("status", value, "all")}
-          placeholder="All Statuses"
+          placeholder="All statuses"
+          aria-label="Status"
           options={STATUS_OPTIONS}
         />
         <FilterSelect
           value={sortBy}
           onValueChange={(value) => setFilterParam("sort", value, "created_desc")}
           placeholder="Sort"
+          aria-label="Sort"
           options={[
-            { value: "created_desc", label: "Created (Newest First)" },
-            { value: "created_asc", label: "Created (Oldest First)" },
-            { value: "score_desc", label: "AI Score (High → Low)" },
-            { value: "score_asc", label: "AI Score (Low → High)" },
-            { value: "version_desc", label: "Version (High → Low)" },
-            { value: "version_asc", label: "Version (Low → High)" },
+            { value: "created_desc", label: "Created (newest first)" },
+            { value: "created_asc", label: "Created (oldest first)" },
+            { value: "score_desc", label: "AI score (high → low)" },
+            { value: "score_asc", label: "AI score (low → high)" },
+            { value: "version_desc", label: "Version (high → low)" },
+            { value: "version_asc", label: "Version (low → high)" },
           ]}
         />
         {!isUserView && (
           <FilterSelect
             value={selectedAuthor}
             onValueChange={(value) => setFilterParam("author", value, "all")}
-            placeholder="All Authors"
+            placeholder="All authors"
+            aria-label="Author"
             options={[
-              { value: "all", label: "All Authors" },
+              { value: "all", label: "All authors" },
               ...authors.map((name) => ({ value: name, label: name })),
             ]}
           />
         )}
-      </div>
+      </FilterToolbar>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
+        <InlineAlert>{error}</InlineAlert>
       ) : loading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
-          Loading articles
-        </div>
+        <DataGridSkeleton rows={8} />
       ) : (
         <>
           <ArticlesTable
@@ -331,13 +239,13 @@ const AllArticles = () => {
             onRowClick={(articleId: string) => navigate(`/admin/articles/${articleId}`)}
           />
           {total > limit && (
-            <div className="flex justify-end mt-4">
+            <div className="mt-4 flex justify-end">
               <SimplePagination page={page} total={total} pageSize={limit} onChange={setPage} />
             </div>
           )}
         </>
       )}
-    </div>
+    </PageShell>
   );
 };
 

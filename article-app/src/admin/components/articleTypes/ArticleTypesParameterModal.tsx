@@ -52,19 +52,19 @@ export default function ArticleTypesParameterModal({
         </DialogHeader>
         {modalDraft && (
           <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-700">
                 Parameter name
               </label>
               <Input
                 value={modalDraft.name}
                 onChange={(e) => setModalDraft({ ...modalDraft, name: e.target.value })}
                 placeholder="e.g. Grammar"
-                className="bg-white"
+                className="rounded-sm bg-white"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-700">
                 Prompt for the parameter
               </label>
               <Textarea
@@ -72,11 +72,11 @@ export default function ArticleTypesParameterModal({
                 onChange={(e) => setModalDraft({ ...modalDraft, prompt: e.target.value })}
                 placeholder="AI instruction for evaluating this parameter..."
                 rows={2}
-                className="bg-white"
+                className="rounded-sm bg-white"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-700">
                 Range / Option
               </label>
               <Select
@@ -132,7 +132,8 @@ export default function ArticleTypesParameterModal({
                     />
                     <button
                       type="button"
-                      className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      aria-label={`Remove option ${index + 1}`}
+                      className="rounded-sm p-1.5 text-slate-400 outline-none transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:ring-3 focus-visible:ring-ring/50"
                       onClick={() => {
                         const next = modalDraft.options.filter((_, i) => i !== index);
                         setModalDraft({ ...modalDraft, options: next });

@@ -157,6 +157,18 @@ body,
     --border: #e2e8f0;
   }
 
+  /* Sentence-case semibold table headers (Contiq lock) */
+  [data-slot="data-grid"] th {
+    color: #334155; /* slate-700 */
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  /* Soften TipTap toolbar separator to border token */
+  .tiptap-toolbar-sep {
+    background-color: var(--border, #e2e8f0);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

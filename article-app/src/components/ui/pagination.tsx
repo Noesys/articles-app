@@ -49,7 +49,10 @@ function PaginationLink({
       asChild
       variant={isActive ? "outline" : "ghost"}
       size={size}
-      className={cn(className)}
+      className={cn(
+        isActive && "rounded-sm border-border bg-slate-200 text-slate-900 hover:bg-slate-200",
+        className,
+      )}
     >
       <a
         aria-current={isActive ? "page" : undefined}

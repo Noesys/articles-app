@@ -200,7 +200,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
       },
       {
         accessorKey: "ai_score",
-        header: "AI Score",
+        header: "AI score",
         size: 130,
         cell: ({ row }) => {
           const score = row.original.ai_score;
@@ -212,7 +212,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
                 value={Math.min(Math.max(score, 0), 10) * 10}
                 className={cn("w-14 h-1.5", classes.bar)}
               />
-              <span className={cn("font-semibold text-[13px]", classes.text)}>{score}</span>
+              <span className={cn("font-semibold text-[13px] tabular-nums", classes.text)}>{score}</span>
             </span>
           );
         },
@@ -247,34 +247,39 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="rounded-lg border border-border bg-background px-3.5 py-2.5">
-          <div className="text-xs text-muted-foreground">Total Articles</div>
-          <div className="text-xl font-semibold mt-0.5">{dashboard.total}</div>
+        <div className="rounded-sm border border-border bg-background px-3.5 py-2.5">
+          <div className="text-xs text-muted-foreground">Total articles</div>
+          <div className="mt-0.5 text-xl font-semibold tabular-nums">{dashboard.total}</div>
         </div>
-        <div className="rounded-lg border border-border bg-background px-3.5 py-2.5">
+        <div className="rounded-sm border border-border bg-background px-3.5 py-2.5">
           <div className="text-xs text-muted-foreground">Accepted</div>
-          <div className="text-xl font-semibold text-emerald-600 mt-0.5">{dashboard.approved}</div>
+          <div className="mt-0.5 text-xl font-semibold tabular-nums text-emerald-600">
+            {dashboard.approved}
+          </div>
         </div>
-        <div className="rounded-lg border border-border bg-background px-3.5 py-2.5">
+        <div className="rounded-sm border border-border bg-background px-3.5 py-2.5">
           <div className="text-xs text-muted-foreground">Pending</div>
-          <div className="text-xl font-semibold text-amber-600 mt-0.5">{dashboard.pending}</div>
+          <div className="mt-0.5 text-xl font-semibold tabular-nums text-amber-600">
+            {dashboard.pending}
+          </div>
         </div>
-        <div className="rounded-lg border border-border bg-background px-3.5 py-2.5">
+        <div className="rounded-sm border border-border bg-background px-3.5 py-2.5">
           <div className="text-xs text-muted-foreground">Rejected</div>
-          <div className="text-xl font-semibold text-red-600 mt-0.5">
+          <div className="mt-0.5 text-xl font-semibold tabular-nums text-red-600">
             {dashboard.rewriteRequired}
           </div>
         </div>
       </div>
 
       <div className="relative flex-1">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search size={15} className="absolute top-1/2 left-3 z-10 -translate-y-1/2 text-slate-400" />
         <input
-          type="text"
+          type="search"
           value={titleFilter}
           onChange={(e) => setTitleFilter(e.target.value)}
           placeholder="Search title..."
-          className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-9"
+          aria-label="Search title"
+          className="h-9 w-full rounded-sm border border-border bg-white py-2 pr-3 pl-9 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
         />
       </div>
 
@@ -283,6 +288,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
         recordCount={locallyFilteredArticles.length}
         onRowClick={onRowClick ? (row) => onRowClick(row.id) : undefined}
         emptyMessage="No articles found"
+        loadingMode="skeleton"
         tableLayout={contiqTableLayout}
         tableClassNames={contiqTableClassNames}
       >

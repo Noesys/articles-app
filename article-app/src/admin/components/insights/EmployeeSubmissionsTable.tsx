@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Spinner } from "@/components/ui/spinner";
 import {
   DataGrid,
   DataGridContainer,
@@ -20,6 +19,10 @@ import {
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { api } from "@/http-client";
+import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
+import EmptyState from "@/admin/components/ui/EmptyState";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { FileBarChart } from "lucide-react";
 
 const MONTH_LABELS = [
   "Jan",
@@ -37,21 +40,26 @@ const MONTH_LABELS = [
 ];
 const formatMonth = (ym: string) => {
   const [y, m] = ym.split("-");
-  return `${MONTH_LABELS[Number(m) - 1]}-${y.slice(2)}`;
+  return `${MONTH_LABELS[Number(m) - 1]}-${y!.slice(2)}`;
 };
 
 export function EmployeeSubmissionsTable({ start, end }: { start: string; end: string }) {
   const [data, setData] = useState<EmployeeSubmissionsResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadEmployeeSubmissions() {
       setLoading(true);
+      setError(null);
       try {
         const result = await api<EmployeeSubmissionsResult>(
           `/admin/insights/employee-submissions?start=${start}&end=${end}`,
         );
         setData(result);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load submissions");
+        setData(null);
       } finally {
         setLoading(false);
       }
@@ -81,7 +89,7 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
         size: 80,
         cell: ({ getValue }: { getValue: () => unknown }) => {
           const val = getValue() as number;
-          return <span className="block text-center">{val || "-"}</span>;
+          return <span className="block text-center tabular-nums">{val || "-"}</span>;
         },
       })),
       {
@@ -90,7 +98,9 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
         size: 80,
         enablePinning: true,
         cell: ({ getValue }) => (
-          <span className="block text-center">{getValue() as number}</span>
+          <span className="block text-center font-medium tabular-nums">
+            {getValue() as number}
+          </span>
         ),
       },
     ];
@@ -111,19 +121,24 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
     },
   });
 
-  if (loading) {
+  if (loading) return <DataGridSkeleton rows={10} cols={6} />;
+  if (error) return <InlineAlert>{error}</InlineAlert>;
+  if (!data) return null;
+  if (rows.length === 0) {
     return (
-      <div className="mt-10 flex justify-center">
-        <Spinner className="size-6" />
-      </div>
+      <EmptyState
+        icon={<FileBarChart size={20} />}
+        title="No submissions in range"
+        description="Try a wider start/end month range."
+      />
     );
   }
-  if (!data) return null;
 
   return (
     <DataGrid
       table={table}
       recordCount={rows.length}
+      loadingMode="skeleton"
       tableLayout={{
         ...contiqTableLayout,
         columnsPinnable: true,
@@ -138,15 +153,21 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
               <DataGridTableFootRow>
                 <DataGridTableFootRowCell colSpan={2} className="bg-muted">
                   <span className="text-muted-foreground">Total: </span>
-                  <span className="font-semibold text-foreground">{data.rows.length}</span>
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {data.rows.length}
+                  </span>
                 </DataGridTableFootRowCell>
                 {data.months.map((m) => (
                   <DataGridTableFootRowCell key={m} className="bg-muted text-center">
-                    <span className="font-semibold text-foreground">{data.monthlyTotals[m]}</span>
+                    <span className="font-semibold tabular-nums text-foreground">
+                      {data.monthlyTotals[m]}
+                    </span>
                   </DataGridTableFootRowCell>
                 ))}
                 <DataGridTableFootRowCell className="bg-muted text-center">
-                  <span className="font-semibold text-foreground">{data.grandTotal}</span>
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {data.grandTotal}
+                  </span>
                 </DataGridTableFootRowCell>
               </DataGridTableFootRow>
             }

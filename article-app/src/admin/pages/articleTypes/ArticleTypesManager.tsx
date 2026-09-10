@@ -6,42 +6,36 @@ import ArticleTypeCard from "../../components/articleTypes/ArticleTypeCard";
 import EmptyState from "../../components/ui/EmptyState";
 import { useNavigate } from "react-router-dom";
 import { ArticleTypeWithPrompt } from "@/admin/utils/types";
+import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 type ArticleTypesManagerProps = {
   articleTypes: ArticleTypeWithPrompt[];
-
   onDelete?: (id: string) => void | Promise<void>;
 };
 
 export default function ArticleTypesManager({ articleTypes, onDelete }: ArticleTypesManagerProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
   const navigate = useNavigate();
-
   const [deleteTarget, setDeleteTarget] = useState<ArticleTypeWithPrompt | null>(null);
-
   const [submitting, setSubmitting] = useState(false);
-
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-
     return articleTypes.filter((type) => {
-      const matchesQuery =
+      return (
         !normalizedQuery ||
         type.name.toLowerCase().includes(normalizedQuery) ||
-        type.description?.toLowerCase().includes(normalizedQuery);
-
-      return matchesQuery;
+        type.description?.toLowerCase().includes(normalizedQuery)
+      );
     });
   }, [articleTypes, query]);
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-
     setSubmitting(true);
-
     try {
       await onDelete?.(deleteTarget.id);
       setDeleteTarget(null);
@@ -49,48 +43,58 @@ export default function ArticleTypesManager({ articleTypes, onDelete }: ArticleT
       setSubmitting(false);
     }
   };
+
   return (
-    <div className="w-full px-4 md:px-8 py-5">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-3xl font-semibold text-slate-900 leading-tight">Article Types</h2>
-        <button
-          onClick={() => navigate("/admin/article-types/new")}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors"
-        >
-          <Plus size={16} />
-          New Type
-        </button>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Article types"
+        subtitle={`${articleTypes.length} ${articleTypes.length === 1 ? "type" : "types"}`}
+        actions={
+          <Button type="button" size="lg" onClick={() => navigate("/admin/article-types/new")}>
+            <Plus size={16} />
+            New type
+          </Button>
+        }
+      />
 
-      <div className="flex items-center gap-2 mb-4 w-full">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-
-          <input
-            type="text"
+      <FilterToolbar>
+        <div className="relative w-full flex-1">
+          <Search
+            size={15}
+            className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 text-slate-400"
+          />
+          <Input
+            type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search article types..."
-            className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-9"
+            aria-label="Search article types"
+            className="h-9 rounded-sm border-border bg-white pl-9"
           />
         </div>
-      </div>
+      </FilterToolbar>
 
       <div className="w-full">
         {articleTypes.length === 0 ? (
           <EmptyState
             icon={<Tag size={20} />}
-            title={"Loading Article Types."}
-            description=" Please wait..."
+            title="No article types yet"
+            description="Create a type to define scoring parameters and prompts."
+            action={
+              <Button type="button" onClick={() => navigate("/admin/article-types/new")}>
+                <Plus size={16} />
+                New type
+              </Button>
+            }
           />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<Search size={20} />}
             title="No matches"
-            description="Try a different search term or filter."
+            description="Try a different search term."
           />
         ) : (
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+          <div className="divide-y divide-slate-100 overflow-hidden rounded-sm border border-slate-200 bg-white shadow-[var(--shadow-card)]">
             {filtered.map((type) => (
               <ArticleTypeCard
                 key={type.id}
@@ -114,6 +118,6 @@ export default function ArticleTypesManager({ articleTypes, onDelete }: ArticleT
           onConfirm={handleDelete}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

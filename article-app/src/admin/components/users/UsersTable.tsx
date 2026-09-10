@@ -157,8 +157,8 @@ export default function UsersTable({
               variant="outline"
               className={cn(
                 "font-medium border-transparent",
-                role === "super_admin" && "bg-violet-50 text-violet-700 ring-1 ring-violet-200/80",
-                role === "admin" && "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200/80",
+                role === "super_admin" && "bg-indigo-50 text-indigo-800 ring-1 ring-indigo-300/80",
+                role === "admin" && "bg-sky-50 text-sky-700 ring-1 ring-sky-200/80",
                 role === "user" && "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80",
               )}
             >
@@ -300,6 +300,7 @@ export default function UsersTable({
         table={table}
         recordCount={users.length}
         isLoading={loading}
+        loadingMode="skeleton"
         tableLayout={contiqTableLayout}
         tableClassNames={contiqTableClassNames}
       >
@@ -327,7 +328,7 @@ export default function UsersTable({
             </DialogDescription>
           </DialogHeader>
           {statusUser?.auth_role === "super_admin" && (
-            <div className="flex items-start gap-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-700">
+            <div className="flex items-start gap-2 rounded-sm bg-indigo-50 px-3 py-2 text-xs text-indigo-800">
               <ShieldCheck size={14} className="shrink-0 mt-0.5" />
               This is a super admin account. Make sure this action is intended.
             </div>

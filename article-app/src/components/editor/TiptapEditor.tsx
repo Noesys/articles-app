@@ -55,7 +55,9 @@ function ToolbarButton({
         <button
           type="button"
           onClick={onClick}
-          className={`p-1.5 rounded border border-transparent ${active ? "bg-slate-800 text-white hover:bg-slate-900 border-slate-800" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200"}`}
+          className={`rounded-sm border border-transparent p-1.5 outline-none transition-[color,background-color,border-color] duration-[var(--duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "text-slate-600 hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900"}`}
+          aria-label={tip}
+          aria-pressed={active}
         >
           {children}
         </button>
@@ -120,8 +122,8 @@ export default function TiptapEditor({
 
   if (!editor) return null;
   return (
-    <div className="border border-slate-300 bg-white rounded-lg shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent">
-      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 bg-slate-50 border-b border-slate-300">
+    <div className="overflow-hidden rounded-sm border border-border bg-white shadow-[var(--shadow-card)] focus-within:border-transparent focus-within:ring-2 focus-within:ring-indigo-500/40">
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-slate-50 px-2 py-1.5">
         <ToolbarButton tip="Undo" onClick={() => editor.chain().focus().undo().run()}>
           <Undo2 size={16} />
         </ToolbarButton>

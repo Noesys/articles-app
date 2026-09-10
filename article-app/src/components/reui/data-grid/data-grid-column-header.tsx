@@ -84,12 +84,12 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
   }
 
   const headerLabelClassName = cn(
-    "text-foreground/80 inline-flex h-full items-center gap-1.5 font-medium [&_svg]:opacity-60 text-[0.8125rem] leading-[calc(1.125/0.8125)] [&_svg]:size-3.5",
+    "text-slate-700 inline-flex h-full items-center gap-1.5 font-semibold [&_svg]:opacity-60 text-sm leading-[calc(1.125/0.875)] [&_svg]:size-3.5",
     className
   )
 
   const headerButtonClassName = cn(
-    "text-foreground/80 hover:bg-secondary data-[state=open]:bg-secondary hover:text-foreground data-[state=open]:text-foreground px-2 font-medium h-6 rounded-lg",
+    "text-slate-700 hover:bg-secondary data-[state=open]:bg-secondary hover:text-foreground data-[state=open]:text-foreground px-2 font-semibold h-6 rounded-sm",
     className
   )
 

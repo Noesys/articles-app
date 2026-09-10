@@ -1,3 +1,9 @@
+/**
+ * Admin status Badge — Contiq semantic chips (success/warning/danger/neutral/indigo).
+ * Prefer this for article-type status chips; use shadcn `components/ui/badge` for
+ * DataGrid cells and generic outline/default badges. Both use rounded-sm.
+ * Dual use is intentional: admin Badge carries semantic variants + optional dot.
+ */
 type BadgeVariant = "success" | "warning" | "danger" | "neutral" | "indigo";
 
 const VARIANT_STYLES: Record<BadgeVariant, string> = {
@@ -11,15 +17,16 @@ const VARIANT_STYLES: Record<BadgeVariant, string> = {
 type BadgeProps = {
   children: React.ReactNode;
   variant?: BadgeVariant;
+  /** Decorative; always pair with text label (never color-only). */
   dot?: boolean;
 };
 
 export default function Badge({ children, variant = "neutral", dot }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[11px] font-semibold tracking-wide rounded-sm px-2.5 py-1 ring-1 ring-inset ${VARIANT_STYLES[variant]}`}
+      className={`inline-flex items-center gap-1 rounded-sm px-2.5 py-1 text-[11px] font-semibold tracking-wide ring-1 ring-inset ${VARIANT_STYLES[variant]}`}
     >
-      {dot && <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />}
+      {dot && <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" aria-hidden />}
       {children}
     </span>
   );

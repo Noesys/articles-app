@@ -92,7 +92,7 @@ export default function ScoringHistoryTable({
       },
       {
         accessorKey: "score",
-        header: "AI Score",
+        header: "AI score",
         size: 130,
         cell: ({ row }) => {
           const s = row.original.score;
@@ -104,7 +104,7 @@ export default function ScoringHistoryTable({
                 value={Math.min(Math.max(s, 0), 10) * 10}
                 className={cn("w-14 h-1.5", classes.bar)}
               />
-              <span className={cn("font-semibold text-[13px]", classes.text)}>
+              <span className={cn("font-semibold text-[13px] tabular-nums", classes.text)}>
                 {formatAiScore(s)}
               </span>
             </span>
@@ -164,16 +164,19 @@ export default function ScoringHistoryTable({
   });
 
   return (
-    <div className="rounded-lg border border-border bg-background shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/40">
-        <span className="text-sm font-semibold text-foreground">Scoring History</span>
-        <span className="text-xs text-muted-foreground">{history.length} versions</span>
+    <div className="overflow-hidden rounded-sm border border-border bg-background shadow-[var(--shadow-card)]">
+      <div className="flex items-center justify-between border-b border-border bg-muted/40 px-5 py-3.5">
+        <span className="text-sm font-semibold text-foreground">Scoring history</span>
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {history.length} versions
+        </span>
       </div>
 
       <DataGrid
         table={table}
         recordCount={history.length}
         emptyMessage="No scoring history yet."
+        loadingMode="skeleton"
         tableLayout={contiqTableLayout}
         tableClassNames={contiqTableClassNames}
       >

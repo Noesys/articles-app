@@ -14,10 +14,10 @@ type ArticleTypeCardProps = {
 
 const AVATAR_PALETTE = [
   "bg-indigo-50 text-indigo-600",
-  "bg-violet-50 text-violet-600",
   "bg-sky-50 text-sky-600",
   "bg-teal-50 text-teal-600",
-  "bg-rose-50 text-rose-600",
+  "bg-cyan-50 text-cyan-600",
+  "bg-emerald-50 text-emerald-600",
 ];
 
 function getAvatarColor(name: string) {
@@ -63,10 +63,10 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
     <div className="group">
       <button
         onClick={() => onToggle(isExpanded ? null : type.id)}
-        className="w-full flex items-center gap-3 px-4 py-3.5 text-left bg-slate-200 hover:brightness-95 transition-colors"
+        className="flex w-full items-center gap-3 bg-slate-100 px-4 py-3.5 text-left transition-[background-color] duration-[var(--duration-fast)] hover:bg-slate-200/80"
       >
         <div
-          className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center font-semibold text-sm ${getAvatarColor(type.name)}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-sm text-sm font-semibold ${getAvatarColor(type.name)}`}
         >
           {type.name.charAt(0).toUpperCase() || <Tag size={16} />}
         </div>
@@ -109,13 +109,13 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
         </div>
         <ChevronDown
           size={16}
-          className={`text-slate-400 shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
+          className={`shrink-0 text-slate-400 transition-transform duration-[var(--duration-med)] ease-[var(--ease-out-contiq)] motion-reduce:transition-none ${isExpanded ? "rotate-180" : ""}`}
         />
       </button>
 
-      {/* Expanded prompt view */}
+      {/* Expanded prompt view — height transition; reduced-motion = instant via global CSS */}
       <div
-        className={`grid transition-[grid-template-rows] duration-200 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+        className={`grid transition-[grid-template-rows] duration-[var(--duration-med)] ease-[var(--ease-out-contiq)] motion-reduce:transition-none ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >
         <div className="overflow-hidden">
           <div className="border-t border-slate-100 px-4 py-3.5 bg-slate-50/70 space-y-3">
@@ -130,7 +130,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                 Scoring Prompt
               </div>
               {type.score_prompt ? (
-                <MarkdownContent className="bg-white p-3 rounded-lg border border-slate-200 max-h-85 overflow-y-auto shadow-sm">
+                <MarkdownContent className="max-h-85 overflow-y-auto rounded-sm border border-slate-200 bg-white p-3 shadow-[var(--shadow-card)]">
                   {type.score_prompt}
                 </MarkdownContent>
               ) : (

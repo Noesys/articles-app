@@ -21,6 +21,9 @@ import {
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ColumnDef, useTable } from "@tanstack/react-table";
+import { PageHeader, PageShell } from "@/components/page-chrome";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { Button as ShadcnButton } from "@/components/ui/button";
 import {
   contiqTableContainerClassName,
   contiqTableClassNames,
@@ -243,36 +246,30 @@ export default function ArticleTypesForm() {
   if (loading) return <div className="m-5 text-sm text-slate-400">Loading…</div>;
 
   return (
-    <div className="w-full px-4 md:px-8 py-5">
-      <button
+    <PageShell>
+      <ShadcnButton
         type="button"
+        variant="ghost"
+        size="sm"
         onClick={() => navigate("/admin/article-types")}
-        className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4"
+        className="mb-3 -ml-2 text-slate-500 hover:text-slate-700"
       >
-        <ChevronLeft size={16} /> Back to Article Types
-      </button>
+        <ChevronLeft size={16} /> Back to article types
+      </ShadcnButton>
 
-      <div className="mb-5">
-        <h1 className="text-3xl font-semibold text-slate-900">
-          {isEditing ? "Edit Article Type" : "New Article Type"}
-        </h1>
-      </div>
+      <PageHeader title={isEditing ? "Edit article type" : "New article type"} />
 
-      {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
-          {error}
-        </div>
-      )}
+      {error && <InlineAlert>{error}</InlineAlert>}
 
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-slate-700">Name</label>
           <input
             type="text"
             value={form.name}
             onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
             placeholder="e.g. Marketing, Software, HR"
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
           />
         </div>
         <div className="grid grid-cols-10 gap-4">
@@ -283,7 +280,7 @@ export default function ArticleTypesForm() {
               value={form.description}
               onChange={(e) => setForm((c) => ({ ...c, description: e.target.value }))}
               placeholder="Short description (optional)"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
             />
           </div>
           <div className="col-span-3">
@@ -309,7 +306,7 @@ export default function ArticleTypesForm() {
                 }));
               }}
               placeholder="10"
-              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
             />
           </div>
         </div>
@@ -320,7 +317,7 @@ export default function ArticleTypesForm() {
             onChange={(e) => setForm((c) => ({ ...c, promptContent: e.target.value }))}
             placeholder="The full AI scoring prompt for this article type..."
             rows={8}
-            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full resize-y rounded-sm border border-border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
           />
         </div>
 
@@ -376,7 +373,7 @@ export default function ArticleTypesForm() {
         saveModal={saveModal}
         closeModal={closeModal}
       />
-    </div>
+    </PageShell>
   );
 }
 

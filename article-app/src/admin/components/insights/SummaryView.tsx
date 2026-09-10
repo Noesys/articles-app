@@ -5,7 +5,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Spinner } from "@/components/ui/spinner";
+import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
 import {
   Empty,
   EmptyDescription,
@@ -185,11 +185,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
   }, [start, end]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center py-16">
-        <Spinner className="size-6" />
-      </div>
-    );
+    return <DataGridSkeleton rows={6} cols={3} />;
   }
 
   if (!data?.length) {
@@ -207,7 +203,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
     <Accordion
       type="multiple"
       defaultValue={data.map((d) => d.articleTypeId)}
-      className="rounded-xl border border-border bg-background overflow-hidden"
+      className="rounded-sm border border-border bg-background overflow-hidden"
     >
       {data.map((at) => (
         <AccordionItem

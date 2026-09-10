@@ -9,18 +9,25 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-      <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between">
+    <header
+      className="sticky top-0 z-50 border-b border-slate-200 bg-white shadow-[var(--shadow-card)]"
+      style={{ minHeight: "var(--header-height)" }}
+    >
+      <div
+        className="flex w-full items-center justify-between px-[var(--page-pad-x)] md:px-[var(--page-pad-x-md)]"
+        style={{ height: "var(--header-height)" }}
+      >
         <div className="flex items-center gap-2">
-          <img src={logoImage} alt="Logo" className="h-13 w-26" />
+          <img src={logoImage} alt="Contiq" className="h-10 w-auto max-w-[7.5rem] object-contain" />
         </div>
         <div className="flex items-center gap-3">
-          {user && <span className="text-sm text-slate-500 hidden sm:block">{user.name}</span>}
+          {user && <span className="hidden text-sm text-slate-500 sm:block">{user.name}</span>}
           <button
+            type="button"
             onClick={logout}
-            className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-sm text-slate-600 outline-none transition-[color,background-color] duration-[var(--duration-fast)] hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            <LogOut size={15} />
+            <LogOut size={15} aria-hidden />
             Logout
           </button>
         </div>
