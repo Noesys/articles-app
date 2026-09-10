@@ -5,10 +5,10 @@
   "type": "module",
   "main": "seed.ts",
   "scripts": {
-    "seed": "node seed.mjs",
-    "seed:dry": "node seed.mjs --dry-run",
-    "seed:verbose": "node seed.mjs --verbose",
-    "seed:test": "node seed.mjs --dry-run --verbose"
+    "seed:phase1": "node seed-phase1.mjs",
+    "seed:phase2": "node seed-phase2.mjs",
+    "seed:phase1:dry": "node seed-phase1.mjs --dry-run",
+    "seed:phase2:dry": "node seed-phase2.mjs --dry-run"
   },
   "dependencies": {
     "csv-parse": "^5.5.2",

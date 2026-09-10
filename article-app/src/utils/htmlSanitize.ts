@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
- 
+
 const ALLOWED = [
   "h1",
   "h2",
@@ -27,6 +27,12 @@ const ALLOWED = [
   "strong",
   "em",
 ];
+
+/**
+ * Sanitize pasted HTML for the editor.
+ * Intentionally omits `style` — inline CSS is an XSS vector (expression/url/behavior).
+ * Structural tags + href/src/alt are enough; TipTap marks carry formatting.
+ */
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ALLOWED,
@@ -38,10 +44,10 @@ export function sanitizeHtml(html: string): string {
       "rowspan",
       "width",
       "height",
-      "style",
       "title",
-      "textalign",
     ],
+    ALLOW_DATA_ATTR: false,
+    ALLOW_UNKNOWN_PROTOCOLS: false,
     KEEP_CONTENT: true,
   });
 }

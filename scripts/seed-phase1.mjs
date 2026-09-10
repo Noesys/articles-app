@@ -1,62 +1,46 @@
 import fs from "fs";
 import path from "path";
-import { DatabaseSync } from "node:sqlite";
-// Credentials from article-api/wrangler.toml [[d1_databases]]
-const DB_NAME = "noesys-articles";
-const DB_ID = "acc066a7-2084-4d5e-89b0-90c20c4ceb6c";
-const ROOT = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")),
-  "..",
-);
-function findDB() {
-  const p = path.join(
-    ROOT,
-    "article-api/.wrangler/state/v3/d1/miniflare-D1DatabaseObject",
-  );
-  if (!fs.existsSync(p)) return null;
-  return (
-    fs
-      .readdirSync(p)
-      .filter((f) => f.endsWith(".sqlite") && !f.includes("metadata"))
-      .map((f) => path.join(p, f))[0] ?? null
-  );
-}
-const DB = process.env.SEED_DB ?? findDB();
-if (!DB && !process.env.SEED_REMOTE)
-  console.warn(
-    `Local D1 not found. Run with SEED_REMOTE=1 to target production ${DB_NAME} (${DB_ID}) via wrangler d1 execute --remote, or set SEED_DB=<path>.`,
-  );
+import crypto from "crypto";
+import {
+  ROOT,
+  DB_NAME,
+  DB_ID,
+  assertWranglerLoggedIn,
+  applyRemoteMigrations,
+  d1Query,
+  d1Exec,
+  d1ExecBatched,
+  sqlStr,
+  sqlNum,
+} from "./d1-remote.mjs";
+
 const DRY = process.argv.includes("--dry-run");
-const db = new DatabaseSync(DB);
-// Apply migrations required for this project (noesys-articles) - order matters, idempotent
-for (const mig of [
-  "0007_article_types_is_active.sql",
-  "0008_unique_index.sql",
-  "0009_evaluatable_flag_employee_linkage.sql",
-]) {
-  try {
-    db.exec(
-      fs.readFileSync(
-        path.join(ROOT, `article-api/src/migrations/${mig}`),
-        "utf8",
-      ),
-    );
-  } catch (e) {
-    console.log(`migration ${mig}:`, e.message.slice(0, 120));
-  }
-}
-if (!DRY && !db.prepare("SELECT id FROM users WHERE id='seed_bot_001'").get())
-  db.prepare(
-    "INSERT INTO users(id,email,name,auth_role,job_role,created_at,is_active)VALUES(?,?,?,?,?,?,?)",
-  ).run(
-    "seed_bot_001",
-    "seed-bot@noesys.local",
-    "Seeder Bot",
-    "user",
-    "Seeder",
-    new Date().toISOString(),
-    1,
+
+console.log(`seed-phase1 → remote D1 ${DB_NAME} (${DB_ID})`);
+assertWranglerLoggedIn();
+if (!DRY) applyRemoteMigrations();
+
+const now = new Date().toISOString();
+const stmts = [];
+
+const seedBot = d1Query(
+  `SELECT id FROM users WHERE id=${sqlStr("seed_bot_001")} LIMIT 1`,
+  { dry: DRY },
+);
+if (!seedBot.length) {
+  stmts.push(
+    `INSERT INTO users(id,email,name,auth_role,job_role,created_at,is_active)VALUES(${[
+      sqlStr("seed_bot_001"),
+      sqlStr("seed-bot@noesys.local"),
+      sqlStr("Seeder Bot"),
+      sqlStr("user"),
+      sqlStr("Seeder"),
+      sqlStr(now),
+      sqlNum(1),
+    ].join(",")})`,
   );
+}
+
 const types = [
   "Use case blog",
   "Platform hub content",
@@ -68,48 +52,46 @@ const types = [
   "Offline marketing content",
   "Not suitable",
 ];
+
+const existingTypes = d1Query(`SELECT id, name FROM article_types`, { dry: DRY });
+const typeMap = new Map(
+  existingTypes.map((r) => [String(r.name).toLowerCase(), r.id]),
+);
+
 for (const n of types) {
-  let r = db
-    .prepare("SELECT id FROM article_types WHERE lower(name)=lower(?)")
-    .get(n);
-  if (r) continue;
+  if (typeMap.has(n.toLowerCase())) continue;
   const id = "at_" + crypto.randomUUID();
-  if (!DRY)
-    db.prepare(
-      "INSERT INTO article_types(id,name,created_by,created_at,updated_at,pass_threshold,score_prompt,score_min,score_max,is_evaluatable)VALUES(?,?,?,?,?,?,?,?,?,?)",
-    ).run(
-      id,
-      n,
-      "seed_bot_001",
-      new Date().toISOString(),
-      new Date().toISOString(),
-      5,
-      "",
-      0,
-      10,
-      n === "Not suitable" ? 0 : 1,
-    );
+  typeMap.set(n.toLowerCase(), id);
+  stmts.push(
+    `INSERT INTO article_types(id,name,created_by,created_at,updated_at,pass_threshold,score_prompt,score_min,score_max,is_evaluatable)VALUES(${[
+      sqlStr(id),
+      sqlStr(n),
+      sqlStr("seed_bot_001"),
+      sqlStr(now),
+      sqlStr(now),
+      sqlNum(5),
+      sqlStr(""),
+      sqlNum(0),
+      sqlNum(10),
+      sqlNum(n === "Not suitable" ? 0 : 1),
+    ].join(",")})`,
+  );
   console.log((DRY ? "[dry] " : "") + "type " + n);
 }
-// ensure evaluatable flag correct
-if (!DRY) {
-  try {
-    db.prepare(
-      "UPDATE article_types SET is_evaluatable=0 WHERE lower(name)='not suitable'",
-    ).run();
-    db.prepare(
-      "UPDATE article_types SET is_evaluatable=1 WHERE lower(name)!='not suitable'",
-    ).run();
-  } catch {}
-}
-const typeRows = db.prepare("SELECT id,name FROM article_types").all();
-const typeMap = new Map(typeRows.map((r) => [r.name.toLowerCase(), r.id]));
-// prompts
-const raw = fs.readFileSync(
-  path.join(ROOT, "scripts/article_scoring_prompts.md"),
-  "utf8",
+
+stmts.push(
+  `UPDATE article_types SET is_evaluatable=0 WHERE lower(name)='not suitable'`,
 );
-const parts = raw.split(/^# \d+\.\s+/m).slice(1);
+stmts.push(
+  `UPDATE article_types SET is_evaluatable=1 WHERE lower(name)!='not suitable'`,
+);
+
+d1ExecBatched(stmts, { dry: DRY, label: "phase1-types" });
+
+// refresh type map from remote after inserts
+const typeRows = d1Query(`SELECT id, name FROM article_types`, { dry: DRY });
+for (const r of typeRows) typeMap.set(String(r.name).toLowerCase(), r.id);
+
 const headingToName = {
   "USE CASE BLOG": "Use case blog",
   "PLATFORM HUB CONTENT": "Platform hub content",
@@ -121,6 +103,21 @@ const headingToName = {
   "SUCCESS STORY": "Success story",
   "OFFLINE MARKETING CONTENT": "Offline marketing content",
 };
+
+const promptStmts = [];
+const raw = fs.readFileSync(
+  path.join(ROOT, "scripts/article_scoring_prompts.md"),
+  "utf8",
+);
+const parts = raw.split(/^# \d+\.\s+/m).slice(1);
+const existingPrompts = d1Query(
+  `SELECT id, article_type_id FROM prompts`,
+  { dry: DRY },
+);
+const promptByType = new Map(
+  existingPrompts.map((r) => [r.article_type_id, r.id]),
+);
+
 for (const p of parts) {
   const nl = p.indexOf("\n");
   const head = p.slice(0, nl).replace(/—.*$/, "").trim().toUpperCase();
@@ -129,38 +126,46 @@ for (const p of parts) {
   const content = p.slice(nl).trim();
   const tid = typeMap.get(tName.toLowerCase());
   if (!tid) continue;
-  const ex = db
-    .prepare("SELECT id FROM prompts WHERE article_type_id=?")
-    .get(tid);
-  if (ex) {
-    if (!DRY)
-      db.prepare("UPDATE prompts SET content=?,updated_at=? WHERE id=?").run(
-        content,
-        new Date().toISOString(),
-        ex.id,
-      );
+  const exId = promptByType.get(tid);
+  if (exId) {
+    promptStmts.push(
+      `UPDATE prompts SET content=${sqlStr(content)},updated_at=${sqlStr(now)} WHERE id=${sqlStr(exId)}`,
+    );
     console.log("updated prompt " + tName);
     continue;
   }
-  if (!DRY)
-    db.prepare(
-      "INSERT INTO prompts(id,article_type_id,content,created_by,created_at,updated_at)VALUES(?,?,?,?,?,?)",
-    ).run(
-      "pr_" + crypto.randomUUID(),
-      tid,
-      content,
-      "seed_bot_001",
-      new Date().toISOString(),
-      new Date().toISOString(),
-    );
+  const pid = "pr_" + crypto.randomUUID();
+  promptByType.set(tid, pid);
+  promptStmts.push(
+    `INSERT INTO prompts(id,article_type_id,content,created_by,created_at,updated_at)VALUES(${[
+      sqlStr(pid),
+      sqlStr(tid),
+      sqlStr(content),
+      sqlStr("seed_bot_001"),
+      sqlStr(now),
+      sqlStr(now),
+    ].join(",")})`,
+  );
   console.log("prompt " + tName);
 }
-// parameters from parameter_prompts.md (6 per type)
+
+d1ExecBatched(promptStmts, { dry: DRY, chunkSize: 5, label: "phase1-prompts" });
+
+const paramStmts = [];
 const praw = fs.readFileSync(
   path.join(ROOT, "scripts/parameter_prompts.md"),
   "utf8",
 );
 const pParts = praw.split(/^[ \t]*# \d+\.\s+/m).slice(1);
+const existingParams = d1Query(
+  `SELECT id, article_type_id, name FROM parameters`,
+  { dry: DRY },
+);
+const paramKey = (tid, name) => `${tid}::${String(name).toLowerCase()}`;
+const paramByKey = new Map(
+  existingParams.map((r) => [paramKey(r.article_type_id, r.name), r.id]),
+);
+
 for (const pp of pParts) {
   const nl = pp.indexOf("\n");
   const head = pp.slice(0, nl).replace(/—.*$/, "").trim().toUpperCase();
@@ -168,7 +173,7 @@ for (const pp of pParts) {
   if (!tName) continue;
   const tid = typeMap.get(tName.toLowerCase());
   if (!tid) continue;
-  let names = [
+  const names = [
     "Authenticity",
     "Practitioner Depth",
     "Original Insight",
@@ -178,10 +183,9 @@ for (const pp of pParts) {
   ];
   for (let i = 0; i < names.length; i++) {
     const nm = names[i];
-    let q = `### ${i + 1}. ${nm}`;
     let idx = pp.indexOf(`### ${i + 1}.`);
     if (idx === -1) idx = pp.indexOf(nm);
-    let prompt = pp
+    const prompt = pp
       .slice(
         idx,
         pp.indexOf("### " + (i + 2) + ".", idx + 1) === -1
@@ -190,36 +194,46 @@ for (const pp of pParts) {
       )
       .trim()
       .slice(0, 2000);
-    const ex = db
-      .prepare(
-        "SELECT id FROM parameters WHERE article_type_id=? AND lower(name)=lower(?)",
-      )
-      .get(tid, nm);
-    if (ex) {
-      if (!DRY)
-        db.prepare(
-          "UPDATE parameters SET prompt=?,updated_at=? WHERE id=?",
-        ).run(prompt, new Date().toISOString(), ex.id);
+    const key = paramKey(tid, nm);
+    const exId = paramByKey.get(key);
+    if (exId) {
+      paramStmts.push(
+        `UPDATE parameters SET prompt=${sqlStr(prompt)},updated_at=${sqlStr(now)} WHERE id=${sqlStr(exId)}`,
+      );
       continue;
     }
-    if (!DRY)
-      db.prepare(
-        "INSERT INTO parameters(id,article_type_id,name,prompt,scope_type,min_value,max_value,is_active,sort_order,created_by,created_at,updated_at)VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-      ).run(
-        "prm_" + crypto.randomUUID(),
-        tid,
-        nm,
-        prompt,
-        "numeric",
-        1,
-        10,
-        1,
-        i + 1,
-        "seed_bot_001",
-        new Date().toISOString(),
-        new Date().toISOString(),
-      );
+    const id = "prm_" + crypto.randomUUID();
+    paramByKey.set(key, id);
+    paramStmts.push(
+      `INSERT INTO parameters(id,article_type_id,name,prompt,scope_type,min_value,max_value,is_active,sort_order,created_by,created_at,updated_at)VALUES(${[
+        sqlStr(id),
+        sqlStr(tid),
+        sqlStr(nm),
+        sqlStr(prompt),
+        sqlStr("numeric"),
+        sqlNum(1),
+        sqlNum(10),
+        sqlNum(1),
+        sqlNum(i + 1),
+        sqlStr("seed_bot_001"),
+        sqlStr(now),
+        sqlStr(now),
+      ].join(",")})`,
+    );
   }
   console.log("params " + tName);
 }
-console.log("phase1 done", DRY ? "(dry)" : "");
+
+d1ExecBatched(paramStmts, { dry: DRY, chunkSize: 10, label: "phase1-params" });
+
+if (!DRY) {
+  const counts = d1Query(
+    `SELECT
+      (SELECT COUNT(*) FROM article_types) AS types,
+      (SELECT COUNT(*) FROM prompts) AS prompts,
+      (SELECT COUNT(*) FROM parameters) AS parameters`,
+  );
+  console.log("phase1 done", counts[0] || {});
+} else {
+  console.log("phase1 done (dry)");
+}
