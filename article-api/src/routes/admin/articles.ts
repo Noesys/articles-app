@@ -29,15 +29,7 @@ async function backgroundEvaluateArticle(
   bindings: Bindings,
 ) {
   try {
-    await evaluateArticle(
-      db,
-      articleId,
-      articleTypeId,
-      title,
-      content,
-      version,
-      bindings,
-    );
+    await evaluateArticle(db, articleId, articleTypeId, title, content, version, bindings);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Admin background evaluation failed:", msg, err);
@@ -51,7 +43,11 @@ articlesRoute.get("/", async (c) => {
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10));
   const { data, total } = await getArticles(c.env.DB, month, status, type, page, limit);
-  return c.json({ message: "Articles fetched successfully", data, pagination: { page, limit, total, totalPages: Math.ceil(total / limit) } });
+  return c.json({
+    message: "Articles fetched successfully",
+    data,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
 });
 
 // for dashboard stats
@@ -88,11 +84,7 @@ articlesRoute.get("/:id", async (c) => {
     article.ai_feedback ||
     (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
 
-  const parameter_results = await getParameterResults(
-    db,
-    articleId,
-    article.version,
-  );
+  const parameter_results = await getParameterResults(db, articleId, article.version);
 
   return c.json({
     message: "Article fetched successfully",
@@ -135,19 +127,14 @@ articlesRoute.get("/:id/parameter-results", async (c) => {
   const id = c.req.param("id");
   const versionQuery = c.req.query("version");
   const version = versionQuery ? parseInt(versionQuery, 10) : undefined;
-  const data = await getParameterResults(
-    c.env.DB,
-    id,
-    isNaN(version!) ? undefined : version,
-  );
+  const data = await getParameterResults(c.env.DB, id, isNaN(version!) ? undefined : version);
   return c.json({ message: "Parameter results fetched", data });
 });
 
 articlesRoute.post("/:id/parameter-results", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
-  if (!Array.isArray(body.results))
-    return c.json({ message: "results array required" }, 400);
+  if (!Array.isArray(body.results)) return c.json({ message: "results array required" }, 400);
   const data = await storeParameterResults(
     c.env.DB,
     id,

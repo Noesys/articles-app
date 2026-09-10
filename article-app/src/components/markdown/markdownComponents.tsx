@@ -22,21 +22,15 @@ export const markdownComponents: Components = {
   h4: ({ children }) => (
     <h4 className="text-sm font-semibold text-slate-800 mt-3 mb-1.5">{children}</h4>
   ),
-  p: ({ children }) => (
-    <p className="text-sm text-slate-700 leading-relaxed mb-3">{children}</p>
-  ),
+  p: ({ children }) => <p className="text-sm text-slate-700 leading-relaxed mb-3">{children}</p>,
   ul: ({ children }) => (
     <ul className="list-disc pl-5 mb-3 space-y-1.5 text-sm text-slate-700">{children}</ul>
   ),
   ol: ({ children }) => (
     <ol className="list-decimal pl-5 mb-3 space-y-1.5 text-sm text-slate-700">{children}</ol>
   ),
-  li: ({ children }) => (
-    <li className="leading-relaxed [&>p]:mb-0 [&>p]:inline">{children}</li>
-  ),
-  strong: ({ children }) => (
-    <strong className="font-semibold text-slate-900">{children}</strong>
-  ),
+  li: ({ children }) => <li className="leading-relaxed [&>p]:mb-0 [&>p]:inline">{children}</li>,
+  strong: ({ children }) => <strong className="font-semibold text-slate-900">{children}</strong>,
   em: ({ children }) => <em className="italic text-slate-700">{children}</em>,
   a: ({ href, children }) => (
     <a
@@ -57,9 +51,7 @@ export const markdownComponents: Components = {
   code: ({ className, children }) => {
     const isBlock = Boolean(className?.includes("language-"));
     if (isBlock) {
-      return (
-        <code className={`${className ?? ""} text-[13px] leading-relaxed`}>{children}</code>
-      );
+      return <code className={`${className ?? ""} text-[13px] leading-relaxed`}>{children}</code>;
     }
     return (
       <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[13px] font-mono text-slate-800">
@@ -79,9 +71,7 @@ export const markdownComponents: Components = {
   ),
   thead: ({ children }) => <thead className="bg-slate-50">{children}</thead>,
   tbody: ({ children }) => <tbody className="bg-white">{children}</tbody>,
-  tr: ({ children }) => (
-    <tr className="border-b border-slate-200 last:border-b-0">{children}</tr>
-  ),
+  tr: ({ children }) => <tr className="border-b border-slate-200 last:border-b-0">{children}</tr>,
   th: ({ children }) => (
     <th className="border-b border-slate-200 px-3 py-2.5 align-top font-semibold text-slate-800 whitespace-nowrap">
       {children}

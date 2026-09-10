@@ -8,9 +8,7 @@ import {
   ParameterRow,
 } from "../../types/admin-types";
 
-export async function getArticleTypes(
-  db: D1Database,
-): Promise<ArticleTypeListItem[]> {
+export async function getArticleTypes(db: D1Database): Promise<ArticleTypeListItem[]> {
   const sql = `
     SELECT
   at.id,
@@ -155,10 +153,7 @@ export async function createArticleType(
   if (input.scoreMax <= input.scoreMin) {
     throw new Error("score_max must be greater than score_min");
   }
-  if (
-    input.passThreshold < input.scoreMin ||
-    input.passThreshold > input.scoreMax
-  ) {
+  if (input.passThreshold < input.scoreMin || input.passThreshold > input.scoreMax) {
     throw new Error("pass_threshold must fall within score_min and score_max");
   }
 
@@ -246,8 +241,7 @@ export async function updateArticleType(
   }
 
   const name = input.name ?? existing.name;
-  const description =
-    input.description !== undefined ? input.description : existing.description;
+  const description = input.description !== undefined ? input.description : existing.description;
   const passThreshold = input.passThreshold ?? existing.pass_threshold;
   const scorePrompt = input.scorePrompt ?? existing.score_prompt;
   const scoreMin = input.scoreMin ?? existing.score_min;
@@ -290,10 +284,7 @@ export async function updateArticleType(
     .run();
 }
 
-export async function deactivateArticleType(
-  db: D1Database,
-  articleTypeId: string,
-): Promise<void> {
+export async function deactivateArticleType(db: D1Database, articleTypeId: string): Promise<void> {
   const existing = await db
     .prepare(
       `

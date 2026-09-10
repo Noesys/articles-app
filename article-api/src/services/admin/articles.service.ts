@@ -31,8 +31,7 @@ export async function getArticles(
     params.push(type);
   }
 
-  const whereClause =
-    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const sql = `
     SELECT
@@ -98,14 +97,24 @@ export async function getArticles(
   `;
 
   const countSql = `SELECT COUNT(DISTINCT a.id) as total FROM articles a JOIN article_types at ON at.id=a.article_type_id ${whereClause}`;
-  const totalRow = await db.prepare(countSql).bind(...params).first<{ total: number }>();
+  const totalRow = await db
+    .prepare(countSql)
+    .bind(...params)
+    .first<{ total: number }>();
   const total = totalRow?.total ?? 0;
   const offset = (page - 1) * limit;
   const pagedSql = sql + ` LIMIT ? OFFSET ?`;
-  const result = await db.prepare(pagedSql).bind(...params, limit, offset).all<ArticleListRawRow>();
+  const result = await db
+    .prepare(pagedSql)
+    .bind(...params, limit, offset)
+    .all<ArticleListRawRow>();
   const data = result.results.map((row): ArticleListResult => ({
     ...row,
-    parameters: row.parameters ? (JSON.parse(row.parameters) as (ArticleParameterResult | null)[]).filter((p): p is ArticleParameterResult => p !== null) : [],
+    parameters: row.parameters
+      ? (JSON.parse(row.parameters) as (ArticleParameterResult | null)[]).filter(
+          (p): p is ArticleParameterResult => p !== null,
+        )
+      : [],
   }));
   return { data, total };
 }
@@ -130,10 +139,7 @@ export interface ArticleDetail {
   job_role: string;
 }
 
-export async function getArticleById(
-  db: D1Database,
-  id: string,
-): Promise<ArticleDetail | null> {
+export async function getArticleById(db: D1Database, id: string): Promise<ArticleDetail | null> {
   return db
     .prepare(
       `
@@ -255,9 +261,7 @@ export async function getArticleTypeMeta(
   articleTypeId: string,
 ): Promise<{ id: string; name: string; is_evaluatable: number; is_active: number } | null> {
   return db
-    .prepare(
-      `SELECT id, name, is_evaluatable, is_active FROM article_types WHERE id = ? LIMIT 1`,
-    )
+    .prepare(`SELECT id, name, is_evaluatable, is_active FROM article_types WHERE id = ? LIMIT 1`)
     .bind(articleTypeId)
     .first();
 }
@@ -338,7 +342,13 @@ export async function changeArticleType(
 export async function prepareArticleReevaluate(
   db: D1Database,
   articleId: string,
-): Promise<{ version: number; title: string; content: string; article_type_id: string; evaluatable: boolean } | null> {
+): Promise<{
+  version: number;
+  title: string;
+  content: string;
+  article_type_id: string;
+  evaluatable: boolean;
+} | null> {
   const article = await getArticleById(db, articleId);
   if (!article) return null;
 

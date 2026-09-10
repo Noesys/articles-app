@@ -73,10 +73,7 @@ usersRoute.get("/:id/articles", async (c) => {
   const status = c.req.query("status");
   const type = c.req.query("type");
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
-  const limit = Math.min(
-    100,
-    Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10),
-  );
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10));
   const { data, total } = await getArticlesByUser(
     c.env.DB,
     userId,
@@ -103,9 +100,7 @@ usersRoute.patch("/:id/role", async (c) => {
   const body = await c.req.json<UpdateUserRoleBody>();
   if (
     !body.role ||
-    !ALLOWED_AUTH_ROLES.includes(
-      body.role as (typeof ALLOWED_AUTH_ROLES)[number],
-    )
+    !ALLOWED_AUTH_ROLES.includes(body.role as (typeof ALLOWED_AUTH_ROLES)[number])
   ) {
     return c.json({ message: "Invalid role" }, 400);
   }
@@ -118,10 +113,7 @@ usersRoute.patch("/:id/role", async (c) => {
 
   const currentUser = c.get("user");
 
-  if (
-    targetUser.auth_role === "super_admin" &&
-    currentUser.auth_role !== "super_admin"
-  ) {
+  if (targetUser.auth_role === "super_admin" && currentUser.auth_role !== "super_admin") {
     return c.json({ message: "Cannot modify super admin users" }, 403);
   }
 

@@ -1,15 +1,10 @@
 import { Hono } from "hono";
-import {
-  getArticlesByUser,
-  getArticleById,
-  createArticle,
-} from "../../services/user/articles";
+import { getArticlesByUser, getArticleById, createArticle } from "../../services/user/articles";
 import {
   getArticleHistory,
   snapshotArticle,
   updateArticleForRewrite,
 } from "../../services/user/articleHistory";
-import { getArticleTypes } from "../../services/user/articleTypes";
 import type { AppEnv, Bindings } from "../../types/shared-types";
 import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 import { AppError } from "../../utils/errors";
@@ -72,15 +67,7 @@ async function backgroundEvaluateArticle(
   bindings: Bindings,
 ) {
   try {
-    await evaluateArticle(
-      db,
-      articleId,
-      articleTypeId,
-      title,
-      content,
-      version,
-      bindings,
-    );
+    await evaluateArticle(db, articleId, articleTypeId, title, content, version, bindings);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Background evaluation failed:", msg, err);
@@ -114,9 +101,7 @@ articleRoutes.get("/mine", async (c) => {
 
   if (viewAll) {
     page = pageRaw ? Math.max(1, parseInt(pageRaw, 10) || 1) : 1;
-    limit = limitRaw
-      ? Math.min(100, Math.max(1, parseInt(limitRaw, 10) || 10))
-      : 10;
+    limit = limitRaw ? Math.min(100, Math.max(1, parseInt(limitRaw, 10) || 10)) : 10;
   }
 
   const { articles, pagination } = await getArticlesByUser(
@@ -172,8 +157,7 @@ articleRoutes.get("/mine/:id", async (c) => {
     history.sort((a, b) => a.version - b.version);
   }
 
-  const isPending =
-    article.status === "pending" || article.status === "processing";
+  const isPending = article.status === "pending" || article.status === "processing";
   const currentFeedback = isPending
     ? ""
     : article.ai_feedback ||
@@ -334,14 +318,7 @@ articleRoutes.post("/", async (c) => {
     } catch {
       // Fallback to sequential if batch not supported in local D1
       await snapshotArticle(db, requestedId, historyId, now, user.id);
-      await updateArticleForRewrite(
-        db,
-        requestedId,
-        title,
-        content,
-        rewriteMonth,
-        user.id,
-      );
+      await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth, user.id);
     }
 
     articleId = requestedId;
@@ -350,17 +327,8 @@ articleRoutes.post("/", async (c) => {
 
     // ❌ REMOVED: Synchronous evaluation (was blocking)
     // ✅ ADDED: Background evaluation via waitUntil
-    const currentVersion = existingArticle.version;
     c.executionCtx.waitUntil(
-      backgroundEvaluateArticle(
-        db,
-        articleId,
-        article_type_id,
-        title,
-        content,
-        nextVersion,
-        c.env,
-      ),
+      backgroundEvaluateArticle(db, articleId, article_type_id, title, content, nextVersion, c.env),
     );
 
     // Return immediately with pending status
@@ -424,8 +392,7 @@ articleRoutes.get("/:id/status", async (c) => {
   const db = c.env.DB;
   const articleId = c.req.param("id");
   const article = await getArticleById(db, articleId, user.id);
-  if (!article)
-    return c.json({ success: false, message: "Article not found" }, 404);
+  if (!article) return c.json({ success: false, message: "Article not found" }, 404);
   // Map internal status to spec status: pending / accepted / rejected
   let status: string = article.status;
   if (article.ai_score !== null) {

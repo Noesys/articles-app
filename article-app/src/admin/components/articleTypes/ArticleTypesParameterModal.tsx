@@ -50,9 +50,7 @@ export default function ArticleTypesParameterModal({
               key="save"
               onClick={saveModal}
               disabled={
-                !modalDraft?.name.trim() ||
-                !modalDraft?.prompt.trim() ||
-                !!modalNumericInvalid
+                !modalDraft?.name.trim() || !modalDraft?.prompt.trim() || !!modalNumericInvalid
               }
               type="button"
               className="min-w-[90px]"
@@ -71,9 +69,7 @@ export default function ArticleTypesParameterModal({
               </label>
               <Input
                 value={modalDraft.name}
-                onChange={(e) =>
-                  setModalDraft({ ...modalDraft, name: e.target.value })
-                }
+                onChange={(e) => setModalDraft({ ...modalDraft, name: e.target.value })}
                 placeholder="e.g. Grammar"
                 className="!bg-white"
               />
@@ -84,9 +80,7 @@ export default function ArticleTypesParameterModal({
               </label>
               <Input.TextArea
                 value={modalDraft.prompt}
-                onChange={(e) =>
-                  setModalDraft({ ...modalDraft, prompt: e.target.value })
-                }
+                onChange={(e) => setModalDraft({ ...modalDraft, prompt: e.target.value })}
                 placeholder="AI instruction for evaluating this parameter..."
                 rows={2}
                 className="!bg-white"
@@ -99,9 +93,7 @@ export default function ArticleTypesParameterModal({
               <Select
                 showSearch
                 value={modalDraft.scopeType}
-                onChange={(v: ScopeType) =>
-                  setModalDraft({ ...modalDraft, scopeType: v })
-                }
+                onChange={(v: ScopeType) => setModalDraft({ ...modalDraft, scopeType: v })}
                 className="w-full [&_.ant-select-selector]:!bg-white"
                 styles={{
                   popup: {
@@ -113,7 +105,7 @@ export default function ArticleTypesParameterModal({
                   { value: "option", label: "Option" },
                 ]}
                 filterOption={(input, opt) =>
-                  (opt?.label as string)
+                  String(opt?.label ?? "")
                     .toLowerCase()
                     .includes(input.toLowerCase())
                 }
@@ -125,9 +117,7 @@ export default function ArticleTypesParameterModal({
                   onWheel={handleWheel}
                   type="number"
                   value={modalDraft.minValue}
-                  onChange={(e) =>
-                    setModalDraft({ ...modalDraft, minValue: e.target.value })
-                  }
+                  onChange={(e) => setModalDraft({ ...modalDraft, minValue: e.target.value })}
                   placeholder="Min"
                   className="!bg-white"
                 />
@@ -135,16 +125,12 @@ export default function ArticleTypesParameterModal({
                   onWheel={handleWheel}
                   type="number"
                   value={modalDraft.maxValue}
-                  onChange={(e) =>
-                    setModalDraft({ ...modalDraft, maxValue: e.target.value })
-                  }
+                  onChange={(e) => setModalDraft({ ...modalDraft, maxValue: e.target.value })}
                   placeholder="Max"
                   className="!bg-white"
                 />
                 {modalNumericInvalid && (
-                  <p className="text-xs text-red-500 col-span-2">
-                    Max must be greater than min.
-                  </p>
+                  <p className="text-xs text-red-500 col-span-2">Max must be greater than min.</p>
                 )}
               </div>
             ) : (
@@ -165,9 +151,7 @@ export default function ArticleTypesParameterModal({
                       type="button"
                       className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600"
                       onClick={() => {
-                        const next = modalDraft.options.filter(
-                          (_, i) => i !== index,
-                        );
+                        const next = modalDraft.options.filter((_, i) => i !== index);
                         setModalDraft({ ...modalDraft, options: next });
                       }}
                     >

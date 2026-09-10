@@ -29,14 +29,12 @@ CF_ACCESS_TEAM_DOMAIN = "https://noesys.cloudflareaccess.com"
 CF_ACCESS_AUD = "c0e82ee6d75b083b709c6a3b76705b2bdec24d75efdf7dc53676fe8e8a7e0d68"
 
 [env.development]
-routes = [
-  { pattern = "api.localhost/*", zone_name = "localhost" }
-]
+routes = [{ pattern = "api.localhost/*", zone_name = "localhost" }]
 
 [env.development.vars]
 ENVIRONMENT = "development"
-ALLOWED_EMAIL_DOMAIN="noesyssoftware.com"
-DEV_USER_MAIL="naresh@noesyssoftware.com"
+ALLOWED_EMAIL_DOMAIN = "noesyssoftware.com"
+DEV_USER_MAIL = "naresh@noesyssoftware.com"
 
 [access.dev]
 aud = "article-app"

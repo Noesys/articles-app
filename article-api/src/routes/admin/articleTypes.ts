@@ -17,17 +17,14 @@ function parseArticleTypeBody(
   body: unknown,
   isUpdate = false,
 ): Partial<ArticleTypeInput> | { error: string } {
-  if (!body || typeof body !== "object")
-    return { error: "Invalid request body" };
+  if (!body || typeof body !== "object") return { error: "Invalid request body" };
   const b = body as Record<string, unknown>;
   const name = b.name as string | undefined;
   const description = b.description as string | undefined;
   const passThreshold = b.passThreshold as unknown;
   const scorePrompt = b.scorePrompt as string | undefined;
-  const scoreMin =
-    b.scoreMin !== undefined ? b.scoreMin : isUpdate ? undefined : 0;
-  const scoreMax =
-    b.scoreMax !== undefined ? b.scoreMax : isUpdate ? undefined : 10;
+  const scoreMin = b.scoreMin !== undefined ? b.scoreMin : isUpdate ? undefined : 0;
+  const scoreMax = b.scoreMax !== undefined ? b.scoreMax : isUpdate ? undefined : 10;
 
   if (!isUpdate) {
     if (!name?.trim()) return { error: "Article type name is required" };
@@ -46,12 +43,8 @@ function parseArticleTypeBody(
 
   return {
     ...(name !== undefined ? { name: name.trim() } : {}),
-    ...(description !== undefined
-      ? { description: description.trim() || undefined }
-      : {}),
-    ...(passThreshold !== undefined
-      ? { passThreshold: passThreshold as number }
-      : {}),
+    ...(description !== undefined ? { description: description.trim() || undefined } : {}),
+    ...(passThreshold !== undefined ? { passThreshold: passThreshold as number } : {}),
     ...(scorePrompt !== undefined ? { scorePrompt: scorePrompt.trim() } : {}),
     ...(scoreMin !== undefined ? { scoreMin: Number(scoreMin) } : {}),
     ...(scoreMax !== undefined ? { scoreMax: Number(scoreMax) } : {}),
@@ -90,11 +83,7 @@ articleTypesRoute.post("/", async (c) => {
   }
 
   try {
-    const data = await createArticleType(
-      c.env.DB,
-      parsed as ArticleTypeInput,
-      c.get("user").id,
-    );
+    const data = await createArticleType(c.env.DB, parsed as ArticleTypeInput, c.get("user").id);
 
     return c.json(
       {
@@ -104,10 +93,7 @@ articleTypesRoute.post("/", async (c) => {
       201,
     );
   } catch (err: any) {
-    return c.json(
-      { message: err.message || "Failed to create article type" },
-      400,
-    );
+    return c.json({ message: err.message || "Failed to create article type" }, 400);
   }
 });
 
@@ -129,10 +115,7 @@ articleTypesRoute.patch("/:id", async (c) => {
     await updateArticleType(c.env.DB, id, parsed);
     return c.json({ message: "Article type updated successfully" });
   } catch (err: any) {
-    return c.json(
-      { message: err.message || "Failed to update article type" },
-      400,
-    );
+    return c.json({ message: err.message || "Failed to update article type" }, 400);
   }
 });
 

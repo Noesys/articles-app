@@ -1,13 +1,4 @@
-import {
-  ChartNoAxesCombined,
-  FileText,
-  LogOut,
-  Menu,
-  Pen,
-  Tags,
-  Users,
-  X,
-} from "lucide-react";
+import { ChartNoAxesCombined, FileText, LogOut, Menu, Pen, Tags, Users, X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import logoImage from "../../Logo/contiq.png";
@@ -75,9 +66,7 @@ export default function AdminHeader({ title }: { title?: string }) {
                 to={item.to}
                 className={({ isActive }) =>
                   `flex items-center justify-center gap-2 rounded-lg px-2 xl:px-3 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-indigo-50 text-indigo-700"
-                      : "text-slate-600 hover:bg-slate-100"
+                    isActive ? "bg-indigo-50 text-indigo-700" : "text-slate-600 hover:bg-slate-100"
                   }`
                 }
               >
@@ -107,9 +96,7 @@ export default function AdminHeader({ title }: { title?: string }) {
           type="button"
           onClick={() => setMobileMenuOpen((open) => !open)}
           className="lg:hidden inline-flex items-center justify-center rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-          aria-label={
-            mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"
-          }
+          aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
           aria-expanded={mobileMenuOpen}
         >
           {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -141,9 +128,7 @@ export default function AdminHeader({ title }: { title?: string }) {
             })}
           </nav>
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
-            <span className="min-w-0 truncate text-sm text-slate-500">
-              {user?.name}
-            </span>
+            <span className="min-w-0 truncate text-sm text-slate-500">{user?.name}</span>
             <button
               onClick={logout}
               className="shrink-0 flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"

@@ -5,7 +5,7 @@ import { ArticleTypeConfig, ParameterConfig, ParameterOption } from "../../types
  */
 export async function getArticleTypeConfig(
   db: D1Database,
-  articleTypeId: string
+  articleTypeId: string,
 ): Promise<ArticleTypeConfig | null> {
   const result = await db
     .prepare(
@@ -23,7 +23,7 @@ export async function getArticleTypeConfig(
         WHERE id = ?
           AND is_active = 1
         LIMIT 1
-      `
+      `,
     )
     .bind(articleTypeId)
     .first<ArticleTypeConfig>();
@@ -36,7 +36,7 @@ export async function getArticleTypeConfig(
  */
 export async function getActiveParameters(
   db: D1Database,
-  articleTypeId: string
+  articleTypeId: string,
 ): Promise<ParameterConfig[]> {
   const parameters = await db
     .prepare(
@@ -55,7 +55,7 @@ export async function getActiveParameters(
         WHERE article_type_id = ?
           AND is_active = 1
         ORDER BY sort_order ASC
-      `
+      `,
     )
     .bind(articleTypeId)
     .all<Omit<ParameterConfig, "options">>();
@@ -84,7 +84,7 @@ export async function getActiveParameters(
           WHERE parameter_id IN (${placeholders})
             AND is_active = 1
           ORDER BY parameter_id, sort_order ASC
-        `
+        `,
       )
       .bind(...optionScopeParameterIds)
       .all<ParameterOption>();
@@ -103,7 +103,7 @@ export async function getActiveParameters(
     parameterConfigs.push({
       ...param,
       scope_type: param.scope_type as "numeric" | "option",
-      options: param.scope_type === "option" ? (optionsMap[param.id] || []) : [],
+      options: param.scope_type === "option" ? optionsMap[param.id] || [] : [],
     });
   }
 
@@ -115,7 +115,7 @@ export async function getActiveParameters(
  */
 export async function getActiveOptionsForParameter(
   db: D1Database,
-  parameterId: string
+  parameterId: string,
 ): Promise<ParameterOption[]> {
   const result = await db
     .prepare(
@@ -130,7 +130,7 @@ export async function getActiveOptionsForParameter(
         WHERE parameter_id = ?
           AND is_active = 1
         ORDER BY sort_order ASC
-      `
+      `,
     )
     .bind(parameterId)
     .all<ParameterOption>();

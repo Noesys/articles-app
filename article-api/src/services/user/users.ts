@@ -1,10 +1,6 @@
 import { User } from "../../types/user-types";
 
-
-export async function findUserByEmail(
-  db: D1Database,
-  email: string
-): Promise<User | null> {
+export async function findUserByEmail(db: D1Database, email: string): Promise<User | null> {
   return db
     .prepare(
       `
@@ -20,7 +16,7 @@ export async function findUserByEmail(
         FROM users
         WHERE email = ?
         LIMIT 1
-      `
+      `,
     )
     .bind(email)
     .first<User>();
@@ -37,7 +33,7 @@ export async function createUser(
     created_at: string;
     created_by?: string | null;
     is_active?: number;
-  }
+  },
 ): Promise<void> {
   // Defensive: auth_role is caller-supplied; enforce an allowlist so a future
   // code-path that accidentally passes a privileged role has no effect.
@@ -59,7 +55,7 @@ export async function createUser(
           is_active
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `
+      `,
     )
     .bind(
       user.id,
@@ -69,15 +65,12 @@ export async function createUser(
       user.job_role,
       user.created_at,
       user.created_by ?? null,
-      user.is_active ?? 1
+      user.is_active ?? 1,
     )
     .run();
 }
 
-export async function getUserById(
-  db: D1Database,
-  userId: string
-): Promise<User | null> {
+export async function getUserById(db: D1Database, userId: string): Promise<User | null> {
   return db
     .prepare(
       `
@@ -93,7 +86,7 @@ export async function getUserById(
         FROM users
         WHERE id = ?
         LIMIT 1
-      `
+      `,
     )
     .bind(userId)
     .first<User>();
@@ -102,7 +95,7 @@ export async function getUserById(
 export async function updateUserStatus(
   db: D1Database,
   userId: string,
-  isActive: number
+  isActive: number,
 ): Promise<void> {
   await db
     .prepare(
@@ -110,7 +103,7 @@ export async function updateUserStatus(
         UPDATE users
         SET is_active = ?
         WHERE id = ?
-      `
+      `,
     )
     .bind(isActive, userId)
     .run();
@@ -122,7 +115,7 @@ export async function updateUser(
   updates: {
     name?: string;
     job_role?: string;
-  }
+  },
 ): Promise<void> {
   const fields: string[] = [];
   const values: unknown[] = [];
@@ -149,7 +142,7 @@ export async function updateUser(
         UPDATE users
         SET ${fields.join(", ")}
         WHERE id = ?
-      `
+      `,
     )
     .bind(...values)
     .run();

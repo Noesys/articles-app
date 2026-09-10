@@ -1,24 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import UserCard from "@/admin/components/users/UserCard";
 import { Search } from "lucide-react";
-import { DatePicker, AutoComplete, Input } from "antd";
+import { AutoComplete } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import dayjs, { type Dayjs } from "dayjs";
 
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { User } from "@/admin/utils/types";
 import { api } from "@/http-client";
 
-async function fetchUsers(
-  month?: string,
-  submissionStatus?: "not_submitted",
-): Promise<User[]> {
+async function fetchUsers(month?: string, submissionStatus?: "not_submitted"): Promise<User[]> {
   const params = new URLSearchParams();
   if (month && submissionStatus) {
     params.set("month", month);
@@ -35,9 +28,7 @@ const UsersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const monthParam = searchParams.get("month");
   const selectedMonthKey =
-    monthParam &&
-    /^\d{4}-\d{2}$/.test(monthParam) &&
-    dayjs(`${monthParam}-01`).isValid()
+    monthParam && /^\d{4}-\d{2}$/.test(monthParam) && dayjs(`${monthParam}-01`).isValid()
       ? monthParam
       : dayjs().format("YYYY-MM");
   const selectedMonth: Dayjs = dayjs(`${selectedMonthKey}-01`).startOf("month");
@@ -46,11 +37,7 @@ const UsersPage = () => {
   const navigate = useNavigate();
   const search = searchParams.get("q") || "";
   const showNotSubmitted = searchParams.get("status") === "not_submitted";
-  const setFilterParam = (
-    name: string,
-    value: string,
-    defaultValue?: string,
-  ) => {
+  const setFilterParam = (name: string, value: string, defaultValue?: string) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
@@ -82,26 +69,20 @@ const UsersPage = () => {
       body: JSON.stringify({ is_active: nextIsActive }),
     });
 
-    setUsers(
-      (prev) =>
-        nextIsActive
-          ? prev.map((u) => (u.id === userId ? { ...u, is_active: 1 } : u))
-          : prev.filter((u) => u.id !== userId), 
+    setUsers((prev) =>
+      nextIsActive
+        ? prev.map((u) => (u.id === userId ? { ...u, is_active: 1 } : u))
+        : prev.filter((u) => u.id !== userId),
     );
   };
 
-  const handleRoleChange = async (
-    userId: string,
-    nextRole: "user" | "admin" | "super_admin",
-  ) => {
+  const handleRoleChange = async (userId: string, nextRole: "user" | "admin" | "super_admin") => {
     await api(`/admin/users/${userId}/role`, {
       method: "PATCH",
       body: JSON.stringify({ role: nextRole }),
     });
 
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, auth_role: nextRole } : u)),
-    );
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, auth_role: nextRole } : u)));
   };
 
   const ROLE_ORDER = {
@@ -189,9 +170,7 @@ const UsersPage = () => {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() =>
-                    setFilterParam("year", String(focusedYear - 1))
-                  }
+                  onClick={() => setFilterParam("year", String(focusedYear - 1))}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -201,9 +180,7 @@ const UsersPage = () => {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() =>
-                    setFilterParam("year", String(focusedYear + 1))
-                  }
+                  onClick={() => setFilterParam("year", String(focusedYear + 1))}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -211,28 +188,19 @@ const UsersPage = () => {
 
               <div className="grid grid-cols-3 gap-2">
                 {Array.from({ length: 12 }).map((_, i) => {
-                  const month = dayjs()
-                    .year(focusedYear)
-                    .month(i)
-                    .startOf("month");
+                  const month = dayjs().year(focusedYear).month(i).startOf("month");
 
-                  const isSelected =
-                    selectedMonth.format("YYYY-MM") === month.format("YYYY-MM");
+                  const isSelected = selectedMonth.format("YYYY-MM") === month.format("YYYY-MM");
 
-                  const isCurrent =
-                    dayjs().format("YYYY-MM") === month.format("YYYY-MM");
+                  const isCurrent = dayjs().format("YYYY-MM") === month.format("YYYY-MM");
 
                   return (
                     <Button
                       key={i}
                       variant={isSelected ? "default" : "ghost"}
-                      onClick={() =>
-                        setFilterParam("month", month.format("YYYY-MM"))
-                      }
+                      onClick={() => setFilterParam("month", month.format("YYYY-MM"))}
                       className={`h-9 text-sm ${
-                        isSelected
-                          ? ""
-                          : "hover:bg-accent hover:text-accent-foreground"
+                        isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"
                       }`}
                     >
                       {month.format("MMM")}

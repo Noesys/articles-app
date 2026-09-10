@@ -36,16 +36,7 @@ const ALLOWED = [
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ALLOWED,
-    ALLOWED_ATTR: [
-      "href",
-      "src",
-      "alt",
-      "colspan",
-      "rowspan",
-      "width",
-      "height",
-      "title",
-    ],
+    ALLOWED_ATTR: ["href", "src", "alt", "colspan", "rowspan", "width", "height", "title"],
     ALLOW_DATA_ATTR: false,
     ALLOW_UNKNOWN_PROTOCOLS: false,
     KEEP_CONTENT: true,

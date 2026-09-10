@@ -15,10 +15,7 @@ import { AuthRole, User } from "@/admin/utils/types";
 type UserCardProps = {
   user: User;
   submissionStatus?: "submitted" | "not_submitted";
-  onToggleActive?: (
-    userId: string,
-    nextIsActive: boolean,
-  ) => void | Promise<void>;
+  onToggleActive?: (userId: string, nextIsActive: boolean) => void | Promise<void>;
   onRoleChange?: (userId: string, nextRole: AuthRole) => void | Promise<void>;
   onUserClick?: (userId: string) => void;
 };
@@ -97,9 +94,7 @@ export default function UserCard({
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-slate-900 truncate">
-              {user.name}
-            </h3>
+            <h3 className="font-semibold text-slate-900 truncate">{user.name}</h3>
             <span
               className={`text-[11px] font-medium rounded-full px-2 py-0.5 ${ROLE_STYLES[user.auth_role]}`}
             >
@@ -135,8 +130,7 @@ export default function UserCard({
           {currentUser?.id !== user.id &&
             ((currentUser?.auth_role === "super_admin" &&
               (user.auth_role === "admin" || user.auth_role === "user")) ||
-              (currentUser?.auth_role === "admin" &&
-                user.auth_role === "user")) && (
+              (currentUser?.auth_role === "admin" && user.auth_role === "user")) && (
               <button
                 onClick={() => setModalOpen(true)}
                 className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors
@@ -229,8 +223,7 @@ export default function UserCard({
             {user.auth_role === "super_admin" && (
               <div className="mt-3 flex items-start gap-2 rounded-lg bg-purple-50 px-3 py-2 text-xs text-purple-700">
                 <ShieldCheck size={14} className="shrink-0 mt-0.5" />
-                This is a super admin account. Make sure this action is
-                intended.
+                This is a super admin account. Make sure this action is intended.
               </div>
             )}
 
@@ -248,11 +241,7 @@ export default function UserCard({
                 className={`rounded-lg px-3.5 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50
                   ${isActive ? "bg-red-600 hover:bg-red-700" : "bg-emerald-600 hover:bg-emerald-700"}`}
               >
-                {submitting
-                  ? "Please wait..."
-                  : isActive
-                    ? "Deactivate"
-                    : "Activate"}
+                {submitting ? "Please wait..." : isActive ? "Deactivate" : "Activate"}
               </button>
             </div>
           </div>

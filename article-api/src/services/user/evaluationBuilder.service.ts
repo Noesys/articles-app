@@ -1,17 +1,12 @@
 import { z } from "zod";
 import { ArticleTypeConfig, ParameterConfig } from "../../types/user-types";
-export function getScoreableParameters(
-  parameters: ParameterConfig[],
-): ParameterConfig[] {
-  return parameters.filter(
-    (p) => p.scope_type === "numeric" || p.options.length > 0,
-  );
+export function getScoreableParameters(parameters: ParameterConfig[]): ParameterConfig[] {
+  return parameters.filter((p) => p.scope_type === "numeric" || p.options.length > 0);
 }
 
 function shortDescribe(name: string, prompt: string, max = 160): string {
   const trimmed = prompt.replace(/\s+/g, " ").trim();
-  const body =
-    trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
+  const body = trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
   return body ? `${name}: ${body}` : name;
 }
 
@@ -56,7 +51,7 @@ export function buildEvaluationSchema(
       .string()
       .min(1)
       .describe(
-        "Markdown feedback with headings; each point as a bullet (use \"- \"). Follow the scoring instructions in the user prompt.",
+        'Markdown feedback with headings; each point as a bullet (use "- "). Follow the scoring instructions in the user prompt.',
       ),
     parameters: z.object(paramShape),
   });

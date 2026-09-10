@@ -55,12 +55,7 @@ export async function updateArticleEvaluation(
     throw new Error("Article id is required");
   }
 
-  if (
-    typeof score !== "number" ||
-    Number.isNaN(score) ||
-    score < 0 ||
-    score > 10
-  ) {
+  if (typeof score !== "number" || Number.isNaN(score) || score < 0 || score > 10) {
     throw new Error("Score must be between 0 and 10");
   }
 

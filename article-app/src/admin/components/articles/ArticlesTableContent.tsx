@@ -1,6 +1,6 @@
 import { ArticleStatus, ArticleSummary } from "@/admin/utils/types";
 import { ClockCircleOutlined } from "@ant-design/icons";
-import { ColumnsType, TableProps } from "antd/es/table";
+import { ColumnsType } from "antd/es/table";
 import { Search } from "lucide-react";
 import {
   Table,
@@ -31,10 +31,7 @@ function getAiScoreColor(status: ArticleStatus) {
   return "#d48806";
 }
 
-const STATUS_CONFIG: Record<
-  ArticleStatus,
-  { color: string; label: string; icon?: boolean }
-> = {
+const STATUS_CONFIG: Record<ArticleStatus, { color: string; label: string; icon?: boolean }> = {
   approved: {
     color: "green",
     label: "Accepted",
@@ -60,19 +57,18 @@ const STATUS_CONFIG: Record<
 
 function getNameInitials(name: string) {
   if (!name || typeof name !== "string") return "?";
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "?";
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
 }
 
-export default function ArticlesTableContent({
-  articles,
-  onRowClick,
-}: ArticlesTableProps) {
+export default function ArticlesTableContent({ articles, onRowClick }: ArticlesTableProps) {
   const [columns, setColumns] = useState<ColumnsType<ArticleSummary>>([]);
 
   const [titleFilter, setTitleFilter] = useState("");
@@ -86,9 +82,7 @@ export default function ArticlesTableContent({
   const locallyFilteredArticles = useMemo(() => {
     const normalizedTitle = titleFilter.trim().toLowerCase();
     if (!normalizedTitle) return articles;
-    return articles.filter((article) =>
-      article.title.toLowerCase().includes(normalizedTitle),
-    );
+    return articles.filter((article) => article.title.toLowerCase().includes(normalizedTitle));
   }, [articles, titleFilter]);
 
   useEffect(() => {
@@ -98,13 +92,9 @@ export default function ArticlesTableContent({
   const dashboard = useMemo(() => {
     const total = visibleRows.length;
 
-    const approved = visibleRows.filter(
-      (article) => article.status === "approved",
-    ).length;
+    const approved = visibleRows.filter((article) => article.status === "approved").length;
 
-    const pending = visibleRows.filter(
-      (article) => article.status === "pending",
-    ).length;
+    const pending = visibleRows.filter((article) => article.status === "pending").length;
 
     const rewriteRequired = visibleRows.filter(
       (article) => article.status === "rewrite_required",
@@ -114,8 +104,7 @@ export default function ArticlesTableContent({
 
     const averageScore =
       scored.length > 0
-        ? scored.reduce((sum, article) => sum + (article.ai_score ?? 0), 0) /
-          scored.length
+        ? scored.reduce((sum, article) => sum + (article.ai_score ?? 0), 0) / scored.length
         : null;
 
     return {
@@ -159,10 +148,7 @@ export default function ArticlesTableContent({
         ellipsis: true,
         render: (name: string) => (
           <Space size={8}>
-            <Avatar
-              size={26}
-              style={{ backgroundColor: "#7f77dd", fontSize: 11 }}
-            >
+            <Avatar size={26} style={{ backgroundColor: "#7f77dd", fontSize: 11 }}>
               {getNameInitials(name)}
             </Avatar>
             <Text ellipsis style={{ fontSize: fs }}>
@@ -205,9 +191,7 @@ export default function ArticlesTableContent({
         dataIndex: "version",
         key: "version",
         width: 85,
-        render: (version: number) => (
-          <Text className="text-sm">v{version}</Text>
-        ),
+        render: (version: number) => <Text className="text-sm">v{version}</Text>,
       },
 
       {
@@ -227,10 +211,7 @@ export default function ArticlesTableContent({
                 strokeColor={getAiScoreColor(record.status)}
                 style={{ width: 56 }}
               />
-              <Text
-                strong
-                style={{ color: getAiScoreColor(record.status), fontSize: fs }}
-              >
+              <Text strong style={{ color: getAiScoreColor(record.status), fontSize: fs }}>
                 {score}
               </Text>
             </Space>
@@ -259,9 +240,7 @@ export default function ArticlesTableContent({
             <Text type="secondary" className="text-xs">
               Total Articles
             </Text>
-            <div className="text-xl font-semibold mt-0.5">
-              {dashboard.total}
-            </div>
+            <div className="text-xl font-semibold mt-0.5">{dashboard.total}</div>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} lg={6}>
@@ -279,9 +258,7 @@ export default function ArticlesTableContent({
             <Text type="secondary" className="text-xs">
               Pending
             </Text>
-            <div className="text-xl font-semibold text-amber-600 mt-0.5">
-              {dashboard.pending}
-            </div>
+            <div className="text-xl font-semibold text-amber-600 mt-0.5">{dashboard.pending}</div>
           </Card>
         </Col>
         <Col xs={24} sm={12} md={6} lg={6}>
@@ -299,10 +276,7 @@ export default function ArticlesTableContent({
       <div>
         <div className="flex items-center gap-2 mb-4 w-full">
           <div className="relative flex-1">
-            <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
 
             <input
               type="text"
@@ -316,12 +290,8 @@ export default function ArticlesTableContent({
       </div>
 
       {/* Table */}
-      <div
-        className="rounded-xl overflow-hidden"
-      >
-        <div
-          className="flex items-center justify-between px-5 py-4"
-        ></div>
+      <div className="rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4"></div>
 
         <Table<ArticleSummary>
           components={{}}

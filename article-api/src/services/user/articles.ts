@@ -170,13 +170,6 @@ export async function createArticle(
     .run();
 }
 
-export async function updateArticleStatus(
-  db: D1Database,
-  articleId: string,
-  status: string,
-) {
-  await db
-    .prepare(`UPDATE articles SET status = ? WHERE id = ?`)
-    .bind(status, articleId)
-    .run();
+export async function updateArticleStatus(db: D1Database, articleId: string, status: string) {
+  await db.prepare(`UPDATE articles SET status = ? WHERE id = ?`).bind(status, articleId).run();
 }

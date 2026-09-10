@@ -2,9 +2,7 @@ import { formatFeedbackAsMarkdown } from "../../../utils/formatFeedback";
 import MarkdownContent from "@/components/markdown/MarkdownContent";
 
 export default function FeedbackBlock({ feedback }: { feedback: string }) {
-  const stripped = feedback
-    .replace(/^###\s*Overall\s*Score:.*?\/10.*$/m, "")
-    .trim();
+  const stripped = feedback.replace(/^###\s*Overall\s*Score:.*?\/10.*$/m, "").trim();
 
   const fmt = formatFeedbackAsMarkdown(stripped);
 

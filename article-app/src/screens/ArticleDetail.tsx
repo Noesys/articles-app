@@ -1,15 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
-import {
-  ChevronLeft,
-  Edit3,
-  X,
-  Check,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { ChevronLeft, Edit3, X, Check, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import dayjs from "dayjs";
 import { useArticle } from "../hooks/useArticle";
 import { api } from "../http-client";
@@ -54,8 +46,7 @@ export default function ArticleDetail() {
   const queryVersion = searchParams.get("version");
   const rawVersion = routeVersion ?? queryVersion;
   const parsedVersion = rawVersion ? parseInt(rawVersion, 10) : null;
-  const versionParam =
-    parsedVersion !== null && !isNaN(parsedVersion) ? parsedVersion : null;
+  const versionParam = parsedVersion !== null && !isNaN(parsedVersion) ? parsedVersion : null;
 
   const {
     article,
@@ -91,19 +82,14 @@ export default function ArticleDetail() {
     versionParam !== article?.version;
   // If version param matches a history entry, show snapshot; if it equals current version treat as live
   const snapshot =
-    versionParam !== null
-      ? (history.find((h) => h.version === versionParam) ?? null)
-      : null;
+    versionParam !== null ? (history.find((h) => h.version === versionParam) ?? null) : null;
   const effectiveSnapshot = isVersionSnapshot ? snapshot : null;
   const displayTitle = effectiveSnapshot?.title ?? article?.title ?? "";
-  const displayScore = effectiveSnapshot
-    ? effectiveSnapshot.score
-    : currentScore;
+  const displayScore = effectiveSnapshot ? effectiveSnapshot.score : currentScore;
   const displayFeedback = effectiveSnapshot
     ? (effectiveSnapshot.feedback ?? "")
     : (currentFeedback ?? "");
-  const displayStatus =
-    effectiveSnapshot?.status ?? article?.status ?? "pending";
+  const displayStatus = effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
 
   const isFailed = displayStatus === "failed";
@@ -134,9 +120,7 @@ export default function ArticleDetail() {
         return;
       }
       try {
-        const result = await api<ArticleDetailResponse>(
-          `/articles/mine/${article.id}`,
-        );
+        const result = await api<ArticleDetailResponse>(`/articles/mine/${article.id}`);
         setArticle(result.article);
         setHistory(result.history ?? []);
         setCurrentScore(result.current_score);
@@ -196,10 +180,7 @@ export default function ArticleDetail() {
         }),
       });
       try {
-        sessionStorage.setItem(
-          "toast",
-          "Article rewrite submitted! Scoring in progress...",
-        );
+        sessionStorage.setItem("toast", "Article rewrite submitted! Scoring in progress...");
       } catch {}
       navigate(
         user?.auth_role === "admin" || user?.auth_role === "super_admin"
@@ -208,9 +189,7 @@ export default function ArticleDetail() {
       );
     } catch (err) {
       console.error("Rewrite submission failed:", err);
-      setSubmitError(
-        err instanceof Error ? err.message : "Failed to submit rewrite",
-      );
+      setSubmitError(err instanceof Error ? err.message : "Failed to submit rewrite");
     } finally {
       setSubmitting(false);
     }
@@ -230,10 +209,7 @@ export default function ArticleDetail() {
         <div className="text-center">
           <p className="text-slate-500 mb-4">{error}</p>
 
-          <button
-            onClick={() => navigate("/")}
-            className="text-sm text-indigo-600 hover:underline"
-          >
+          <button onClick={() => navigate("/")} className="text-sm text-indigo-600 hover:underline">
             Back to Articles
           </button>
         </div>
@@ -270,8 +246,8 @@ export default function ArticleDetail() {
         )}
         {isPending && !effectiveSnapshot && (
           <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin" /> Processing your
-            submission — scoring in background...
+            <Loader2 size={14} className="animate-spin" /> Processing your submission — scoring in
+            background...
           </div>
         )}
         <div className="flex items-start justify-between gap-4 mb-6">
@@ -284,9 +260,7 @@ export default function ArticleDetail() {
               className="flex-1 bg-white text-sm font-medium rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           ) : (
-            <h1 className="text-2xl font-semibold text-slate-900 leading-snug">
-              {displayTitle}
-            </h1>
+            <h1 className="text-2xl font-semibold text-slate-900 leading-snug">{displayTitle}</h1>
           )}
 
           {effectiveSnapshot ? null : isPending ? (
@@ -317,11 +291,7 @@ export default function ArticleDetail() {
                 disabled={submitting}
                 className="flex items-center gap-1.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-lg px-3 py-2 transition-colors"
               >
-                {submitting ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Check size={14} />
-                )}
+                {submitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Submit Rewrite
               </button>
             </div>
@@ -350,30 +320,22 @@ export default function ArticleDetail() {
               <div className="flex items-center gap-3">
                 {isFailed ? (
                   <div className="py-2">
-                    <p className="font-medium text-red-600">
-                      Evaluation failed
-                    </p>
+                    <p className="font-medium text-red-600">Evaluation failed</p>
                     <p className="text-sm text-slate-500 mt-1">
-                      We couldn't evaluate this article. Please rewrite the
-                      article and submit it again.
+                      We couldn't evaluate this article. Please rewrite the article and submit it
+                      again.
                     </p>
                   </div>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
-                    <Loader2
-                      size={16}
-                      className="animate-spin text-slate-400"
-                    />
+                    <Loader2 size={16} className="animate-spin text-slate-400" />
                     <span>Scoring...</span>
                   </div>
                 ) : (
                   <>
                     <p className="text-3xl font-semibold text-slate-900">
                       {hasScore ? formatAiScore(displayScore!) : "—"}
-                      <span className="text-base text-slate-400 font-normal">
-                        {" "}
-                        / 10
-                      </span>
+                      <span className="text-base text-slate-400 font-normal"> / 10</span>
                     </p>
 
                     {hasScore && (
@@ -404,8 +366,7 @@ export default function ArticleDetail() {
 
             {isFailed ? (
               <p className="text-sm text-red-600">
-                Evaluation failed. Please rewrite the article and submit it
-                again.
+                Evaluation failed. Please rewrite the article and submit it again.
               </p>
             ) : displayScore === null ? (
               <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
@@ -413,9 +374,7 @@ export default function ArticleDetail() {
                 <span>Scoring...</span>
               </div>
             ) : (
-              <FeedbackBlock
-                feedback={displayFeedback || "No feedback available yet."}
-              />
+              <FeedbackBlock feedback={displayFeedback || "No feedback available yet."} />
             )}
           </div>
           <ParameterResultsBox results={parameterResults} />
@@ -443,11 +402,7 @@ export default function ArticleDetail() {
                   </div>
                 )}
                 <span className="p-1 text-slate-400">
-                  {contentCollapsed ? (
-                    <ChevronDown size={18} />
-                  ) : (
-                    <ChevronUp size={18} />
-                  )}
+                  {contentCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
                 </span>
               </div>
             </div>
@@ -486,26 +441,19 @@ export default function ArticleDetail() {
                         <TiptapEditor value={content} onChange={setContent} />
                       )}
                     </div>
-                    {editorView === "preview" && (
-                      <ArticleViewer content={content} />
-                    )}
+                    {editorView === "preview" && <ArticleViewer content={content} />}
                   </div>
                 ) : (
                   <ArticleViewer content={content} />
                 )}
 
-                {submitError && (
-                  <p className="mt-3 text-sm text-red-600">{submitError}</p>
-                )}
+                {submitError && <p className="mt-3 text-sm text-red-600">{submitError}</p>}
               </div>
             )}
           </div>
 
           {!effectiveSnapshot && (
-            <ScoringHistoryTable
-              history={history}
-              articleId={article?.id ?? ""}
-            />
+            <ScoringHistoryTable history={history} articleId={article?.id ?? ""} />
           )}
         </div>
       </div>

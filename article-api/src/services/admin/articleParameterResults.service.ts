@@ -53,14 +53,7 @@ export async function storeParameterResults(
       .prepare(
         `INSERT INTO article_parameter_results (id, article_id, parameter_id, value, version, scored_at) VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .bind(
-        crypto.randomUUID(),
-        articleId,
-        r.parameter_id,
-        r.value,
-        version,
-        now,
-      ),
+      .bind(crypto.randomUUID(), articleId, r.parameter_id, r.value, version, now),
   );
 
   // Also update articles ai_score/feedback if provided

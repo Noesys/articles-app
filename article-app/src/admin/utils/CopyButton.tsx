@@ -22,11 +22,7 @@ export default function CopyButton({ text }: { text: string }) {
       className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
       title="Copy"
     >
-      {copied ? (
-        <Check size={16} className="text-emerald-600" />
-      ) : (
-        <Copy size={16} />
-      )}
+      {copied ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
     </button>
   );
 }

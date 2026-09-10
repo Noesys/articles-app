@@ -55,7 +55,7 @@ export function isLikelyHtml(value: string): boolean {
 function stripAuthorComment(s: string): string {
   return s.replace(/^\s*<!--\s*author_name:[^>]*-->\s*/i, "");
 }
- /** Decide how to feed stored/incoming content into Tiptap. */
+/** Decide how to feed stored/incoming content into Tiptap. */
 export function resolveContentToHtml(content: string): string {
   if (!content || !content.trim()) return "<p></p>";
   const stripped = stripAuthorComment(content);
@@ -93,8 +93,7 @@ function detectAndConvertInlineFormatting(html: string): string {
 
   doc.querySelectorAll("span[style]").forEach((el) => {
     const style = el.getAttribute("style") || "";
-    const isBold =
-      /font-weight\s*:\s*(bold|7\d\d|[89]\d\d)/i.test(style);
+    const isBold = /font-weight\s*:\s*(bold|7\d\d|[89]\d\d)/i.test(style);
     const isItalic = /font-style\s*:\s*italic/i.test(style);
     const isUnderline = /text-decoration\s*:\s*underline/i.test(style);
     const isStrike = /text-decoration\s*:\s*line-through/i.test(style);
@@ -138,7 +137,7 @@ function detectAndConvertBoldHeadings(html: string): string {
     return null;
   };
 
-    // 0) Word Online modern: data-ccp-parastyle="Title" / "Heading 1" -> heading
+  // 0) Word Online modern: data-ccp-parastyle="Title" / "Heading 1" -> heading
   doc.querySelectorAll("[data-ccp-parastyle]").forEach((el) => {
     if (el.closest("h1,h2,h3,h4,h5,h6,li,table")) return;
     const pv = el.getAttribute("data-ccp-parastyle") || "";
@@ -193,10 +192,16 @@ function detectAndConvertBoldHeadings(html: string): string {
         }
       }
       const fsMatch = /font-size\s*:\s*(\d+)\s*(?:pt|px)/i.exec(searchStyle);
-      const fwMatch = /font-weight\s*:\s*(bold|\d{2,3})/i.exec(searchStyle) || /font-weight\s*:\s*(bold|\d{2,3})/i.exec(p.innerHTML);
+      const fwMatch =
+        /font-weight\s*:\s*(bold|\d{2,3})/i.exec(searchStyle) ||
+        /font-weight\s*:\s*(bold|\d{2,3})/i.exec(p.innerHTML);
       let fontSize = fsMatch ? parseInt(fsMatch[1], 10) : 0;
       if (fsMatch && /pt/i.test(fsMatch[0])) fontSize = Math.round(fontSize * 1.33);
-      const isBold = fwMatch !== null || !!p.querySelector("b,strong") || /font-weight:\s*bold/i.test(searchStyle) || /font-weight:\s*bold/i.test(p.innerHTML);
+      const isBold =
+        fwMatch !== null ||
+        !!p.querySelector("b,strong") ||
+        /font-weight:\s*bold/i.test(searchStyle) ||
+        /font-weight:\s*bold/i.test(p.innerHTML);
       const ccp = p.querySelector("[data-ccp-parastyle]")?.getAttribute("data-ccp-parastyle");
       if (ccp) level = getHeadingFromCcp(ccp);
       else if (isBold && fontSize >= 16) {
@@ -210,7 +215,9 @@ function detectAndConvertBoldHeadings(html: string): string {
       // Preserve inner formatting (bold/italic) but strip Word junk spans
       h.innerHTML = p.innerHTML;
       // Clean mso tab stops inside heading
-      h.innerHTML = h.innerHTML.replace(/<span[^>]*mso-tab-count[^>]*>[\s\S]*?<\/span>/gi, " ").trim();
+      h.innerHTML = h.innerHTML
+        .replace(/<span[^>]*mso-tab-count[^>]*>[\s\S]*?<\/span>/gi, " ")
+        .trim();
       p.replaceWith(h);
     }
   });
@@ -303,10 +310,7 @@ export function cleanPastedHtml(rawHtml: string): string {
   });
 
   // Before stripping, collect Word list info (mso-list paragraphs)
-  const wordListInfo = new Map<
-    Element,
-    { level: number; isOrdered: boolean }
-  >();
+  const wordListInfo = new Map<Element, { level: number; isOrdered: boolean }>();
   doc.querySelectorAll("p, h1, h2, h3, h4, h5, h6").forEach((el) => {
     const style = el.getAttribute("style") || "";
     const cls = el.getAttribute("class") || "";
@@ -315,7 +319,7 @@ export function cleanPastedHtml(rawHtml: string): string {
       const level = levelMatch ? parseInt(levelMatch[1], 10) : 1;
       // Detect bullet vs numbered: mso-list often contains lfo style but text tells us
       const raw = (el.textContent || "").trim();
-      const isOrdered = /^\d+[\.\)]/.test(raw) || /^\s*\d/.test(raw);
+      const isOrdered = /^\d+[.)]/.test(raw) || /^\s*\d/.test(raw);
       wordListInfo.set(el, { level, isOrdered });
     }
   });
@@ -329,8 +333,7 @@ export function cleanPastedHtml(rawHtml: string): string {
     if (style) {
       // Keep only text-align, which Tiptap's TextAlign extension understands.
       const align = /text-align:\s*(left|center|right|justify)/i.exec(style);
-      if (align)
-        el.setAttribute("style", `text-align:${align[1].toLowerCase()}`);
+      if (align) el.setAttribute("style", `text-align:${align[1].toLowerCase()}`);
       else el.removeAttribute("style");
     }
     if (el.tagName.toLowerCase() === "span" && !el.attributes.length) {
@@ -365,7 +368,7 @@ export function cleanPastedHtml(rawHtml: string): string {
       }
       const li = doc.createElement("li");
       let text = child.innerHTML
-        .replace(/^\s*(?:\d+[\.\)]|•|·)\s*(?:&nbsp;|\u00a0|\s)*/i, "")
+        .replace(/^\s*(?:\d+[.)]|•|·)\s*(?:&nbsp;|\u00a0|\s)*/i, "")
         .replace(/<span[^>]*mso-tab-count[^>]*>[\s\S]*?<\/span>/gi, " ")
         .trim();
       // If this child is already a heading, don't wrap it in a list item
@@ -389,11 +392,7 @@ export function cleanPastedHtml(rawHtml: string): string {
     let run: HTMLElement[] = [];
     for (const p of paras) {
       const t = (p.textContent || "").trim();
-      if (
-        /^\d+[\.\)]\s+\S/.test(t) &&
-        t.length < 200 &&
-        !p.querySelector("img,table")
-      ) {
+      if (/^\d+[.)]\s+\S/.test(t) && t.length < 200 && !p.querySelector("img,table")) {
         run.push(p);
       } else if (run.length >= 2) {
         break;
@@ -409,10 +408,7 @@ export function cleanPastedHtml(rawHtml: string): string {
           p.before(list);
         }
         const li = doc.createElement("li");
-        li.innerHTML =
-          p.innerHTML.replace(/^\s*\d+[\.\)]\s*/, "").trim() ||
-          p.textContent ||
-          "";
+        li.innerHTML = p.innerHTML.replace(/^\s*\d+[.)]\s*/, "").trim() || p.textContent || "";
         list.appendChild(li);
         p.remove();
       }
@@ -446,9 +442,7 @@ export function cleanPastedHtml(rawHtml: string): string {
 
 /** True when the clipboard HTML came from Word / Outlook / Google Docs. */
 export function isOfficeHtml(html: string): boolean {
-  return /mso-|urn:schemas-microsoft-com|class="?Mso|docs-internal-guid/i.test(
-    html || "",
-  );
+  return /mso-|urn:schemas-microsoft-com|class="?Mso|docs-internal-guid/i.test(html || "");
 }
 
 /* ------------------------------------------------------------------ */
@@ -462,8 +456,7 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     const res = await fetch(url, { mode: "cors", credentials: "omit" });
     if (!res.ok) return null;
     const blob = await res.blob();
-    if (!blob.type.startsWith("image/") || blob.size > MAX_INLINE_BYTES)
-      return null;
+    if (!blob.type.startsWith("image/") || blob.size > MAX_INLINE_BYTES) return null;
     return await new Promise((resolve) => {
       const fr = new FileReader();
       fr.onload = () => resolve(fr.result as string);
@@ -475,7 +468,6 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     return null;
   }
 }
-
 
 export async function inlineRemoteImages(html: string): Promise<string> {
   if (!html || !/<img/i.test(html)) return html;

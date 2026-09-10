@@ -15,7 +15,6 @@ export type User = {
   is_active: number;
 };
 
-
 // articles
 
 export type ArticleHistory = {
@@ -112,7 +111,6 @@ export type OtpCode = {
   created_at: string;
   used_at: string | null;
 };
-
 
 // evaluation
 export interface ParameterResultInput {

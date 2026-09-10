@@ -106,10 +106,7 @@ app.onError((err, c) => {
     if (err.status >= 500) {
       console.error(`[user-api] ${errorId}:`, err);
     }
-    return c.json(
-      { success: false, message: err.message, errorId },
-      err.status as any,
-    );
+    return c.json({ success: false, message: err.message, errorId }, err.status as any);
   }
 
   // Anything else (D1 errors, network failures, bugs) is unexpected —

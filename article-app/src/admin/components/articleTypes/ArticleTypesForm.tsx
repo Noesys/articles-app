@@ -11,7 +11,6 @@ import {
   FormState,
   ParameterDraft,
   ParameterResponse,
-  ScopeType,
 } from "@/admin/utils/types";
 import ArticleTypesParameterModal from "./ArticleTypesParameterModal";
 
@@ -81,9 +80,7 @@ export default function ArticleTypesForm() {
   // modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalDraft, setModalDraft] = useState<ParameterDraft | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<ParameterDraft | null>(
-    null,
-  );
+  const [pendingDelete, setPendingDelete] = useState<ParameterDraft | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -105,9 +102,7 @@ export default function ArticleTypesForm() {
         });
       } catch (err) {
         console.error(err);
-        setError(
-          "Couldn't load this article type. Try going back and re-opening it.",
-        );
+        setError("Couldn't load this article type. Try going back and re-opening it.");
       } finally {
         setLoading(false);
       }
@@ -144,9 +139,7 @@ export default function ArticleTypesForm() {
     if (exists)
       setForm((c) => ({
         ...c,
-        parameters: c.parameters.map((p) =>
-          p.id === modalDraft.id ? modalDraft : p,
-        ),
+        parameters: c.parameters.map((p) => (p.id === modalDraft.id ? modalDraft : p)),
       }));
     else setForm((c) => ({ ...c, parameters: [...c.parameters, modalDraft] }));
     closeModal();
@@ -183,9 +176,7 @@ export default function ArticleTypesForm() {
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    const invalidParameter = form.parameters.find(
-      (p) => !p.name.trim() || !p.prompt.trim(),
-    );
+    const invalidParameter = form.parameters.find((p) => !p.name.trim() || !p.prompt.trim());
     if (invalidParameter) {
       openEditModal(invalidParameter);
       return;
@@ -217,23 +208,26 @@ export default function ArticleTypesForm() {
         form.parameters.map((p) => {
           const paramBody = JSON.stringify(parameterToBody(p));
           if (p.isNew)
-            return api(`/admin/article-types/${articleTypeId}/parameters`, { method: "POST", body: paramBody });
-          return api(`/admin/article-types/${articleTypeId}/parameters/${p.id}`, { method: "PATCH", body: paramBody });
+            return api(`/admin/article-types/${articleTypeId}/parameters`, {
+              method: "POST",
+              body: paramBody,
+            });
+          return api(`/admin/article-types/${articleTypeId}/parameters/${p.id}`, {
+            method: "PATCH",
+            body: paramBody,
+          });
         }),
       );
       navigate("/admin/article-types");
     } catch (err) {
       console.error(err);
-      setError(
-        "Something went wrong saving this article type. Please try again.",
-      );
+      setError("Something went wrong saving this article type. Please try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading)
-    return <div className="m-5 text-sm text-slate-400">Loading…</div>;
+  if (loading) return <div className="m-5 text-sm text-slate-400">Loading…</div>;
 
   return (
     <div className="w-full px-4 md:px-8 py-5">
@@ -259,9 +253,7 @@ export default function ArticleTypesForm() {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Name
-          </label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
           <input
             type="text"
             value={form.name}
@@ -272,15 +264,11 @@ export default function ArticleTypesForm() {
         </div>
         <div className="grid grid-cols-10 gap-4">
           <div className="col-span-7">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Description
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
             <input
               type="text"
               value={form.description}
-              onChange={(e) =>
-                setForm((c) => ({ ...c, description: e.target.value }))
-              }
+              onChange={(e) => setForm((c) => ({ ...c, description: e.target.value }))}
               placeholder="Short description (optional)"
               className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
@@ -313,14 +301,10 @@ export default function ArticleTypesForm() {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Scoring Prompt
-          </label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Scoring Prompt</label>
           <textarea
             value={form.promptContent}
-            onChange={(e) =>
-              setForm((c) => ({ ...c, promptContent: e.target.value }))
-            }
+            onChange={(e) => setForm((c) => ({ ...c, promptContent: e.target.value }))}
             placeholder="The full AI scoring prompt for this article type..."
             rows={8}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -329,9 +313,7 @@ export default function ArticleTypesForm() {
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-sm font-medium text-slate-700">
-              Parameters
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Parameters</label>
             <Button
               variant="ghost"
               size="sm"
@@ -363,8 +345,7 @@ export default function ArticleTypesForm() {
               locale={{
                 emptyText: (
                   <span className="text-sm text-slate-400 italic">
-                    No parameters yet — optional, but useful for multi-criteria
-                    scoring.
+                    No parameters yet — optional, but useful for multi-criteria scoring.
                   </span>
                 ),
               }}
@@ -374,9 +355,7 @@ export default function ArticleTypesForm() {
                   dataIndex: "name",
                   key: "name",
                   render: (v: string) =>
-                    v || (
-                      <span className="text-slate-300 italic">Untitled</span>
-                    ),
+                    v || <span className="text-slate-300 italic">Untitled</span>,
                 },
                 {
                   title: "Prompt",
@@ -384,9 +363,7 @@ export default function ArticleTypesForm() {
                   key: "prompt",
                   ellipsis: true,
                   render: (v: string) =>
-                    v || (
-                      <span className="text-slate-300 italic">No prompt</span>
-                    ),
+                    v || <span className="text-slate-300 italic">No prompt</span>,
                 },
                 {
                   title: "Range / Options",
@@ -449,12 +426,7 @@ export default function ArticleTypesForm() {
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            loading={submitting}
-            disabled={!canSubmit}
-            type="button"
-          >
+          <Button onClick={handleSubmit} loading={submitting} disabled={!canSubmit} type="button">
             {isEditing ? "Save Changes" : "Create Type"}
           </Button>
         </div>

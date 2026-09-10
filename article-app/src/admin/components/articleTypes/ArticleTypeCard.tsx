@@ -1,11 +1,4 @@
-import {
-  ChevronDown,
-  Clock,
-  FileText,
-  Pencil,
-  Tag,
-  Trash2,
-} from "lucide-react";
+import { ChevronDown, Clock, FileText, Pencil, Tag, Trash2 } from "lucide-react";
 import { formatDateToUSLocale } from "../../utils/date";
 import Badge from "../ui/Badge";
 import { ArticleTypeWithPrompt, ParameterOptionDraft } from "@/admin/utils/types";
@@ -64,13 +57,7 @@ function ActionButton({
   );
 }
 
-function ArticleTypeCard({
-  type,
-  isExpanded,
-  onToggle,
-  onEdit,
-  onDelete,
-}: ArticleTypeCardProps) {
+function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: ArticleTypeCardProps) {
   return (
     <div className="group">
       <button
@@ -101,9 +88,7 @@ function ArticleTypeCard({
             )}
           </div>
           {type.description && (
-            <p className="text-sm text-slate-500 truncate mt-0.5">
-              {type.description}
-            </p>
+            <p className="text-sm text-slate-500 truncate mt-0.5">{type.description}</p>
           )}
         </div>
 
@@ -161,25 +146,26 @@ function ArticleTypeCard({
 
               {type.parameters.length > 0 ? (
                 <div className="space-y-3">
-                  {(type.parameters as unknown as { id: string; name: string; prompt?: string | null; scopeType: string; options?: ParameterOptionDraft[] | null; minValue?: string | number | null; maxValue?: string | number | null }[]).map((param) => (
-                    <div
-                      key={param.id}
-                      className="rounded-xl border border-slate-200 bg-white p-4"
-                    >
+                  {(
+                    type.parameters as unknown as {
+                      id: string;
+                      name: string;
+                      prompt?: string | null;
+                      scopeType: string;
+                      options?: ParameterOptionDraft[] | null;
+                      minValue?: string | number | null;
+                      maxValue?: string | number | null;
+                    }[]
+                  ).map((param) => (
+                    <div key={param.id} className="rounded-xl border border-slate-200 bg-white p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-medium text-slate-900">
-                            {param.name}
-                          </h4>
+                          <h4 className="font-medium text-slate-900">{param.name}</h4>
 
-                          <p className="mt-1 text-sm text-slate-500">
-                            {param.prompt}
-                          </p>
+                          <p className="mt-1 text-sm text-slate-500">{param.prompt}</p>
                         </div>
 
-                        <Badge variant="indigo">
-                          {param.scopeType.toUpperCase()}
-                        </Badge>
+                        <Badge variant="indigo">{param.scopeType.toUpperCase()}</Badge>
                       </div>
 
                       <div className="flex gap-1 my-1">
@@ -199,9 +185,7 @@ function ArticleTypeCard({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400 italic">
-                  No parameters configured.
-                </p>
+                <p className="text-sm text-slate-400 italic">No parameters configured.</p>
               )}
             </div>
           </div>

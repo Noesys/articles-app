@@ -31,21 +31,12 @@ function getLanguageModel(env: Bindings) {
 function formatAiError(error: unknown): Error {
   if (NoObjectGeneratedError.isInstance(error)) {
     const cause =
-      error.cause instanceof Error
-        ? error.cause.message
-        : error.cause
-          ? String(error.cause)
-          : "";
+      error.cause instanceof Error ? error.cause.message : error.cause ? String(error.cause) : "";
     const textSnippet =
       typeof error.text === "string" && error.text.length > 0
         ? ` Raw: ${error.text.slice(0, 280)}`
         : "";
-    return new Error(
-      `${error.message}${cause ? ` (${cause})` : ""}${textSnippet}`.slice(
-        0,
-        500,
-      ),
-    );
+    return new Error(`${error.message}${cause ? ` (${cause})` : ""}${textSnippet}`.slice(0, 500));
   }
   return error instanceof Error ? error : new Error(String(error));
 }
@@ -56,8 +47,7 @@ export async function evaluateArticle(
   bindings: Bindings,
 ): Promise<AIEvaluationResult> {
   const model = getLanguageModel(bindings);
-  const isGoogle =
-    bindings.AI_PROVIDER === "google" || !bindings.AI_PROVIDER;
+  const isGoogle = bindings.AI_PROVIDER === "google" || !bindings.AI_PROVIDER;
 
   try {
     // generateObject is more reliable than generateText+Output.object with Gemini 3

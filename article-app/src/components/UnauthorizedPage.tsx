@@ -1,4 +1,4 @@
-import { ShieldAlert, ArrowLeft, LogOut, Lock } from "lucide-react";
+import { ShieldAlert, Lock } from "lucide-react";
 import logoImage from "../Logo/contiq.png";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -39,9 +39,7 @@ export function UnauthorizedPage({
 
           {/* Heading & Text */}
           <h1 className="text-2xl font-bold text-slate-900 mb-2">{title}</h1>
-          <p className="text-slate-600 text-sm leading-relaxed mb-6">
-            {message}
-          </p>
+          <p className="text-slate-600 text-sm leading-relaxed mb-6">{message}</p>
 
           {/* Additional Info Pill if logged in */}
           {user && (
@@ -50,13 +48,17 @@ export function UnauthorizedPage({
                 <Lock className="w-3.5 h-3.5 text-slate-400" />
                 Account Status
               </div>
-              <p>Logged in as: <span className="font-semibold text-slate-900">{user.email}</span></p>
-              <p>Role: <span className="capitalize font-semibold text-slate-900">{user.auth_role}</span></p>
+              <p>
+                Logged in as: <span className="font-semibold text-slate-900">{user.email}</span>
+              </p>
+              <p>
+                Role:{" "}
+                <span className="capitalize font-semibold text-slate-900">{user.auth_role}</span>
+              </p>
             </div>
           )}
         </div>
       </main>
-          
     </div>
   );
 }

@@ -8,38 +8,31 @@ export const ResizableImage = Image.extend({
       ...this.parent?.(),
       width: {
         default: null,
-        parseHTML: (el: HTMLElement) =>
-          el.getAttribute("width") || el.style.width || null,
-        renderHTML: (attrs: { width?: string | number | null }) => (attrs.width ? { width: attrs.width } : {}),
+        parseHTML: (el: HTMLElement) => el.getAttribute("width") || el.style.width || null,
+        renderHTML: (attrs: { width?: string | number | null }) =>
+          attrs.width ? { width: attrs.width } : {},
       },
       height: {
         default: null,
-        parseHTML: (el: HTMLElement) =>
-          el.getAttribute("height") || el.style.height || null,
+        parseHTML: (el: HTMLElement) => el.getAttribute("height") || el.style.height || null,
         renderHTML: (attrs: { height?: string | number | null }) =>
           attrs.height ? { height: attrs.height } : {},
       },
       style: {
         default: null,
         parseHTML: (el: HTMLElement) => el.getAttribute("style"),
-        renderHTML: (attrs: { style?: string | null }) => (attrs.style ? { style: attrs.style } : {}),
+        renderHTML: (attrs: { style?: string | null }) =>
+          attrs.style ? { style: attrs.style } : {},
       },
       textAlign: {
         default: null,
         parseHTML: (el: HTMLElement) => {
-          const explicit =
-            el.getAttribute("textalign") || el.getAttribute("textAlign");
+          const explicit = el.getAttribute("textalign") || el.getAttribute("textAlign");
           if (explicit) return explicit;
           const style = el.getAttribute("style") || "";
-          if (
-            style.includes("margin-left: auto") &&
-            style.includes("margin-right: auto")
-          )
+          if (style.includes("margin-left: auto") && style.includes("margin-right: auto"))
             return "center";
-          if (
-            style.includes("margin-left: auto") &&
-            style.includes("margin-right: 0")
-          )
+          if (style.includes("margin-left: auto") && style.includes("margin-right: 0"))
             return "right";
           if (style.includes("margin-left: auto")) return "right";
           return null;
@@ -60,8 +53,7 @@ export const ResizableImage = Image.extend({
       styleParts.push(
         `width:${HTMLAttributes.width}${String(HTMLAttributes.width).endsWith("px") || String(HTMLAttributes.width).endsWith("%") ? "" : "px"}`,
       );
-    if (HTMLAttributes.height)
-      styleParts.push(`height:${HTMLAttributes.height}`);
+    if (HTMLAttributes.height) styleParts.push(`height:${HTMLAttributes.height}`);
     if (HTMLAttributes.style) styleParts.push(String(HTMLAttributes.style));
     // Wrap image in aligned paragraph for preview portability
     // The actual alignment is stored as a wrapper style, but for static HTML

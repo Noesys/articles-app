@@ -4,7 +4,6 @@ import "./Tiptap.css";
 import { tiptapExtensions } from "./TiptapExtensions";
 import { resolveContentToHtml } from "@/components/editor/lib/contentNormalize";
 import { sanitizeHtml } from "@/utils/htmlSanitize";
-import CopyButton from "@/admin/utils/CopyButton";
 
 type Props = {
   content: string;

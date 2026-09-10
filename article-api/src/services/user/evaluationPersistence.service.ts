@@ -42,7 +42,7 @@ export async function persistEvaluationResults(
   db: D1Database,
   articleId: string,
   version: number,
-  outcome: EvaluationOutcome
+  outcome: EvaluationOutcome,
 ): Promise<void> {
   const scoredAt = new Date().toISOString();
 
@@ -62,7 +62,7 @@ export async function persistEvaluationResults(
               scored_at = ?,
               pass_threshold = ?
           WHERE id = ? AND version = ?
-        `
+        `,
       )
       .bind(
         outcome.ai_score,
@@ -82,7 +82,7 @@ export async function persistEvaluationResults(
         `
           DELETE FROM article_parameter_results
           WHERE article_id = ? AND version = ?
-        `
+        `,
       )
       .bind(articleId, version),
   );
@@ -97,7 +97,7 @@ export async function persistEvaluationResults(
             INSERT INTO article_parameter_results
               (id, article_id, parameter_id, value, option_id, numeric_value, version, scored_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `
+          `,
         )
         .bind(
           resultId,
@@ -125,7 +125,7 @@ export async function handleEvaluationFailure(
   db: D1Database,
   articleId: string,
   version: number,
-  errorMessage: string
+  errorMessage: string,
 ): Promise<void> {
   const safe = sanitizeErrorMessage(errorMessage);
   await db
@@ -135,7 +135,7 @@ export async function handleEvaluationFailure(
         SET status = 'failed',
             ai_feedback = ?
         WHERE id = ? AND version = ?
-      `
+      `,
     )
     .bind(safe, articleId, version)
     .run();

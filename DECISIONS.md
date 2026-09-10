@@ -1,4 +1,4 @@
-# Decision Log 
+# Decision Log
 
 ## Architecture
 
@@ -49,8 +49,6 @@
 **Concurrency Handling:** WAL (Write-Ahead Logging) mode and per-worker connection pooling; db.batch() for atomic transactions on concurrent writes; evaluation service uses batched UPDATE+DELETE+INSERT pattern.
 
 **Known Limitations:** Query complexity constraints (limited FULLTEXT search, some window function restrictions), 10-row optimization limits addressed via careful schema design. Cost favorable: generous free tier (100GB storage, 1M queries/month) covers expected load; managed PostgreSQL would cost monthly regardless of scale.
-
-
 
 ### 5. Asynchronous AI Evaluation
 
@@ -103,7 +101,6 @@
 **Content Flow:** Tiptap stores as HTML -> POST converts to markdown (via toMarkdown) -> API stores markdown in D1 -> GET retrieves markdown -> ArticleViewer renders via React Markdown. Turndown library handles pasted HTML-to-markdown conversion for complex tables.
 
 **Trade-offs:** Larger bundle size than plain text (~50-100KB depending on extensions), ProseMirror's learning curve for customization, and complexity of HTML-to-markdown conversion pipeline.
-
 
 ---
 
