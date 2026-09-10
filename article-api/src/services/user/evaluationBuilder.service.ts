@@ -53,6 +53,10 @@ export function buildEvaluationSchema(
       .describe(
         'Markdown feedback with headings; each point as a bullet (use "- "). Follow the scoring instructions in the user prompt.',
       ),
+    suggested_title: z
+      .string()
+      .min(1)
+      .describe("Improved article title; concise, clear, and faithful to the content."),
     parameters: z.object(paramShape),
   });
 }
@@ -93,6 +97,8 @@ Return "score" as a number between ${articleType.score_min} and ${articleType.sc
 
 Return "feedback" following these instructions exactly:
 ${articleType.score_prompt}
+
+Return "suggested_title" as a single improved title for this article: concise, clear, and faithful to the content. Do not wrap it in quotes.
 
 Also evaluate each of the following parameters and return them under "parameters", keyed by the exact key given (p0, p1, ...):
 

@@ -7,6 +7,7 @@ import {
   getArticles,
   getArticleStats,
   prepareArticleReevaluate,
+  updateArticleTitle,
 } from "../../services/admin/articles.service";
 import {
   getParameterResults,
@@ -15,6 +16,7 @@ import {
 import { AppEnv, Bindings } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 import { evaluateArticle } from "../../services/user/evaluateArticle.service";
+import { sanitizeHtmlServer } from "../../utils/sanitize";
 
 const articlesRoute = new Hono<AppEnv>();
 articlesRoute.use("*", requireRole("admin", "super_admin"));
@@ -99,6 +101,7 @@ articlesRoute.get("/:id", async (c) => {
         version: article.version,
         ai_score: article.ai_score,
         ai_feedback: article.ai_feedback || null,
+        suggested_title: article.suggested_title || null,
         author_name: article.author_name,
         author_email: article.author_email,
         job_role: article.job_role,
@@ -119,6 +122,46 @@ articlesRoute.get("/:id", async (c) => {
           snapshotted_at: item.snapshotted_at,
         };
       }),
+    },
+  });
+});
+
+/** Title-only update — does not bump version or re-run evaluation. */
+articlesRoute.patch("/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as { title?: unknown };
+
+  if (typeof body.title !== "string") {
+    return c.json({ success: false, message: "title is required" }, 400);
+  }
+
+  const title = sanitizeHtmlServer(body.title).replace(/\s+/g, " ").trim();
+  if (!title) {
+    return c.json({ success: false, message: "title is required" }, 400);
+  }
+
+  let article;
+  try {
+    article = await updateArticleTitle(c.env.DB, id, title);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ success: false, message: msg }, 400);
+  }
+
+  if (!article) {
+    return c.json({ success: false, message: "Article not found" }, 404);
+  }
+
+  return c.json({
+    message: "Article title updated",
+    data: {
+      article: {
+        id: article.id,
+        title: article.title,
+        suggested_title: article.suggested_title || null,
+        version: article.version,
+        updated_at: article.updated_at,
+      },
     },
   });
 });

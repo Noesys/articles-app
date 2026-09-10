@@ -74,9 +74,15 @@ export async function evaluateArticle(
     const status: EvaluationOutcome["status"] =
       aiResult.score >= articleType.pass_threshold ? "approved" : "rewrite_required";
 
+    const suggestedTitle =
+      typeof aiResult.suggested_title === "string"
+        ? aiResult.suggested_title.replace(/\s+/g, " ").trim().slice(0, 500) || null
+        : null;
+
     await persistEvaluationResults(db, articleId, version, {
       ai_score: aiResult.score,
       ai_feedback: aiResult.feedback,
+      suggested_title: suggestedTitle,
       status,
       pass_threshold: articleType.pass_threshold,
       parameter_results: parameterResults,

@@ -18,6 +18,7 @@ export interface ArticleDetail {
   article_type_name: string;
   status: string;
   version: number;
+  suggested_title?: string | null;
 }
 
 export interface HistoryItem {

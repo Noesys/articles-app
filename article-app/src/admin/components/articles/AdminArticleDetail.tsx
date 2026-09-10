@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, Loader2, ChevronDown, ChevronUp, Pencil, Check, X } from "lucide-react";
 import { Select, message } from "antd";
 import dayjs from "dayjs";
 import { api } from "../../../http-client";
@@ -61,6 +61,11 @@ export default function AdminArticleDetail() {
   /** True after admin starts re-eval until score/failed/timeout — distinct from idle pending. */
   const [scoringInFlight, setScoringInFlight] = useState(false);
 
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [titleBusy, setTitleBusy] = useState(false);
+  const [applyBusy, setApplyBusy] = useState(false);
+
   const applyArticlePayload = useCallback((d: any) => {
     if (d.article) {
       setArticle(d.article as ArticleDetail);
@@ -80,6 +85,7 @@ export default function AdminArticleDetail() {
       article_type_name: (d.article_type_name as string) || (d.type as string) || "",
       status: d.status as string,
       version: d.version as number,
+      suggested_title: (d.suggested_title as string | null | undefined) ?? null,
     };
     setArticle(art);
     setSelectedTypeId(art.article_type_id);
@@ -171,6 +177,7 @@ export default function AdminArticleDetail() {
     : (currentFeedback ?? "");
   const displayStatus = effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
+  const suggestedTitle = !effectiveSnapshot ? (article?.suggested_title ?? null) : null;
 
   const isFailed = displayStatus === "failed";
   const isScoring = scoringInFlight && !effectiveSnapshot && !isFailed && displayScore === null;
@@ -265,6 +272,58 @@ export default function AdminArticleDetail() {
 
   const hasScore = displayScore !== null;
 
+  async function saveTitle(nextTitle: string) {
+    if (!id) return;
+    const trimmed = nextTitle.replace(/\s+/g, " ").trim();
+    if (!trimmed) {
+      message.error("Title is required");
+      return;
+    }
+    if (trimmed === article?.title) {
+      setEditingTitle(false);
+      return;
+    }
+    setTitleBusy(true);
+    try {
+      const res: any = await api(`/admin/articles/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title: trimmed }),
+      });
+      const updatedTitle = (res?.article?.title as string | undefined) ?? trimmed;
+      setArticle((prev) => (prev ? { ...prev, title: updatedTitle } : prev));
+      setEditingTitle(false);
+      message.success("Title updated");
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setTitleBusy(false);
+    }
+  }
+
+  async function handleSaveTitle() {
+    await saveTitle(titleDraft);
+  }
+
+  async function handleApplySuggestedTitle() {
+    if (!suggestedTitle) return;
+    setApplyBusy(true);
+    try {
+      await saveTitle(suggestedTitle);
+    } finally {
+      setApplyBusy(false);
+    }
+  }
+
+  function startEditTitle() {
+    setTitleDraft(article?.title ?? "");
+    setEditingTitle(true);
+  }
+
+  function cancelEditTitle() {
+    setEditingTitle(false);
+    setTitleDraft(article?.title ?? "");
+  }
+
   async function handleChangeType(reevaluate: boolean) {
     if (!id || !selectedTypeId) return;
     setTypeBusy(true);
@@ -332,6 +391,8 @@ export default function AdminArticleDetail() {
   }
 
   const typeChanged = selectedTypeId && selectedTypeId !== article.article_type_id;
+  const suggestionMatchesTitle =
+    !!suggestedTitle && suggestedTitle.trim() === (article.title ?? "").trim();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -358,8 +419,85 @@ export default function AdminArticleDetail() {
           </div>
         )}
 
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <h1 className="text-2xl font-semibold text-slate-900 leading-snug">{displayTitle}</h1>
+        <div className="mb-6">
+          {!effectiveSnapshot && editingTitle ? (
+            <div className="flex flex-wrap items-start gap-2">
+              <input
+                type="text"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleSaveTitle();
+                  }
+                  if (e.key === "Escape") cancelEditTitle();
+                }}
+                disabled={titleBusy}
+                className="flex-1 min-w-[220px] text-2xl font-semibold text-slate-900 leading-snug rounded-md border border-slate-300 px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                autoFocus
+              />
+              <button
+                type="button"
+                disabled={titleBusy}
+                onClick={() => void handleSaveTitle()}
+                className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+              >
+                {titleBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                Save
+              </button>
+              <button
+                type="button"
+                disabled={titleBusy}
+                onClick={cancelEditTitle}
+                className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+              >
+                <X size={14} />
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2">
+              <h1 className="text-2xl font-semibold text-slate-900 leading-snug">{displayTitle}</h1>
+              {!effectiveSnapshot && (
+                <button
+                  type="button"
+                  onClick={startEditTitle}
+                  disabled={titleBusy || applyBusy || scoringInFlight}
+                  className="mt-1 inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  title="Edit title"
+                >
+                  <Pencil size={12} />
+                  Edit
+                </button>
+              )}
+            </div>
+          )}
+
+          {!effectiveSnapshot && suggestedTitle && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                AI suggested title
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm text-slate-800 flex-1 min-w-0">{suggestedTitle}</p>
+                <button
+                  type="button"
+                  disabled={
+                    applyBusy ||
+                    titleBusy ||
+                    suggestionMatchesTitle ||
+                    editingTitle ||
+                    scoringInFlight
+                  }
+                  onClick={() => void handleApplySuggestedTitle()}
+                  className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-40"
+                >
+                  {applyBusy ? "Applying…" : suggestionMatchesTitle ? "Applied" : "Apply"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {!effectiveSnapshot && (

@@ -137,6 +137,7 @@ export interface ArticleDetail {
   author_name: string;
   author_email: string;
   job_role: string;
+  suggested_title: string | null;
 }
 
 export async function getArticleById(db: D1Database, id: string): Promise<ArticleDetail | null> {
@@ -192,6 +193,39 @@ export async function getArticleHistory(
     .all<ArticleHistoryEntry>();
 
   return result.results;
+}
+
+const MAX_TITLE_BYTES = 500;
+
+/** Title-only update — does not bump version or trigger evaluation. */
+export async function updateArticleTitle(
+  db: D1Database,
+  articleId: string,
+  title: string,
+): Promise<ArticleDetail | null> {
+  const trimmed = title.replace(/\s+/g, " ").trim();
+  if (!trimmed) {
+    throw new Error("Title is required");
+  }
+  if (new TextEncoder().encode(trimmed).length > MAX_TITLE_BYTES) {
+    throw new Error("Title too long");
+  }
+
+  const existing = await getArticleById(db, articleId);
+  if (!existing) return null;
+
+  const now = new Date().toISOString();
+  await db
+    .prepare(
+      `UPDATE articles
+       SET title = ?,
+           updated_at = ?
+       WHERE id = ?`,
+    )
+    .bind(trimmed, now, articleId)
+    .run();
+
+  return getArticleById(db, articleId);
 }
 
 function currentMonthYear(): string {
@@ -314,6 +348,7 @@ export async function changeArticleType(
              status = 'pending',
              ai_score = NULL,
              ai_feedback = NULL,
+             suggested_title = NULL,
              pass_threshold = NULL,
              scored_at = NULL,
              updated_at = ?
@@ -386,6 +421,7 @@ export async function prepareArticleReevaluate(
              status = 'pending',
              ai_score = NULL,
              ai_feedback = NULL,
+             suggested_title = NULL,
              pass_threshold = NULL,
              scored_at = NULL,
              updated_at = ?

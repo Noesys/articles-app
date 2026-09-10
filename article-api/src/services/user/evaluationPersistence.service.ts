@@ -58,6 +58,7 @@ export async function persistEvaluationResults(
           UPDATE articles
           SET ai_score = ?,
               ai_feedback = ?,
+              suggested_title = ?,
               status = ?,
               scored_at = ?,
               pass_threshold = ?
@@ -67,6 +68,7 @@ export async function persistEvaluationResults(
       .bind(
         outcome.ai_score,
         outcome.ai_feedback,
+        outcome.suggested_title,
         outcome.status,
         scoredAt,
         outcome.pass_threshold,
