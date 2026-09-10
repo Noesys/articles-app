@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
-
+ 
 const ALLOWED = [
   "h1",
   "h2",
@@ -30,7 +30,18 @@ const ALLOWED = [
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ALLOWED,
-    ALLOWED_ATTR: ["href", "src", "alt", "colspan", "rowspan"],
+    ALLOWED_ATTR: [
+      "href",
+      "src",
+      "alt",
+      "colspan",
+      "rowspan",
+      "width",
+      "height",
+      "style",
+      "title",
+      "textalign",
+    ],
     KEEP_CONTENT: true,
   });
 }
