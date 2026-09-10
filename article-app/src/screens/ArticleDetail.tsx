@@ -25,6 +25,7 @@ import CopyButton from "@/admin/utils/CopyButton";
 import { ArticleDetailResponse } from "@/utils/types";
 import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
 import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
+import { toMarkdown } from "@/utils/toMarkdown";
 
 function formatAiScore(s: number) {
   return Number.isInteger(s) ? String(s) : s.toFixed(1);
@@ -192,7 +193,8 @@ export default function ArticleDetail() {
           id: article.id,
           article_type_id: article.article_type_id,
           title: title.trim(),
-          content: content.trim(),
+          // content: content.trim(),
+          content: toMarkdown(content.trim()),
         }),
       });
       try {

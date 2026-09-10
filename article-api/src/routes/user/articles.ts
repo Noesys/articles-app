@@ -26,7 +26,7 @@ function currentMonth(): string {
 
 function validateArticleSize(title: string, content: string): void {
   const MAX_TITLE_BYTES = 500;
-  const MAX_CONTENT_BYTES = 50_000;
+  const MAX_CONTENT_BYTES = 10 * 1024 * 1024; // 10 MB
   if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES)
     throw new AppError("Title too long", 400);
   if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES)
@@ -250,11 +250,11 @@ articleRoutes.post("/", async (c) => {
   const user = c.get("user");
   const db = c.env.DB;
 
-  const MAX_BODY_BYTES = 100 * 1024;
+  const MAX_BODY_BYTES = 100 * 1024 * 1024;
 
   const contentLength = c.req.header("content-length");
   if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
-    return c.json({ success: false, message: "Request body too large" }, 413);
+    return c.json({ success: false, message: "Request body too large. Should be under 10 MB" }, 413);
   }
 
   type CreateArticleBody = {
