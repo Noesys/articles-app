@@ -256,34 +256,6 @@ export default function AdminArticleDetail() {
             </p>
 
             <div className="flex items-center gap-3">
-              {/* {displayScore === null ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
-                  <Loader2 size={16} className="animate-spin text-slate-400" />
-                  <span>loading...</span>
-                </div>
-              ) : (
-                <>
-                  <p className="text-3xl font-semibold text-slate-900">
-                    {hasScore ? formatAiScore(displayScore!) : "—"}
-                    <span className="text-base text-slate-400 font-normal">
-                      {" "}
-                      / 10
-                    </span>
-                  </p>
-
-                  {hasScore && (
-                    <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${getScoreBarColor(displayStatus)}`}
-                        style={{
-                          width: `${(Math.min(displayScore!, 10) / 10) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </>
-              )} */}
-
               <div className="flex items-center gap-3">
                 {isFailed ? (
                   <div className="py-2">
@@ -291,7 +263,8 @@ export default function AdminArticleDetail() {
                       Evaluation failed
                     </p>
                     <p className="text-sm text-slate-500 mt-1">
-                      Article couldn't be evaluated. User must re-submit the article.
+                      Article couldn't be evaluated. User must re-submit the
+                      article.
                     </p>
                   </div>
                 ) : displayScore === null ? (
@@ -398,6 +371,7 @@ export default function AdminArticleDetail() {
 
           {!effectiveSnapshot && (
             <ScoringHistoryTable
+              isAdmin={true}
               history={history}
               articleId={article?.id ?? ""}
             />

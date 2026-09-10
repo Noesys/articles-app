@@ -16,14 +16,25 @@ import AdminHeader from "./admin/components/AdminHeader";
 import AdminArticleDetail from "./admin/components/articles/AdminArticleDetail";
 import ArticleTypesForm from "./admin/components/articleTypes/ArticleTypesForm";
 import InsightsPage from "./admin/pages/insights/InsightsPage";
+import Footer from "./components/Footer";
 
 function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       <div className="flex-1 min-w-0 flex flex-col">
         <AdminHeader />
         <div className="flex-1 min-w-0">{children}</div>
+        <Footer />
       </div>
+    </div>
+  );
+}
+
+function UserLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1">{children}</div>
+      <Footer />
     </div>
   );
 }
@@ -51,12 +62,15 @@ function RootRouteRedirect() {
   if (!user) return <UnauthorizedPage />;
   if (user.auth_role === "admin" || user.auth_role === "super_admin")
     return <Navigate to="/admin/articles" replace />;
-  return <MyArticles />;
+  return (
+    <UserLayout>
+      <MyArticles />
+    </UserLayout>
+  );
 }
 
 export default function App() {
   return (
-    // <-- No BrowserRouter here, just Routes
     <Routes>
       <Route path="/" element={<RootRouteRedirect />} />
 
@@ -64,7 +78,9 @@ export default function App() {
         path="/articles/new"
         element={
           <ProtectedRoute>
-            <ArticleCreation />
+            <UserLayout>
+              <ArticleCreation />
+            </UserLayout>
           </ProtectedRoute>
         }
       />
@@ -72,7 +88,9 @@ export default function App() {
         path="/articles/:id/history/:version"
         element={
           <ProtectedRoute>
-            <ArticleDetail />
+            <UserLayout>
+              <ArticleDetail />
+            </UserLayout>
           </ProtectedRoute>
         }
       />
@@ -80,7 +98,9 @@ export default function App() {
         path="/articles/:id"
         element={
           <ProtectedRoute>
-            <ArticleDetail />
+            <UserLayout>
+              <ArticleDetail />
+            </UserLayout>
           </ProtectedRoute>
         }
       />

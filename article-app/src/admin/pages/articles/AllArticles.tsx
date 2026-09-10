@@ -52,8 +52,8 @@ const AllArticles = () => {
   const monthParam = searchParams.get("month");
   const selectedMonthKey =
     monthParam &&
-    /^\d{4}-\d{2}$/.test(monthParam) &&
-    dayjs(`${monthParam}-01`).isValid()
+      /^\d{4}-\d{2}$/.test(monthParam) &&
+      dayjs(`${monthParam}-01`).isValid()
       ? monthParam
       : dayjs().format("YYYY-MM");
   const selectedMonth: Dayjs = dayjs(`${selectedMonthKey}-01`).startOf("month");
@@ -102,6 +102,11 @@ const AllArticles = () => {
       console.error("Failed to load article types:", err);
     }
   }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedMonthKey, selectedStatus, selectedType, selectedAuthor]);
+  
 
   const fetchArticles = useCallback(async () => {
     setLoading(true);
@@ -283,11 +288,10 @@ const AllArticles = () => {
                     onClick={() =>
                       setFilterParam("month", month.format("YYYY-MM"))
                     }
-                    className={`h-9 text-sm ${
-                      isSelected
+                    className={`h-9 text-sm ${isSelected
                         ? ""
                         : "hover:bg-accent hover:text-accent-foreground"
-                    }`}
+                      }`}
                   >
                     {month.format("MMM")}
                     {isCurrent && (
@@ -403,7 +407,7 @@ const AllArticles = () => {
         </div>
       ) : (
         <>
-          <ArticlesTable articles={displayedArticles} onRowClick={(articleId: string) => navigate(`/admin/articles/${articleId}`)} />
+          <ArticlesTable articles={displayedArticles} totalCount={total} onRowClick={(articleId: string) => navigate(`/admin/articles/${articleId}`)} />
           {total > limit && <div className="flex justify-end mt-4"><Pagination current={page} total={total} pageSize={limit} onChange={(p) => setPage(p)} showSizeChanger={false} /></div>}
         </>
       )}

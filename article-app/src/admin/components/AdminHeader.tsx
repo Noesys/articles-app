@@ -58,7 +58,7 @@ export default function AdminHeader({ title }: { title?: string }) {
     <header className="sticky top-0 bg-white border-b border-slate-200 z-50">
       <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 shrink-0">
-          <img src={logoImage} alt="Logo" className="h-13 w-26" />
+          <img src={logoImage} alt="Logo" className="h-7 w-26" />
         </div>
         {title && (
           <span className="text-sm font-medium text-slate-700 hidden xl:block truncate">

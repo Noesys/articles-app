@@ -503,6 +503,7 @@ export default function ArticleDetail() {
 
           {!effectiveSnapshot && (
             <ScoringHistoryTable
+              isAdmin={false}
               history={history}
               articleId={article?.id ?? ""}
             />

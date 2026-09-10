@@ -20,6 +20,7 @@ import { formatDateToUSLocale } from "@/admin/utils/date";
 
 type ArticlesTableProps = {
   articles: ArticleSummary[];
+  totalCount?: number;
   onRowClick?: (id: string) => void;
 };
 
@@ -70,6 +71,7 @@ function getNameInitials(name: string) {
 
 export default function ArticlesTableContent({
   articles,
+  totalCount,
   onRowClick,
 }: ArticlesTableProps) {
   const [columns, setColumns] = useState<ColumnsType<ArticleSummary>>([]);
@@ -95,7 +97,8 @@ export default function ArticlesTableContent({
   }, [locallyFilteredArticles]);
 
   const dashboard = useMemo(() => {
-    const total = visibleRows.length;
+    // const total = visibleRows.length;
+    const total = titleFilter ? visibleRows.length : (totalCount ?? visibleRows.length);
 
     const approved = visibleRows.filter(
       (article) => article.status === "approved",
@@ -114,7 +117,7 @@ export default function ArticlesTableContent({
     const averageScore =
       scored.length > 0
         ? scored.reduce((sum, article) => sum + (article.ai_score ?? 0), 0) /
-          scored.length
+        scored.length
         : null;
 
     return {
@@ -157,17 +160,26 @@ export default function ArticlesTableContent({
         width: 160,
         ellipsis: true,
         render: (name: string) => (
-          <Space size={8}>
-            <Avatar
-              size={26}
-              style={{ backgroundColor: "#7f77dd", fontSize: 11 }}
-            >
-              {getNameInitials(name)}
-            </Avatar>
-            <Text ellipsis style={{ fontSize: fs }}>
-              {name}
-            </Text>
-          </Space>
+          <>
+            <Tooltip title={name} className="flex items-center">
+              <Avatar
+                size={26}
+                style={{ backgroundColor: "#7f77dd", fontSize: 11 }}
+              >
+                {getNameInitials(name)}
+              </Avatar>
+              <Text
+                ellipsis
+                className="font-medium pl-1"
+                style={{
+                  color: "var(--ant-color-link, #2f54eb)",
+                  fontSize: fs,
+                }}
+              >
+                {name}
+              </Text>
+            </Tooltip>
+          </>
         ),
       },
       {
@@ -315,22 +327,15 @@ export default function ArticlesTableContent({
       </div>
 
       {/* Table */}
-      <div
-        className="rounded-xl overflow-hidden"
-      >
-        <div
-          className="flex items-center justify-between px-5 py-4"
-        ></div>
+      <div className="rounded-xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4"></div>
 
         <Table<ArticleSummary>
           components={{}}
           columns={columns}
           dataSource={locallyFilteredArticles}
           rowKey="id"
-          pagination={{
-            pageSize: 10,
-            hideOnSinglePage: true,
-          }}
+          pagination={false}
           scroll={{ x: 1085 }}
           onRow={(record) => ({
             onClick: () => onRowClick?.(record.id),

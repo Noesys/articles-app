@@ -12,7 +12,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
       <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <img src={logoImage} alt="Logo" className="h-13 w-26" />
+          <img src={logoImage} alt="Logo" className="h-7 w-26" />
         </div>
         <div className="flex items-center gap-3">
           {user && (

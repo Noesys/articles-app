@@ -3,6 +3,7 @@ import { ArticleSummary } from "@/admin/utils/types";
 import ArticlesTableContent from "./ArticlesTableContent";
 
 type ArticlesTableProps = {
+  totalCount?: number;
   articles: ArticleSummary[];
   onRowClick?: (id: string) => void;
 };

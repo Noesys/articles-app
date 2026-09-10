@@ -18,9 +18,11 @@ function formatAiScore(s: number) {
 export default function ScoringHistoryTable({
   history,
   articleId,
+  isAdmin,
 }: {
   history: HistoryItem[];
   articleId: string;
+  isAdmin: boolean;
 }) {
   const navigate = useNavigate();
   const [cols, setCols] = useState<ColumnsType<HistoryItem>>([]);
@@ -35,7 +37,11 @@ export default function ScoringHistoryTable({
         render: (v: number, r: HistoryItem) => (
           <span
             onClick={() =>
-              navigate(`/admin/articles/${articleId}?version=${r.version}`)
+              navigate(
+                isAdmin
+                  ? `/admin/articles/${articleId}?version=${r.version}`
+                  : `/articles/${articleId}/history/${r.version}`,
+              )
             }
             className="text-sky-600 font-semibold text-sm cursor-pointer"
           >
@@ -86,10 +92,7 @@ export default function ScoringHistoryTable({
           const cfg = STATUS_MAP[r.status] || STATUS_MAP.pending;
 
           return (
-            <Tag
-              color={cfg.color}
-              className="text-[13px]"
-            >
+            <Tag color={cfg.color} className="text-[13px]">
               {cfg.label}
             </Tag>
           );
@@ -111,10 +114,15 @@ export default function ScoringHistoryTable({
           // Using snapshotted_at for historical timeline display ensures each version's row accurately
           // represents when that version ended and entered history, avoiding duplicated timestamps across versions.
           const dateStr = r.snapshotted_at || r.submitted_at;
-          if (!dateStr) return <span className="text-slate-400 text-[13px]">—</span>;
-          const normalized = typeof dateStr === "string" && dateStr.includes("T") && !dateStr.endsWith("Z") && !/[+-]\d{2}:\d{2}$/.test(dateStr)
-            ? `${dateStr}Z`
-            : dateStr;
+          if (!dateStr)
+            return <span className="text-slate-400 text-[13px]">—</span>;
+          const normalized =
+            typeof dateStr === "string" &&
+            dateStr.includes("T") &&
+            !dateStr.endsWith("Z") &&
+            !/[+-]\d{2}:\d{2}$/.test(dateStr)
+              ? `${dateStr}Z`
+              : dateStr;
           return (
             <span className="text-slate-700 text-[13px]">
               {dayjs(normalized).format("MMM D, YYYY h:mm A")}
