@@ -27,13 +27,18 @@ export function sqlNum(value) {
 }
 
 function runWrangler(args) {
-  const out = execFileSync("npx", ["wrangler", ...args], {
-    cwd: API_DIR,
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  return out;
+  try {
+    return execFileSync("npx", ["wrangler", ...args], {
+      cwd: API_DIR,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (e) {
+    const detail = [e.stdout, e.stderr].filter(Boolean).join("\n").trim();
+    if (detail) console.error(detail.slice(0, 4000));
+    throw e;
+  }
 }
 
 /** Confirm wrangler session is already authenticated (no login prompt). */
@@ -69,6 +74,16 @@ export function applyRemoteMigrations() {
   console.log(out.trim() || "migrations apply done");
 }
 
+function parseWranglerJson(out) {
+  const start = out.indexOf("[");
+  if (start === -1) return null;
+  try {
+    return JSON.parse(out.slice(start));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Run one or more SQL statements against remote D1.
  * Prefer batches via temp --file (handles large prompt/article bodies).
@@ -95,10 +110,7 @@ export function d1Exec(sql, { dry = false, label = "exec" } = {}) {
       "--file",
       tmp,
     ]);
-    // wrangler may print non-JSON warnings before JSON array
-    const start = out.indexOf("[");
-    if (start === -1) return out;
-    return JSON.parse(out.slice(start));
+    return parseWranglerJson(out) ?? out;
   } finally {
     try {
       fs.unlinkSync(tmp);
@@ -106,15 +118,28 @@ export function d1Exec(sql, { dry = false, label = "exec" } = {}) {
   }
 }
 
-/** SELECT helper — returns rows array from first result set. */
+/**
+ * SELECT helper — must use --command (wrangler --file often returns only a summary,
+ * not row results — same class of silent-empty bug as score_prompt).
+ */
 export function d1Query(sql, { dry = false } = {}) {
   if (dry) {
     console.log(`[dry] query: ${sql}`);
     return [];
   }
-  const parsed = d1Exec(sql);
+  const out = runWrangler([
+    "d1",
+    "execute",
+    DB_NAME,
+    "--remote",
+    "--json",
+    "--command",
+    sql,
+  ]);
+  const parsed = parseWranglerJson(out);
   if (!parsed || !Array.isArray(parsed)) return [];
-  return parsed[0]?.results ?? [];
+  const block = parsed.find((b) => Array.isArray(b?.results));
+  return block?.results ?? [];
 }
 
 /** Flush a growing statement list in chunks to stay under CLI limits. */

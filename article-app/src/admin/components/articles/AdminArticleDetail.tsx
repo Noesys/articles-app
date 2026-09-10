@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Select, message } from "antd";
 import dayjs from "dayjs";
 import { api } from "../../../http-client";
 import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
@@ -26,6 +27,8 @@ function getScoreBarColor(status: string) {
   if (status === "rewrite_required" || status === "failed") return "bg-red-500";
   return "bg-amber-500";
 }
+
+type ArticleTypeOption = { id: string; name: string };
 
 export default function AdminArticleDetail() {
   const { id, version: routeVersion } = useParams<{
@@ -54,6 +57,67 @@ export default function AdminArticleDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const [contentCollapsed, setContentCollapsed] = useState(true);
+  const [articleTypes, setArticleTypes] = useState<ArticleTypeOption[]>([]);
+  const [selectedTypeId, setSelectedTypeId] = useState("");
+  const [typeBusy, setTypeBusy] = useState(false);
+  const [reevalBusy, setReevalBusy] = useState(false);
+
+  const loadArticle = useCallback(async () => {
+    if (!id) return;
+    const d: any = await api(`/admin/articles/${id}`);
+
+    if (d.article) {
+      setArticle(d.article as ArticleDetail);
+      setSelectedTypeId((d.article as ArticleDetail).article_type_id || "");
+      setHistory((d.history ?? []) as HistoryItem[]);
+      setCurrentScore(d.current_score ?? d.ai_score ?? null);
+      setCurrentFeedback(d.current_feedback ?? d.ai_feedback ?? "");
+      setParameterResults(d.parameter_results ?? []);
+    } else {
+      const art: ArticleDetail = {
+        id: d.id as string,
+        title: d.title as string,
+        content: d.content as string,
+        article_type_id: (d.article_type_id as string) || "",
+        article_type_name:
+          (d.article_type_name as string) || (d.type as string) || "",
+        status: d.status as string,
+        version: d.version as number,
+      };
+      setArticle(art);
+      setSelectedTypeId(art.article_type_id);
+      setCurrentScore(d.ai_score ?? null);
+      setCurrentFeedback(d.ai_feedback || "");
+      setParameterResults(d.parameter_results ?? []);
+      const hist = (d.history || []).map(
+        (h: {
+          article_id?: string;
+          id?: string;
+          version: number;
+          title: string;
+          content: string;
+          ai_score?: number | null;
+          score?: number | null;
+          ai_feedback?: string | null;
+          feedback?: string | null;
+          status?: string;
+          submitted_at?: string;
+          snapshotted_at?: string;
+        }) => ({
+          article_id: h.article_id || (h.id as string) || "",
+          version: h.version,
+          title: h.title,
+          content: h.content,
+          score: h.ai_score ?? h.score ?? null,
+          feedback: h.ai_feedback ?? h.feedback ?? null,
+          status: h.status || "pending",
+          submitted_at: (h.submitted_at || h.snapshotted_at || "") as string,
+          snapshotted_at: h.snapshotted_at || "",
+        }),
+      );
+      setHistory(hist as HistoryItem[]);
+    }
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -62,67 +126,20 @@ export default function AdminArticleDetail() {
     (async () => {
       setLoading(true);
       setError(null);
-
       try {
-        const d: any = await api(`/admin/articles/${id}`);
-
+        const [types] = await Promise.all([
+          api<ArticleTypeOption[] | { id: string; name: string }[]>(
+            `/admin/article-types`,
+          ),
+          loadArticle(),
+        ]);
         if (cancelled) return;
-
-        // api() unwraps to data
-
-        // Handle both admin flat shape and user nested shape
-        if (d.article) {
-          // user shape fallback
-          setArticle(d.article as ArticleDetail);
-          setHistory((d.history ?? []) as HistoryItem[]);
-          setCurrentScore(d.current_score ?? d.ai_score ?? null);
-          setCurrentFeedback(d.current_feedback ?? d.ai_feedback ?? "");
-          setParameterResults(d.parameter_results ?? []);
-        } else {
-          const art: ArticleDetail = {
-            id: d.id as string,
-            title: d.title as string,
-            content: d.content as string,
-            article_type_id: (d.article_type_id as string) || "",
-            article_type_name:
-              (d.article_type_name as string) || (d.type as string) || "",
-            status: d.status as string,
-            version: d.version as number,
-          };
-          setArticle(art);
-          setCurrentScore(d.ai_score ?? null);
-          setCurrentFeedback(d.ai_feedback || "");
-          setParameterResults(d.parameter_results ?? []);
-          const hist = (d.history || []).map(
-            (h: {
-              article_id?: string;
-              id?: string;
-              version: number;
-              title: string;
-              content: string;
-              ai_score?: number | null;
-              score?: number | null;
-              ai_feedback?: string | null;
-              feedback?: string | null;
-              status?: string;
-              submitted_at?: string;
-              snapshotted_at?: string;
-            }) => ({
-              article_id: h.article_id || (h.id as string) || "",
-              version: h.version,
-              title: h.title,
-              content: h.content,
-              score: h.ai_score ?? h.score ?? null,
-              feedback: h.ai_feedback ?? h.feedback ?? null,
-              status: h.status || "pending",
-              submitted_at: (h.submitted_at ||
-                h.snapshotted_at ||
-                "") as string,
-              snapshotted_at: h.snapshotted_at || "",
-            }),
-          );
-          setHistory(hist as HistoryItem[]);
-        }
+        const list = Array.isArray(types) ? types : [];
+        setArticleTypes(
+          list
+            .map((t) => ({ id: t.id, name: t.name }))
+            .sort((a, b) => a.name.localeCompare(b.name)),
+        );
       } catch (e: unknown) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : String(e));
@@ -134,7 +151,7 @@ export default function AdminArticleDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, loadArticle]);
 
   const isVersionSnapshot =
     versionParam !== null &&
@@ -160,6 +177,9 @@ export default function AdminArticleDetail() {
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
 
   const isFailed = displayStatus === "failed";
+  const isPendingUnscored =
+    !effectiveSnapshot && displayStatus === "pending" && displayScore === null;
+
   useEffect(() => {
     if (!id || !versionParam) return;
     (async () => {
@@ -193,6 +213,48 @@ export default function AdminArticleDetail() {
 
   const hasScore = displayScore !== null;
 
+  async function handleChangeType(reevaluate: boolean) {
+    if (!id || !selectedTypeId) return;
+    setTypeBusy(true);
+    try {
+      await api(`/admin/articles/${id}/type`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          article_type_id: selectedTypeId,
+          reevaluate,
+        }),
+      });
+      message.success(
+        reevaluate
+          ? "Type updated — re-evaluation started"
+          : "Article type updated",
+      );
+      await loadArticle();
+      setCurrentScore(null);
+      setCurrentFeedback("");
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setTypeBusy(false);
+    }
+  }
+
+  async function handleReevaluate() {
+    if (!id) return;
+    setReevalBusy(true);
+    try {
+      await api(`/admin/articles/${id}/reevaluate`, { method: "POST" });
+      message.success("Re-evaluation started");
+      await loadArticle();
+      setCurrentScore(null);
+      setCurrentFeedback("");
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReevalBusy(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -217,6 +279,9 @@ export default function AdminArticleDetail() {
       </div>
     );
   }
+
+  const typeChanged =
+    selectedTypeId && selectedTypeId !== article.article_type_id;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -249,6 +314,54 @@ export default function AdminArticleDetail() {
           </h1>
         </div>
 
+        {!effectiveSnapshot && (
+          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm mb-6">
+            <p className="text-md font-semibold uppercase tracking-wide text-slate-600 mb-3">
+              Article type
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Select
+                className="min-w-[240px]"
+                value={selectedTypeId || undefined}
+                options={articleTypes.map((t) => ({
+                  value: t.id,
+                  label: t.name,
+                }))}
+                onChange={(v) => setSelectedTypeId(v)}
+                disabled={typeBusy || reevalBusy}
+              />
+              <button
+                type="button"
+                disabled={!typeChanged || typeBusy || reevalBusy}
+                onClick={() => handleChangeType(true)}
+                className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+              >
+                {typeBusy ? "Saving…" : "Change type & re-evaluate"}
+              </button>
+              <button
+                type="button"
+                disabled={!typeChanged || typeBusy || reevalBusy}
+                onClick={() => handleChangeType(false)}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+              >
+                Change type only
+              </button>
+              <button
+                type="button"
+                disabled={typeBusy || reevalBusy || !!typeChanged}
+                onClick={handleReevaluate}
+                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+              >
+                {reevalBusy ? "Starting…" : "Re-evaluate"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Changing type snapshots the prior score (if any). Not suitable
+              skips AI scoring.
+            </p>
+          </div>
+        )}
+
         <div className="space-y-6">
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-md font-semibold uppercase tracking-wide text-slate-600 mb-1">
@@ -256,34 +369,6 @@ export default function AdminArticleDetail() {
             </p>
 
             <div className="flex items-center gap-3">
-              {/* {displayScore === null ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
-                  <Loader2 size={16} className="animate-spin text-slate-400" />
-                  <span>loading...</span>
-                </div>
-              ) : (
-                <>
-                  <p className="text-3xl font-semibold text-slate-900">
-                    {hasScore ? formatAiScore(displayScore!) : "—"}
-                    <span className="text-base text-slate-400 font-normal">
-                      {" "}
-                      / 10
-                    </span>
-                  </p>
-
-                  {hasScore && (
-                    <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${getScoreBarColor(displayStatus)}`}
-                        style={{
-                          width: `${(Math.min(displayScore!, 10) / 10) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </>
-              )} */}
-
               <div className="flex items-center gap-3">
                 {isFailed ? (
                   <div className="py-2">
@@ -291,16 +376,20 @@ export default function AdminArticleDetail() {
                       Evaluation failed
                     </p>
                     <p className="text-sm text-slate-500 mt-1">
-                      Article couldn't be evaluated. User must re-submit the article.
+                      Use Re-evaluate above, or ask the user to re-submit.
                     </p>
                   </div>
+                ) : isPendingUnscored ? (
+                  <p className="text-sm text-slate-500 py-1">
+                    Not scored yet — use Re-evaluate to run scoring.
+                  </p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
                     <Loader2
                       size={16}
                       className="animate-spin text-slate-400"
                     />
-                    <span>loading...</span>
+                    <span>Scoring…</span>
                   </div>
                 ) : (
                   <>
@@ -339,8 +428,10 @@ export default function AdminArticleDetail() {
 
             {isFailed ? (
               <p className="text-sm text-red-600">
-                Evaluation failed. User must re-submit the article.
+                Evaluation failed. Re-evaluate or ask the user to re-submit.
               </p>
+            ) : isPendingUnscored ? (
+              <p className="text-sm text-slate-500">No feedback yet.</p>
             ) : displayScore === null ? (
               <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                 <Loader2 size={16} className="animate-spin text-slate-400" />
@@ -397,10 +488,7 @@ export default function AdminArticleDetail() {
           </div>
 
           {!effectiveSnapshot && (
-            <ScoringHistoryTable
-              history={history}
-              articleId={article?.id ?? ""}
-            />
+            <ScoringHistoryTable history={history} articleId={article.id} />
           )}
         </div>
       </div>

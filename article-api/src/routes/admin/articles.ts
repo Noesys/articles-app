@@ -1,20 +1,48 @@
 import { Hono } from "hono";
 import { ArticleHistoryEntry } from "../../types/admin-types";
 import {
+  changeArticleType,
   getArticleById,
   getArticleHistory,
   getArticles,
   getArticleStats,
+  prepareArticleReevaluate,
 } from "../../services/admin/articles.service";
 import {
   getParameterResults,
   storeParameterResults,
 } from "../../services/admin/articleParameterResults.service";
-import { AppEnv } from "../../types/shared-types";
+import { AppEnv, Bindings } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
+import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 
 const articlesRoute = new Hono<AppEnv>();
 articlesRoute.use("*", requireRole("admin", "super_admin"));
+
+async function backgroundEvaluateArticle(
+  db: D1Database,
+  articleId: string,
+  articleTypeId: string,
+  title: string,
+  content: string,
+  version: number,
+  bindings: Bindings,
+) {
+  try {
+    await evaluateArticle(
+      db,
+      articleId,
+      articleTypeId,
+      title,
+      content,
+      version,
+      bindings,
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Admin background evaluation failed:", msg, err);
+  }
+}
 
 articlesRoute.get("/", async (c) => {
   const month = c.req.query("month");
@@ -128,6 +156,106 @@ articlesRoute.post("/:id/parameter-results", async (c) => {
     body.ai_feedback,
   );
   return c.json({ message: "Parameter results stored", data }, 201);
+});
+
+/**
+ * Change article type. With reevaluate=true (default when type is evaluatable),
+ * clears scores and runs AI scoring in the background.
+ */
+articlesRoute.patch("/:id/type", async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as {
+    article_type_id?: string;
+    reevaluate?: boolean;
+  };
+
+  if (!body.article_type_id) {
+    return c.json({ success: false, message: "article_type_id is required" }, 400);
+  }
+
+  let result;
+  try {
+    result = await changeArticleType(c.env.DB, id, body.article_type_id);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ success: false, message: msg }, 400);
+  }
+
+  if (!result) {
+    return c.json({ success: false, message: "Article not found" }, 404);
+  }
+
+  const shouldReevaluate = body.reevaluate !== false && result.evaluatable;
+  if (shouldReevaluate) {
+    c.executionCtx.waitUntil(
+      backgroundEvaluateArticle(
+        c.env.DB,
+        id,
+        body.article_type_id,
+        result.title,
+        result.content,
+        result.version,
+        c.env,
+      ),
+    );
+  }
+
+  const article = await getArticleById(c.env.DB, id);
+  return c.json({
+    message: shouldReevaluate
+      ? "Article type updated; re-evaluation started"
+      : "Article type updated",
+    data: {
+      article,
+      reevaluate: shouldReevaluate,
+      evaluatable: result.evaluatable,
+    },
+  });
+});
+
+/** Re-evaluate with the current article type (snapshots prior score if any). */
+articlesRoute.post("/:id/reevaluate", async (c) => {
+  const id = c.req.param("id");
+
+  let result;
+  try {
+    result = await prepareArticleReevaluate(c.env.DB, id);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ success: false, message: msg }, 400);
+  }
+
+  if (!result) {
+    return c.json({ success: false, message: "Article not found" }, 404);
+  }
+
+  if (!result.evaluatable) {
+    return c.json(
+      {
+        success: false,
+        message: "Article type is not evaluatable (e.g. Not suitable). Change type first.",
+      },
+      400,
+    );
+  }
+
+  c.executionCtx.waitUntil(
+    backgroundEvaluateArticle(
+      c.env.DB,
+      id,
+      result.article_type_id,
+      result.title,
+      result.content,
+      result.version,
+      c.env,
+    ),
+  );
+
+  const article = await getArticleById(c.env.DB, id);
+  return c.json({
+    message: "Re-evaluation started",
+    data: { article, reevaluate: true },
+  });
 });
 
 export default articlesRoute;

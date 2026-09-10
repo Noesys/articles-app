@@ -21,16 +21,18 @@ assertWranglerLoggedIn();
 if (!DRY) applyRemoteMigrations();
 
 const now = new Date().toISOString();
-const stmts = [];
+const CREATED_BY = "seed_bot_001";
 
+// Ensure creator exists in its own round-trip (D1 multi-statement batches
+// can fail FK checks if the referenced user is inserted in the same file).
 const seedBot = d1Query(
-  `SELECT id FROM users WHERE id=${sqlStr("seed_bot_001")} LIMIT 1`,
+  `SELECT id FROM users WHERE id=${sqlStr(CREATED_BY)} LIMIT 1`,
   { dry: DRY },
 );
 if (!seedBot.length) {
-  stmts.push(
+  d1Exec(
     `INSERT INTO users(id,email,name,auth_role,job_role,created_at,is_active)VALUES(${[
-      sqlStr("seed_bot_001"),
+      sqlStr(CREATED_BY),
       sqlStr("seed-bot@noesys.local"),
       sqlStr("Seeder Bot"),
       sqlStr("user"),
@@ -38,7 +40,11 @@ if (!seedBot.length) {
       sqlStr(now),
       sqlNum(1),
     ].join(",")})`,
+    { dry: DRY, label: "phase1-seed-bot" },
   );
+  console.log((DRY ? "[dry] " : "") + "created seed_bot_001");
+} else {
+  console.log("seed_bot_001 already present");
 }
 
 const types = [
@@ -58,35 +64,38 @@ const typeMap = new Map(
   existingTypes.map((r) => [String(r.name).toLowerCase(), r.id]),
 );
 
+const typeStmts = [];
 for (const n of types) {
   if (typeMap.has(n.toLowerCase())) continue;
   const id = "at_" + crypto.randomUUID();
   typeMap.set(n.toLowerCase(), id);
-  stmts.push(
-    `INSERT INTO article_types(id,name,created_by,created_at,updated_at,pass_threshold,score_prompt,score_min,score_max,is_evaluatable)VALUES(${[
+  typeStmts.push(
+    `INSERT INTO article_types(id,name,created_by,created_at,updated_at,pass_threshold,score_prompt,score_min,score_max,is_active,is_evaluatable)VALUES(${[
       sqlStr(id),
       sqlStr(n),
-      sqlStr("seed_bot_001"),
+      sqlStr(CREATED_BY),
       sqlStr(now),
       sqlStr(now),
       sqlNum(5),
       sqlStr(""),
       sqlNum(0),
       sqlNum(10),
+      sqlNum(1),
       sqlNum(n === "Not suitable" ? 0 : 1),
     ].join(",")})`,
   );
   console.log((DRY ? "[dry] " : "") + "type " + n);
 }
 
-stmts.push(
-  `UPDATE article_types SET is_evaluatable=0 WHERE lower(name)='not suitable'`,
-);
-stmts.push(
-  `UPDATE article_types SET is_evaluatable=1 WHERE lower(name)!='not suitable'`,
-);
+d1ExecBatched(typeStmts, { dry: DRY, chunkSize: 1, label: "phase1-types" });
 
-d1ExecBatched(stmts, { dry: DRY, label: "phase1-types" });
+d1Exec(
+  [
+    `UPDATE article_types SET is_evaluatable=0 WHERE lower(name)='not suitable'`,
+    `UPDATE article_types SET is_evaluatable=1 WHERE lower(name)!='not suitable'`,
+  ].join(";\n"),
+  { dry: DRY, label: "phase1-evaluatable-flags" },
+);
 
 // refresh type map from remote after inserts
 const typeRows = d1Query(`SELECT id, name FROM article_types`, { dry: DRY });
@@ -126,6 +135,10 @@ for (const p of parts) {
   const content = p.slice(nl).trim();
   const tid = typeMap.get(tName.toLowerCase());
   if (!tid) continue;
+  // App UI + scoring read article_types.score_prompt (not prompts table alone)
+  promptStmts.push(
+    `UPDATE article_types SET score_prompt=${sqlStr(content)},updated_at=${sqlStr(now)} WHERE id=${sqlStr(tid)}`,
+  );
   const exId = promptByType.get(tid);
   if (exId) {
     promptStmts.push(
@@ -141,7 +154,7 @@ for (const p of parts) {
       sqlStr(pid),
       sqlStr(tid),
       sqlStr(content),
-      sqlStr("seed_bot_001"),
+      sqlStr(CREATED_BY),
       sqlStr(now),
       sqlStr(now),
     ].join(",")})`,
@@ -149,7 +162,7 @@ for (const p of parts) {
   console.log("prompt " + tName);
 }
 
-d1ExecBatched(promptStmts, { dry: DRY, chunkSize: 5, label: "phase1-prompts" });
+d1ExecBatched(promptStmts, { dry: DRY, chunkSize: 2, label: "phase1-prompts" });
 
 const paramStmts = [];
 const praw = fs.readFileSync(

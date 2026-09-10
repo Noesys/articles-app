@@ -17,11 +17,16 @@ import {
   sqlNum,
 } from "./d1-remote.mjs";
 
-const FOLDER = path.join(ROOT, "Article_folder");
+// Prefer scripts/Article_folder, fall back to repo-root Article_folder
+const FOLDER =
+  [
+    path.join(ROOT, "scripts", "Article_folder"),
+    path.join(ROOT, "Article_folder"),
+  ].find((p) => fs.existsSync(p)) ?? path.join(ROOT, "scripts", "Article_folder");
 const DRY = process.argv.includes("--dry-run");
 const VERBOSE = process.argv.includes("--verbose");
 
-console.log(`seed-phase2 → remote D1 ${DB_NAME} (${DB_ID})`);
+console.log(`seed-phase2 → remote D1 ${DB_NAME} (${DB_ID})${DRY ? " (DRY — reads remote, no writes)" : ""}`);
 assertWranglerLoggedIn();
 if (!DRY) applyRemoteMigrations();
 
@@ -52,11 +57,65 @@ function monToNum(s) {
   return null;
 }
 
+function stripEmbeddedImages(htmlOrMd) {
+  // Remove base64 / data-URI images without truncating text content
+  return htmlOrMd
+    .replace(/<img\b[^>]*\bsrc\s*=\s*["']data:[^"']*["'][^>]*>/gi, "")
+    .replace(/!\[[^\]]*\]\(data:[^)]+\)/g, "")
+    .replace(/data:image\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+/gi, "");
+}
+function stripEmpPrefix(name) {
+  return String(name)
+    .toLowerCase()
+    .replace(/^e\d+[\s_\-]*/i, "")
+    .trim();
+}
+
+function resolveFolderFile(listedLower, folderFiles) {
+  const exact = folderFiles.find((f) => f.toLowerCase() === listedLower);
+  if (exact) return { file: exact, how: "exact" };
+  const target = stripEmpPrefix(listedLower);
+  const fuzzy = folderFiles.find((f) => {
+    const fl = f.toLowerCase();
+    if (fl.startsWith(".")) return false;
+    if (fl === "completed") return false;
+    return stripEmpPrefix(fl) === target || fl === target;
+  });
+  if (fuzzy) return { file: fuzzy, how: "fuzzy" };
+  return { file: null, how: "missing" };
+}
+
+/**
+ * Map xlsx "Primary Purpose" → article_types.name.
+ * "General" is not a DB type — treat like Not suitable (same as score_prompt-style gap).
+ */
+function resolvePurpose(rawPurpose, typeMap) {
+  const raw = (rawPurpose || "").trim();
+  if (!raw) {
+    return { purpose: "Not suitable", tid: typeMap.get("not suitable"), note: "missing-xlsx" };
+  }
+  const key = raw.toLowerCase();
+  if (key === "general") {
+    return {
+      purpose: "Not suitable",
+      tid: typeMap.get("not suitable"),
+      note: "general→not suitable",
+    };
+  }
+  const tid = typeMap.get(key);
+  if (tid) return { purpose: raw, tid, note: "ok" };
+  return {
+    purpose: "Not suitable",
+    tid: typeMap.get("not suitable"),
+    note: `unknown-purpose:${raw}`,
+  };
+}
+
 const md = fs.readFileSync(
   path.join(ROOT, "scripts/Articles_By_Employee.md"),
   "utf8",
 );
-const map = new Map(); // lower filename -> {empId,email,monthYear}
+const map = new Map(); // lower filename -> {empId,email,monthYear,listed}
 let curEmp = null,
   curEmail = null,
   curMonth = null;
@@ -86,10 +145,12 @@ for (const line of md.split(/\r?\n/)) {
       empId: curEmp,
       email: curEmail,
       monthYear: curMonth,
+      listed: m[1].trim(),
     });
   }
 }
 console.log(`MD parsed: ${map.size} articles`);
+console.log(`Article_folder: ${FOLDER}`);
 
 const xlsxPath = path.join(
   ROOT,
@@ -107,9 +168,16 @@ for (const r of rows.slice(1)) {
   if (fn && p) purposeMap.set(fn, p);
 }
 
-const typeRows = d1Query(`SELECT id, name FROM article_types`, { dry: DRY });
-const typeMap = new Map(typeRows.map((r) => [String(r.name).toLowerCase(), r.id]));
-if (!DRY && !typeMap.has("not suitable")) {
+// Always read remote (dry-run only skips writes) — same class of bug as empty score_prompt
+const typeRows = d1Query(`SELECT id, name FROM article_types`);
+const typeMap = new Map(
+  typeRows.map((r) => [String(r.name).toLowerCase(), r.id]),
+);
+console.log(
+  `Remote article_types (${typeRows.length}):`,
+  typeRows.map((r) => r.name).join(", ") || "(none)",
+);
+if (!typeMap.has("not suitable")) {
   console.error("Run phase1 first (Not suitable type missing on remote)");
   process.exit(1);
 }
@@ -117,18 +185,19 @@ if (!DRY && !typeMap.has("not suitable")) {
 const now = new Date().toISOString();
 const userStmts = [];
 
-// Stub users: id = emp id (E…), so articles.user_id / emp_id stay aligned
 const empRows = [
   ...md.matchAll(
     /\|\s*(E\d+)\s*\|\s*([^|]+?)\s*\|\s*([^\s|]+@[^\s|]+)\s*\|/g,
   ),
 ].map((m) => [m[1].toUpperCase(), m[2].trim(), m[3].trim().toLowerCase()]);
 
-const existingUsers = d1Query(`SELECT id, email FROM users`, { dry: DRY });
+const existingUsers = d1Query(`SELECT id, email FROM users`);
 const byEmail = new Map(
   existingUsers.map((u) => [String(u.email).toLowerCase(), u.id]),
 );
 
+let usersCreate = 0,
+  usersUpdate = 0;
 for (const [empId, name, email] of empRows) {
   const exId = byEmail.get(email);
   if (!exId) {
@@ -144,12 +213,18 @@ for (const [empId, name, email] of empRows) {
       ].join(",")})`,
     );
     byEmail.set(email, empId);
+    usersCreate++;
   } else {
     userStmts.push(
       `UPDATE users SET name=${sqlStr(name)} WHERE lower(email)=lower(${sqlStr(email)})`,
     );
+    usersUpdate++;
   }
 }
+
+console.log(
+  `Users: ${usersCreate} create (id=E…), ${usersUpdate} update-by-email (keep existing id)`,
+);
 
 d1ExecBatched(userStmts, { dry: DRY, chunkSize: 40, label: "phase2-users" });
 
@@ -172,21 +247,44 @@ try {
 
 let ins = 0,
   skip = 0;
-const articleStmts = [];
+const stats = {
+  purposeOk: 0,
+  generalFallback: 0,
+  missingXlsx: 0,
+  unknownPurpose: 0,
+  fileExact: 0,
+  fileFuzzy: 0,
+  fileMissing: 0,
+  byType: {},
+  byStatus: {},
+  byMonth: {},
+};
 
 for (const [low, info] of map) {
-  const purpose = purposeMap.get(low) || "Not suitable";
-  const tid =
-    typeMap.get((purpose || "Not suitable").toLowerCase()) ||
-    typeMap.get("not suitable");
-  if (!tid && !DRY) {
+  const rawPurpose = purposeMap.get(low);
+  const { purpose, tid, note } = resolvePurpose(rawPurpose, typeMap);
+  if (!tid) {
     console.error("missing type for", purpose);
     skip++;
     continue;
   }
-  const fileExists = folderFiles.find((f) => f.toLowerCase() === low);
-  const fname = fileExists || low;
-  const fp = fileExists ? path.join(FOLDER, fileExists) : null;
+  if (note === "ok") stats.purposeOk++;
+  else if (note === "general→not suitable") stats.generalFallback++;
+  else if (note === "missing-xlsx") stats.missingXlsx++;
+  else stats.unknownPurpose++;
+
+  const resolved = resolveFolderFile(low, folderFiles);
+  if (resolved.how === "exact") stats.fileExact++;
+  else if (resolved.how === "fuzzy") {
+    stats.fileFuzzy++;
+    if (VERBOSE) console.warn(`fuzzy match: ${info.listed} → ${resolved.file}`);
+  } else {
+    stats.fileMissing++;
+    if (VERBOSE) console.warn(`missing ${info.listed}`);
+  }
+
+  const fname = resolved.file || info.listed;
+  const fp = resolved.file ? path.join(FOLDER, resolved.file) : null;
   let title = fname
     .replace(/\.(docx|md|mdx)$/i, "")
     .replace(/^E\d+\s*[-_]\s*/i, "")
@@ -194,60 +292,99 @@ for (const [low, info] of map) {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 500);
+
   let content = "";
-  if (fp && fs.existsSync(fp)) {
-    if (/\.mdx?$/i.test(fname)) {
-      const t = fs.readFileSync(fp, "utf8");
-      try {
-        content = matter(t).content.trim();
-      } catch {
-        content = t.trim();
+  if (!DRY) {
+    if (fp && fs.existsSync(fp)) {
+      if (/\.mdx?$/i.test(fname)) {
+        const t = fs.readFileSync(fp, "utf8");
+        try {
+          content = matter(t).content.trim();
+        } catch {
+          content = t.trim();
+        }
+        content = stripEmbeddedImages(content);
+      } else {
+        const buf = fs.readFileSync(fp);
+        // Drop embedded images — base64 img data blows past D1 SQL size limits
+        const r = await mammoth.convertToHtml(
+          { buffer: buf },
+          {
+            convertImage: mammoth.images.imgElement(() => ({
+              src: "",
+              alt: "[image omitted in seed]",
+            })),
+          },
+        );
+        content = stripEmbeddedImages(r.value.trim() || "(empty)");
       }
     } else {
-      const buf = fs.readFileSync(fp);
-      const r = await mammoth.convertToHtml({ buffer: buf });
-      content = r.value.trim() || "(empty)";
+      content = "(file not found: " + fname + ")";
     }
-  } else {
-    content = "(file not found: " + fname + ")";
-    if (VERBOSE) console.warn("missing " + fname);
   }
+
   const id = "art_" + crypto.randomUUID();
-  const status =
-    purpose.toLowerCase() === "not suitable" ? "not_suitable" : "pending";
+  // UI only understands pending/approved/rewrite_required/failed — not "not_suitable"
+  const status = "pending";
+  const userId = byEmail.get(info.email) || info.empId;
+
+  stats.byType[purpose] = (stats.byType[purpose] || 0) + 1;
+  stats.byStatus[status] = (stats.byStatus[status] || 0) + 1;
+  stats.byMonth[info.monthYear] = (stats.byMonth[info.monthYear] || 0) + 1;
+
   if (DRY) {
     ins++;
     continue;
   }
-  // user_id + emp_id both use E… emp ids
-  articleStmts.push(
-    `INSERT INTO articles(id,user_id,article_type_id,title,content,status,ai_score,version,submitted_at,scored_at,month_year,retry_count,ai_feedback,emp_id,employee_email)VALUES(${[
-      sqlStr(id),
-      sqlStr(info.empId),
-      sqlStr(tid),
-      sqlStr(title),
-      sqlStr(content),
-      sqlStr(status),
-      "NULL",
-      sqlNum(1),
-      sqlStr(`${info.monthYear}-01T09:00:00.000Z`),
-      "NULL",
-      sqlStr(info.monthYear),
-      sqlNum(0),
-      "NULL",
-      sqlStr(info.empId),
-      sqlStr(info.email),
-    ].join(",")})`,
-  );
-  ins++;
+
+  const stmt = `INSERT INTO articles(id,user_id,article_type_id,title,content,status,ai_score,version,submitted_at,scored_at,month_year,retry_count,ai_feedback,emp_id,employee_email,created_at,updated_at)VALUES(${[
+    sqlStr(id),
+    sqlStr(userId),
+    sqlStr(tid),
+    sqlStr(title),
+    sqlStr(content),
+    sqlStr(status),
+    "NULL",
+    sqlNum(1),
+    sqlStr(`${info.monthYear}-01T09:00:00.000Z`),
+    "NULL",
+    sqlStr(info.monthYear),
+    sqlNum(0),
+    "NULL",
+    sqlStr(info.empId),
+    sqlStr(info.email),
+    sqlStr(now),
+    sqlStr(now),
+  ].join(",")})`;
+
+  try {
+    d1Exec(stmt, { label: `article ${ins + 1}/${map.size}` });
+    ins++;
+    if (ins % 10 === 0) console.log(`… inserted ${ins}/${map.size}`);
+  } catch (e) {
+    console.error(fname, (e.message || String(e)).slice(0, 200));
+    skip++;
+  }
 }
 
-// smaller chunks — article HTML bodies are large
-d1ExecBatched(articleStmts, { dry: DRY, chunkSize: 3, label: "phase2-articles" });
-
+console.log("\n=== phase2 summary ===");
 console.log(
-  `phase2 done inserted=${ins} skipped=${skip} ${DRY ? "(dry)" : ""}`,
+  `articles: ${ins} would-insert, skipped=${skip} ${DRY ? "(dry)" : ""}`,
 );
+console.log("files:", {
+  exact: stats.fileExact,
+  fuzzy: stats.fileFuzzy,
+  missing: stats.fileMissing,
+});
+console.log("purpose mapping:", {
+  ok: stats.purposeOk,
+  generalToNotSuitable: stats.generalFallback,
+  missingXlsx: stats.missingXlsx,
+  unknownPurpose: stats.unknownPurpose,
+});
+console.log("by type (after mapping):", stats.byType);
+console.log("by month:", stats.byMonth);
+console.log("by status:", stats.byStatus);
 
 if (!DRY) {
   const counts = d1Query(

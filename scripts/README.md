@@ -35,7 +35,11 @@ Phase2 deletes prior rows with `employee_email IS NOT NULL`, then re-inserts. In
 
 ## Emp IDs
 
-Employee ids are `E…` (e.g. `E001`). Stub `users.id`, `articles.user_id`, and `articles.emp_id` all use that value so admin/`user_id` joins stay consistent. Author fallback also joins on `employee_email` when the Access user id differs.
+Employee ids are `E…` (e.g. `E001`). Stub users use `id = E…` when the email is new; if the email already exists (Access login), that existing `users.id` is reused for `articles.user_id`. `emp_id` always stays `E…`. Author fallback also joins on `employee_email`.
+
+## Phase 2 purpose notes
+
+Xlsx value **General** is not an article type — seed maps it to **Not suitable** (same class of gap as empty `score_prompt`). Status for all seeded rows is **`pending`** (UI does not understand `not_suitable`).
 
 ## What the app changes expect
 

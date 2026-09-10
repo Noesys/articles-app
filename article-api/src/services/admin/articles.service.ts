@@ -248,3 +248,155 @@ export async function getArticleStats(
 
   return result;
 }
+
+/** Look up type flags for admin type-change / re-evaluate. */
+export async function getArticleTypeMeta(
+  db: D1Database,
+  articleTypeId: string,
+): Promise<{ id: string; name: string; is_evaluatable: number; is_active: number } | null> {
+  return db
+    .prepare(
+      `SELECT id, name, is_evaluatable, is_active FROM article_types WHERE id = ? LIMIT 1`,
+    )
+    .bind(articleTypeId)
+    .first();
+}
+
+/**
+ * Change article type, clear prior scores, optionally prepare for re-evaluation.
+ * Snapshots current version into history when scores/feedback exist.
+ */
+export async function changeArticleType(
+  db: D1Database,
+  articleId: string,
+  articleTypeId: string,
+): Promise<{ version: number; title: string; content: string; evaluatable: boolean } | null> {
+  const article = await getArticleById(db, articleId);
+  if (!article) return null;
+
+  const typeMeta = await getArticleTypeMeta(db, articleTypeId);
+  if (!typeMeta || !typeMeta.is_active) {
+    throw new Error("Article type not found or inactive");
+  }
+
+  const now = new Date().toISOString();
+  const statements: D1PreparedStatement[] = [];
+
+  if (article.ai_score != null || article.ai_feedback || article.status !== "pending") {
+    const historyId = "hist_" + crypto.randomUUID();
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
+           SELECT ?, id, article_type_id, title, COALESCE(ai_feedback,''), content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ?
+           FROM articles WHERE id = ?`,
+        )
+        .bind(historyId, now, articleId),
+    );
+  }
+
+  const nextVersion =
+    article.ai_score != null || article.ai_feedback || article.status !== "pending"
+      ? article.version + 1
+      : article.version;
+
+  const evaluatable = Number(typeMeta.is_evaluatable) === 1;
+  statements.push(
+    db
+      .prepare(
+        `UPDATE articles
+         SET article_type_id = ?,
+             version = ?,
+             status = 'pending',
+             ai_score = NULL,
+             ai_feedback = NULL,
+             pass_threshold = NULL,
+             scored_at = NULL,
+             updated_at = ?
+         WHERE id = ?`,
+      )
+      .bind(articleTypeId, nextVersion, now, articleId),
+  );
+
+  statements.push(
+    db
+      .prepare(`DELETE FROM article_parameter_results WHERE article_id = ? AND version = ?`)
+      .bind(articleId, nextVersion),
+  );
+
+  await db.batch(statements);
+
+  return {
+    version: nextVersion,
+    title: article.title,
+    content: article.content,
+    evaluatable,
+  };
+}
+
+/** Reset scores for re-evaluate without changing type (snapshot if needed). */
+export async function prepareArticleReevaluate(
+  db: D1Database,
+  articleId: string,
+): Promise<{ version: number; title: string; content: string; article_type_id: string; evaluatable: boolean } | null> {
+  const article = await getArticleById(db, articleId);
+  if (!article) return null;
+
+  const typeMeta = await getArticleTypeMeta(db, article.article_type_id);
+  if (!typeMeta || !typeMeta.is_active) {
+    throw new Error("Article type not found or inactive");
+  }
+
+  const now = new Date().toISOString();
+  const statements: D1PreparedStatement[] = [];
+
+  if (article.ai_score != null || article.ai_feedback || article.status !== "pending") {
+    const historyId = "hist_" + crypto.randomUUID();
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
+           SELECT ?, id, article_type_id, title, COALESCE(ai_feedback,''), content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ?
+           FROM articles WHERE id = ?`,
+        )
+        .bind(historyId, now, articleId),
+    );
+  }
+
+  const nextVersion =
+    article.ai_score != null || article.ai_feedback || article.status !== "pending"
+      ? article.version + 1
+      : article.version;
+
+  statements.push(
+    db
+      .prepare(
+        `UPDATE articles
+         SET version = ?,
+             status = 'pending',
+             ai_score = NULL,
+             ai_feedback = NULL,
+             pass_threshold = NULL,
+             scored_at = NULL,
+             updated_at = ?
+         WHERE id = ?`,
+      )
+      .bind(nextVersion, now, articleId),
+  );
+
+  statements.push(
+    db
+      .prepare(`DELETE FROM article_parameter_results WHERE article_id = ? AND version = ?`)
+      .bind(articleId, nextVersion),
+  );
+
+  await db.batch(statements);
+
+  return {
+    version: nextVersion,
+    title: article.title,
+    content: article.content,
+    article_type_id: article.article_type_id,
+    evaluatable: Number(typeMeta.is_evaluatable) === 1,
+  };
+}
