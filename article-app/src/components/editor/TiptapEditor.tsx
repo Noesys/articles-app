@@ -9,7 +9,6 @@ import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { useRef, useCallback, useEffect } from "react";
 import { convertImageToBase64 } from "@/utils/imageToBase64";
-import { Tooltip } from "antd";
 import {
   Undo2,
   Redo2,
@@ -33,6 +32,7 @@ import {
   Heading3,
   Pilcrow,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import "./tiptap.css";
 import "./paste-content.css";
 import { SmartPaste } from "./extensions/SmartPaste";
@@ -50,14 +50,17 @@ function ToolbarButton({
   children: React.ReactNode;
 }) {
   return (
-    <Tooltip title={tip}>
-      <button
-        type="button"
-        onClick={onClick}
-        className={`p-1.5 rounded border border-transparent ${active ? "bg-slate-800 text-white hover:bg-slate-900 border-slate-800" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200"}`}
-      >
-        {children}
-      </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          className={`p-1.5 rounded border border-transparent ${active ? "bg-slate-800 text-white hover:bg-slate-900 border-slate-800" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200"}`}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{tip}</TooltipContent>
     </Tooltip>
   );
 }

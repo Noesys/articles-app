@@ -1,7 +1,7 @@
 import { EmployeeSubmissionsTable } from "@/admin/components/insights/EmployeeSubmissionsTable";
 import { SummaryView } from "@/admin/components/insights/SummaryView";
 import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
-import { Select } from "antd";
+import { FilterSelect } from "@/components/ui/filter-select";
 import { useState } from "react";
 
 const currentMonthYear = () => {
@@ -18,22 +18,10 @@ const InsightsPage = () => {
     <div className="w-full px-4 md:px-8 py-5">
       <h1 className="text-3xl font-semibold mb-5">Insights</h1>
       <div className="flex items-center gap-3 mb-5">
-        <Select
-          className="w-[200px] h-9 [&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!h-9 text-sm"
-          styles={{
-            popup: {
-              root: { background: "#fff" },
-            },
-          }}
-          showSearch
-          optionFilterProp="label"
-          filterOption={(input, opt) =>
-            String(opt?.label ?? "")
-              .toLowerCase()
-              .includes(input.toLowerCase())
-          }
+        <FilterSelect
           value={insights}
-          onChange={setInsights}
+          onValueChange={setInsights}
+          triggerClassName="w-[200px]"
           options={[
             { value: "Employee Submissions", label: "Employee Submissions" },
             { value: "Summary", label: "Summary" },

@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ArticlesTable from "../../components/articles/ArticlesTable";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Pagination, Select } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { api, apiFull } from "@/http-client";
 
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { FilterSelect } from "@/components/ui/filter-select";
+import { SimplePagination } from "@/components/ui/simple-pagination";
 import { ArticleSummary } from "@/admin/utils/types";
 
 type ArticleTypeOption = {
@@ -271,19 +272,10 @@ const AllArticles = () => {
           </PopoverContent>
         </Popover>
 
-        <Select
+        <FilterSelect
           value={selectedType}
-          onChange={(value) => setFilterParam("type", value, "all")}
-          showSearch
-          optionFilterProp="label"
+          onValueChange={(value) => setFilterParam("type", value, "all")}
           placeholder="All Types"
-          className="w-full h-9 [&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!h-9 text-sm"
-          styles={{
-            popup: {
-              root: { background: "#fff" },
-            },
-          }}
-          listHeight={192}
           options={[
             { value: "all", label: "All Types" },
             ...articleTypes.map((type) => ({
@@ -291,45 +283,17 @@ const AllArticles = () => {
               label: type.name,
             })),
           ]}
-          filterOption={(input, opt) =>
-            String(opt?.label ?? "")
-              .toLowerCase()
-              .includes(input.toLowerCase())
-          }
         />
-        <Select
+        <FilterSelect
           value={selectedStatus}
-          onChange={(value) => setFilterParam("status", value, "all")}
-          showSearch
-          optionFilterProp="label"
+          onValueChange={(value) => setFilterParam("status", value, "all")}
           placeholder="All Statuses"
-          className="w-full h-9 [&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!h-9 text-sm"
-          styles={{
-            popup: {
-              root: { background: "#fff" },
-            },
-          }}
-          listHeight={192}
           options={STATUS_OPTIONS}
-          filterOption={(input, opt) =>
-            String(opt?.label ?? "")
-              .toLowerCase()
-              .includes(input.toLowerCase())
-          }
         />
-        <Select
+        <FilterSelect
           value={sortBy}
-          onChange={(value) => setFilterParam("sort", value, "created_desc")}
-          showSearch
-          optionFilterProp="label"
+          onValueChange={(value) => setFilterParam("sort", value, "created_desc")}
           placeholder="Sort"
-          className="w-full h-9 [&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!h-9 text-sm"
-          styles={{
-            popup: {
-              root: { background: "#fff" },
-            },
-          }}
-          listHeight={192}
           options={[
             { value: "created_desc", label: "Created (Newest First)" },
             { value: "created_asc", label: "Created (Oldest First)" },
@@ -338,36 +302,16 @@ const AllArticles = () => {
             { value: "version_desc", label: "Version (High → Low)" },
             { value: "version_asc", label: "Version (Low → High)" },
           ]}
-          filterOption={(input, opt) =>
-            String(opt?.label ?? "")
-              .toLowerCase()
-              .includes(input.toLowerCase())
-          }
         />
         {!isUserView && (
-          <Select
+          <FilterSelect
             value={selectedAuthor}
-            onChange={(value) => setFilterParam("author", value, "all")}
-            showSearch
-            optionFilterProp="label"
+            onValueChange={(value) => setFilterParam("author", value, "all")}
             placeholder="All Authors"
-            className="w-full h-9 [&_.ant-select-selector]:!bg-white [&_.ant-select-selector]:!rounded-lg [&_.ant-select-selector]:!border-slate-300 [&_.ant-select-selector]:!h-9 text-sm"
-            styles={{
-              popup: {
-                root: { background: "#fff" },
-              },
-            }}
-            listHeight={192}
             options={[
               { value: "all", label: "All Authors" },
               ...authors.map((name) => ({ value: name, label: name })),
             ]}
-            filterOption={(input, opt) =>
-              String(opt?.label ?? "")
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-            notFoundContent="No authors found"
           />
         )}
       </div>
@@ -388,13 +332,7 @@ const AllArticles = () => {
           />
           {total > limit && (
             <div className="flex justify-end mt-4">
-              <Pagination
-                current={page}
-                total={total}
-                pageSize={limit}
-                onChange={(p) => setPage(p)}
-                showSizeChanger={false}
-              />
+              <SimplePagination page={page} total={total} pageSize={limit} onChange={setPage} />
             </div>
           )}
         </>

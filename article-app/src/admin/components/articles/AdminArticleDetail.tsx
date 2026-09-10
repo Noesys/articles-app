@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Loader2, ChevronDown, ChevronUp, Pencil, Check, X } from "lucide-react";
-import { Select, message } from "antd";
+import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import dayjs from "dayjs";
 import { api } from "../../../http-client";
 import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
@@ -196,7 +203,7 @@ export default function AdminArticleDetail() {
 
     const finish = (timedOut = false) => {
       setScoringInFlight(false);
-      if (timedOut) message.warning("Scoring timed out — refresh or try again");
+      if (timedOut) toast.warning("Scoring timed out — refresh or try again");
       if (timer) clearInterval(timer);
     };
 
@@ -276,7 +283,7 @@ export default function AdminArticleDetail() {
     if (!id) return;
     const trimmed = nextTitle.replace(/\s+/g, " ").trim();
     if (!trimmed) {
-      message.error("Title is required");
+      toast.error("Title is required");
       return;
     }
     if (trimmed === article?.title) {
@@ -292,9 +299,9 @@ export default function AdminArticleDetail() {
       const updatedTitle = (res?.article?.title as string | undefined) ?? trimmed;
       setArticle((prev) => (prev ? { ...prev, title: updatedTitle } : prev));
       setEditingTitle(false);
-      message.success("Title updated");
+      toast.success("Title updated");
     } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : String(e));
+      toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setTitleBusy(false);
     }
@@ -336,13 +343,13 @@ export default function AdminArticleDetail() {
         }),
       });
       const started = Boolean(res?.reevaluate);
-      message.success(started ? "Type updated — re-evaluation started" : "Article type updated");
+      toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
       await loadArticle();
       setCurrentScore(null);
       setCurrentFeedback("");
       setScoringInFlight(started);
     } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : String(e));
+      toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setTypeBusy(false);
     }
@@ -353,13 +360,13 @@ export default function AdminArticleDetail() {
     setReevalBusy(true);
     try {
       await api(`/admin/articles/${id}/reevaluate`, { method: "POST" });
-      message.success("Re-evaluation started");
+      toast.success("Re-evaluation started");
       await loadArticle();
       setCurrentScore(null);
       setCurrentFeedback("");
       setScoringInFlight(true);
     } catch (e: unknown) {
-      message.error(e instanceof Error ? e.message : String(e));
+      toast.error(e instanceof Error ? e.message : String(e));
     } finally {
       setReevalBusy(false);
     }
@@ -507,15 +514,21 @@ export default function AdminArticleDetail() {
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Select
-                className="min-w-[240px]"
                 value={selectedTypeId || undefined}
-                options={articleTypes.map((t) => ({
-                  value: t.id,
-                  label: t.name,
-                }))}
-                onChange={(v) => setSelectedTypeId(v)}
+                onValueChange={setSelectedTypeId}
                 disabled={typeBusy || reevalBusy || scoringInFlight}
-              />
+              >
+                <SelectTrigger className="min-w-[240px] bg-white">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {articleTypes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <button
                 type="button"
                 disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}

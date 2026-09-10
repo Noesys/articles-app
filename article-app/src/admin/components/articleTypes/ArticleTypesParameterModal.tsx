@@ -1,8 +1,23 @@
 import { ParameterDraft, ScopeType } from "@/admin/utils/types";
 import Button from "../ui/Button";
 import { Trash2 } from "lucide-react";
-import { Input, Modal, Select } from "antd";
 import { WheelEvent } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Props {
   modalOpen: boolean;
@@ -30,37 +45,11 @@ export default function ArticleTypesParameterModal({
   }
 
   return (
-    <>
-      <Modal
-        open={modalOpen}
-        onCancel={closeModal}
-        title={modalDraft?.isNew ? "Add Parameter" : "Edit Parameter"}
-        footer={
-          <div className="flex gap-2 justify-end">
-            <Button
-              key="cancel"
-              variant="secondary"
-              onClick={closeModal}
-              type="button"
-              className="min-w-[90px]"
-            >
-              Cancel
-            </Button>
-            <Button
-              key="save"
-              onClick={saveModal}
-              disabled={
-                !modalDraft?.name.trim() || !modalDraft?.prompt.trim() || !!modalNumericInvalid
-              }
-              type="button"
-              className="min-w-[90px]"
-            >
-              Save
-            </Button>
-          </div>
-        }
-        destroyOnHidden
-      >
+    <Dialog open={modalOpen} onOpenChange={(open) => !open && closeModal()}>
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>{modalDraft?.isNew ? "Add Parameter" : "Edit Parameter"}</DialogTitle>
+        </DialogHeader>
         {modalDraft && (
           <div className="space-y-3">
             <div>
@@ -71,19 +60,19 @@ export default function ArticleTypesParameterModal({
                 value={modalDraft.name}
                 onChange={(e) => setModalDraft({ ...modalDraft, name: e.target.value })}
                 placeholder="e.g. Grammar"
-                className="!bg-white"
+                className="bg-white"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
                 Prompt for the parameter
               </label>
-              <Input.TextArea
+              <Textarea
                 value={modalDraft.prompt}
                 onChange={(e) => setModalDraft({ ...modalDraft, prompt: e.target.value })}
                 placeholder="AI instruction for evaluating this parameter..."
                 rows={2}
-                className="!bg-white"
+                className="bg-white"
               />
             </div>
             <div>
@@ -91,25 +80,19 @@ export default function ArticleTypesParameterModal({
                 Range / Option
               </label>
               <Select
-                showSearch
                 value={modalDraft.scopeType}
-                onChange={(v: ScopeType) => setModalDraft({ ...modalDraft, scopeType: v })}
-                className="w-full [&_.ant-select-selector]:!bg-white"
-                styles={{
-                  popup: {
-                    root: { background: "#fff" },
-                  },
-                }}
-                options={[
-                  { value: "numeric", label: "Numeric" },
-                  { value: "option", label: "Option" },
-                ]}
-                filterOption={(input, opt) =>
-                  String(opt?.label ?? "")
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
+                onValueChange={(v) =>
+                  setModalDraft({ ...modalDraft, scopeType: v as ScopeType })
                 }
-              />
+              >
+                <SelectTrigger className="w-full bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="numeric">Numeric</SelectItem>
+                  <SelectItem value="option">Option</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             {modalDraft.scopeType === "numeric" ? (
               <div className="grid grid-cols-2 gap-2.5">
@@ -119,7 +102,7 @@ export default function ArticleTypesParameterModal({
                   value={modalDraft.minValue}
                   onChange={(e) => setModalDraft({ ...modalDraft, minValue: e.target.value })}
                   placeholder="Min"
-                  className="!bg-white"
+                  className="bg-white"
                 />
                 <Input
                   onWheel={handleWheel}
@@ -127,7 +110,7 @@ export default function ArticleTypesParameterModal({
                   value={modalDraft.maxValue}
                   onChange={(e) => setModalDraft({ ...modalDraft, maxValue: e.target.value })}
                   placeholder="Max"
-                  className="!bg-white"
+                  className="bg-white"
                 />
                 {modalNumericInvalid && (
                   <p className="text-xs text-red-500 col-span-2">Max must be greater than min.</p>
@@ -145,7 +128,7 @@ export default function ArticleTypesParameterModal({
                         next[index] = { ...next[index], label: e.target.value };
                         setModalDraft({ ...modalDraft, options: next });
                       }}
-                      className="flex-1 !bg-white"
+                      className="flex-1 bg-white"
                     />
                     <button
                       type="button"
@@ -177,7 +160,29 @@ export default function ArticleTypesParameterModal({
             )}
           </div>
         )}
-      </Modal>
-    </>
+        <DialogFooter>
+          <Button
+            key="cancel"
+            variant="secondary"
+            onClick={closeModal}
+            type="button"
+            className="min-w-[90px]"
+          >
+            Cancel
+          </Button>
+          <Button
+            key="save"
+            onClick={saveModal}
+            disabled={
+              !modalDraft?.name.trim() || !modalDraft?.prompt.trim() || !!modalNumericInvalid
+            }
+            type="button"
+            className="min-w-[90px]"
+          >
+            Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
