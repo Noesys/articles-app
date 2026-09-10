@@ -54,6 +54,7 @@
     "oxlint": "^1.82.0"
   },
   "optionalDependencies": {
+    "@rolldown/binding-darwin-arm64": "^1.2.8",
     "@rollup/rollup-darwin-arm64": "^4.63.1"
   },
   "engines": {
