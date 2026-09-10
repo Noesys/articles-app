@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import logoImage from "../../Logo/Noesys_logo.png";
+import logoImage from "../../Logo/contiq.png";
 import { NavLink } from "react-router-dom";
 
 const NAV_ITEMS = [
@@ -56,12 +56,9 @@ export default function AdminHeader({ title }: { title?: string }) {
 
   return (
     <header className="sticky top-0 bg-white border-b border-slate-200 z-50">
-      <div className="w-full px-4 md:px-8 h-14 flex items-center justify-between gap-3">
+      <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 shrink-0">
-          <img src={logoImage} alt="Logo" className="h-14 w-20 rounded-lg" />
-          <span className="font-semibold text-slate-900 hidden sm:block">
-            Article Platform
-          </span>
+          <img src={logoImage} alt="Logo" className="h-13 w-26" />
         </div>
         {title && (
           <span className="text-sm font-medium text-slate-700 hidden xl:block truncate">
@@ -94,7 +91,7 @@ export default function AdminHeader({ title }: { title?: string }) {
         <div className="hidden lg:flex items-center gap-3 shrink-0">
           {user && (
             <span className="text-sm text-slate-500 hidden 2xl:block max-w-48 truncate">
-              {user.email}
+              {user.name}
             </span>
           )}
           <button
@@ -145,7 +142,7 @@ export default function AdminHeader({ title }: { title?: string }) {
           </nav>
           <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
             <span className="min-w-0 truncate text-sm text-slate-500">
-              {user?.email}
+              {user?.name}
             </span>
             <button
               onClick={logout}

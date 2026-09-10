@@ -23,6 +23,8 @@ import ScoringHistoryTable from "@/admin/components/articles/ScoringHistoryTable
 import FeedbackBlock from "@/admin/components/articles/FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
 import { ArticleDetailResponse } from "@/utils/types";
+import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
+import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
 
 function formatAiScore(s: number) {
   return Number.isInteger(s) ? String(s) : s.toFixed(1);
@@ -104,12 +106,20 @@ export default function ArticleDetail() {
     effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
 
+  const isFailed = displayStatus === "failed";
+
   // Poll every 2.5s while scoring; stops on terminal status/complete/timeout
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
   const POLLING_INTERVAL = 2500;
   const MAX_POLL_DURATION = 300000;
   useEffect(() => {
-    if (effectiveSnapshot || !article || currentScore !== null || TERMINAL_STATUSES.includes(article.status)) return;
+    if (
+      effectiveSnapshot ||
+      !article ||
+      currentScore !== null ||
+      TERMINAL_STATUSES.includes(article.status)
+    )
+      return;
     let stopped = false;
     let timer: number | null = null;
     const pollStart = Date.now();
@@ -133,7 +143,9 @@ export default function ArticleDetail() {
         setCurrentFeedback(result.current_feedback ?? "");
         setParameterResults(result.parameter_results ?? []);
         if (result.current_score !== null) {
-          try { sessionStorage.removeItem("toastError"); } catch {}
+          try {
+            sessionStorage.removeItem("toastError");
+          } catch {}
           if (timer) clearInterval(timer);
           return;
         }
@@ -196,7 +208,9 @@ export default function ArticleDetail() {
       );
     } catch (err) {
       console.error("Rewrite submission failed:", err);
-      setSubmitError(err instanceof Error ? err.message : "Failed to submit rewrite");
+      setSubmitError(
+        err instanceof Error ? err.message : "Failed to submit rewrite",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -333,34 +347,48 @@ export default function ArticleDetail() {
             </p>
 
             <div className="flex items-center gap-3">
-              {displayScore === null ? (
-                <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
-                  <Loader2 size={16} className="animate-spin text-slate-400" />
-                  <span>Scoring...</span>
-                </div>
-              ) : (
-                <>
-                  <p className="text-3xl font-semibold text-slate-900">
-                    {hasScore ? formatAiScore(displayScore!) : "—"}
+              <div className="flex items-center gap-3">
+                {isFailed ? (
+                  <div className="py-2">
+                    <p className="font-medium text-red-600">
+                      Evaluation failed
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      We couldn't evaluate this article. Please rewrite the
+                      article and submit it again.
+                    </p>
+                  </div>
+                ) : displayScore === null ? (
+                  <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
+                    <Loader2
+                      size={16}
+                      className="animate-spin text-slate-400"
+                    />
+                    <span>Scoring...</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-3xl font-semibold text-slate-900">
+                      {hasScore ? formatAiScore(displayScore!) : "—"}
+                      <span className="text-base text-slate-400 font-normal">
+                        {" "}
+                        / 10
+                      </span>
+                    </p>
 
-                    <span className="text-base text-slate-400 font-normal">
-                      {" "}
-                      / 10
-                    </span>
-                  </p>
-
-                  {hasScore && (
-                    <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${getScoreBarColor(displayStatus)}`}
-                        style={{
-                          width: `${(Math.min(displayScore!, 10) / 10) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
+                    {hasScore && (
+                      <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${getScoreBarColor(displayStatus)}`}
+                          style={{
+                            width: `${(Math.min(displayScore!, 10) / 10) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -374,7 +402,12 @@ export default function ArticleDetail() {
               {displayFeedback && <CopyButton text={displayFeedback} />}
             </div>
 
-            {displayScore === null ? (
+            {isFailed ? (
+              <p className="text-sm text-red-600">
+                Evaluation failed. Please rewrite the article and submit it
+                again.
+              </p>
+            ) : displayScore === null ? (
               <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                 <Loader2 size={16} className="animate-spin text-slate-400" />
                 <span>Scoring...</span>
@@ -401,7 +434,12 @@ export default function ArticleDetail() {
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-full px-2.5 py-1">
                       {article.article_type_name}
                     </span>
-                    <CopyButton text={content} />
+                    <ArticleCopyButton title={title} text={content} />
+                    <DownloadMarkdownButton
+                      title={title}
+                      content={content}
+                      filename="article-review.md"
+                    />
                   </div>
                 )}
                 <span className="p-1 text-slate-400">

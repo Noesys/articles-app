@@ -9,18 +9,32 @@ function nameFromEmail(email: string): string {
 }
 
 /**
- * Resolve email from Cloudflare Access.
+ * Resolve email, name, and job_role from Cloudflare Access.
  * Prefer ctx.access (Worker Access without static-asset router gap).
  * Fall back to Cf-Access-Jwt-Assertion — required when Static Assets sit
  * behind Cloudflare's internal router, which does not forward ctx.access.
  */
-async function resolveAccessEmail(
+type AccessIdentity = {
+  email: string;
+  name: string | null;
+  jobTitle: string | null;
+};
+
+async function resolveAccessIdentity(
   c: Context<AppEnv>,
-): Promise<string | null> {
+): Promise<AccessIdentity | null> {
   if (c.executionCtx.access) {
     const identity = await c.executionCtx.access.getIdentity();
     if (identity?.email) {
-      return identity.email.trim().toLowerCase();
+      const oidc = (identity as any)?.oidc_fields;
+      return {
+        email: identity.email.trim().toLowerCase(),
+        name: identity.name?.trim() || null,
+        jobTitle:
+          typeof oidc?.job_title === "string"
+            ? oidc.job_title.trim() || null
+            : null,
+      };
     }
   }
 
@@ -38,23 +52,45 @@ async function resolveAccessEmail(
         audience: aud,
       });
       if (typeof payload.email === "string" && payload.email) {
-        return payload.email.trim().toLowerCase();
+        const p = payload as Record<string, unknown>;
+        const name =
+          (typeof p.name === "string" && p.name) ||
+          [p.given_name, p.family_name]
+            .filter((v): v is string => typeof v === "string" && v.length > 0)
+            .join(" ") ||
+          null;
+        const oidc = p.oidc_fields as Record<string, unknown> | undefined;
+        const jobTitle =
+          typeof oidc?.job_title === "string"
+            ? oidc.job_title.trim() || null
+            : null;
+
+        return {
+          email: payload.email.trim().toLowerCase(),
+          name: name?.trim() || null,
+          jobTitle,
+        };
       }
     } catch (err) {
       console.error("[accessAuth] JWT verification failed:", err);
-      // fall through to header / other paths
     }
   }
 
-  // Cloudflare strips client-sent Cf-Access-* headers and sets them at the edge.
-  // Safe to use when an Access JWT assertion is also present on the request.
   const headerEmail = c.req.header("Cf-Access-Authenticated-User-Email");
   if (headerEmail && assertion) {
-    return headerEmail.trim().toLowerCase();
+    return {
+      email: headerEmail.trim().toLowerCase(),
+      name: null,
+      jobTitle: null,
+    };
   }
 
   if (c.env.ENVIRONMENT === "development" && c.env.DEV_USER_MAIL) {
-    return c.env.DEV_USER_MAIL.trim().toLowerCase();
+    return {
+      email: c.env.DEV_USER_MAIL.trim().toLowerCase(),
+      name: null,
+      jobTitle: null,
+    };
   }
 
   return null;
@@ -75,7 +111,15 @@ export async function resolveAccessUser(
     }
   }
 
-  const email = await resolveAccessEmail(c);
+  const identity = await resolveAccessIdentity(c);
+  if (!identity) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Unauthorized: No Access identity",
+    };
+  }
+  const { email, name, jobTitle } = identity;
 
   if (!email) {
     return {
@@ -99,9 +143,9 @@ export async function resolveAccessUser(
     await createUser(c.env.DB, {
       id: "usr_" + crypto.randomUUID(),
       email,
-      name: nameFromEmail(email),
+      name: name || nameFromEmail(email),
       auth_role: "user",
-      job_role: "",
+      job_role: jobTitle || "",
       created_at: new Date().toISOString(),
       created_by: null,
       is_active: 1,

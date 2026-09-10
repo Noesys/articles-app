@@ -9,6 +9,8 @@ import ParameterResultsBox from "./ParameterResultsBox";
 import FeedbackBlock from "./FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
 import { HistoryItem, ArticleDetail, ParameterResult } from "@/utils/types";
+import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
+import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
 
 function formatAiScore(s: number) {
   return Number.isInteger(s) ? String(s) : s.toFixed(1);
@@ -157,12 +159,15 @@ export default function AdminArticleDetail() {
     effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
 
+  const isFailed = displayStatus === "failed";
   useEffect(() => {
     if (!id || !versionParam) return;
     (async () => {
       try {
-        const data: any = await api(`/admin/articles/${id}/parameter-results?version=${versionParam}`);
-        const rows = Array.isArray(data) ? data : data?.data ?? data;
+        const data: any = await api(
+          `/admin/articles/${id}/parameter-results?version=${versionParam}`,
+        );
+        const rows = Array.isArray(data) ? data : (data?.data ?? data);
         if (rows) {
           setParameterResults(
             (rows as any[]).map(
@@ -251,7 +256,7 @@ export default function AdminArticleDetail() {
             </p>
 
             <div className="flex items-center gap-3">
-              {displayScore === null ? (
+              {/* {displayScore === null ? (
                 <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
                   <Loader2 size={16} className="animate-spin text-slate-400" />
                   <span>loading...</span>
@@ -277,7 +282,49 @@ export default function AdminArticleDetail() {
                     </div>
                   )}
                 </>
-              )}
+              )} */}
+
+              <div className="flex items-center gap-3">
+                {isFailed ? (
+                  <div className="py-2">
+                    <p className="font-medium text-red-600">
+                      Evaluation failed
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Article couldn't be evaluated. User must re-submit the article.
+                    </p>
+                  </div>
+                ) : displayScore === null ? (
+                  <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
+                    <Loader2
+                      size={16}
+                      className="animate-spin text-slate-400"
+                    />
+                    <span>loading...</span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-3xl font-semibold text-slate-900">
+                      {hasScore ? formatAiScore(displayScore!) : "—"}
+                      <span className="text-base text-slate-400 font-normal">
+                        {" "}
+                        / 10
+                      </span>
+                    </p>
+
+                    {hasScore && (
+                      <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${getScoreBarColor(displayStatus)}`}
+                          style={{
+                            width: `${(Math.min(displayScore!, 10) / 10) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -290,10 +337,14 @@ export default function AdminArticleDetail() {
               {displayFeedback && <CopyButton text={displayFeedback} />}
             </div>
 
-            {displayScore === null ? (
+            {isFailed ? (
+              <p className="text-sm text-red-600">
+                Evaluation failed. User must re-submit the article.
+              </p>
+            ) : displayScore === null ? (
               <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                 <Loader2 size={16} className="animate-spin text-slate-400" />
-                <span>loading...</span>
+                <span>Scoring...</span>
               </div>
             ) : (
               <FeedbackBlock
@@ -316,7 +367,15 @@ export default function AdminArticleDetail() {
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-full px-2.5 py-1">
                       {article.article_type_name}
                     </span>
-                    <CopyButton text={displayContent} />
+                    <ArticleCopyButton
+                      title={`# ${displayTitle}`}
+                      text={displayContent}
+                    />
+                    <DownloadMarkdownButton
+                      title={displayTitle}
+                      content={displayContent}
+                      filename="article-review.md"
+                    />
                   </div>
                 )}
 
