@@ -1,6 +1,5 @@
 import { Article, ArticlePagination } from "../../types/user-types";
 
-
 const ARTICLE_COLUMNS = `
   a.id,
   a.user_id,
@@ -24,7 +23,7 @@ export async function getArticlesByUser(
   month?: string,
   viewAll?: boolean,
   page?: number,
-  limit?: number
+  limit?: number,
 ): Promise<{
   articles: Article[];
   pagination?: ArticlePagination;
@@ -34,6 +33,13 @@ export async function getArticlesByUser(
     INNER JOIN article_types at ON at.id = a.article_type_id
   `;
 
+  // resolve current user's email for seeded-articles linkage (seed phase2 stores employee_email/emp_id, no user rows)
+  const me = await db
+    .prepare(`SELECT email FROM users WHERE id=?`)
+    .bind(userId)
+    .first<{ email: string }>();
+  const myEmail = me?.email?.toLowerCase() ?? "";
+  const byUserOrEmail = `(a.user_id = ? OR lower(a.employee_email) = ?)`;
   if (viewAll) {
     const safePage = Math.max(1, Math.floor(page || 1));
     const safeLimit = Math.min(100, Math.max(1, Math.floor(limit || 10)));
@@ -44,10 +50,10 @@ export async function getArticlesByUser(
         `
           SELECT COUNT(*) AS total
           ${fromClause}
-          WHERE a.user_id = ?
-        `
+          WHERE ${byUserOrEmail}
+        `,
       )
-      .bind(userId)
+      .bind(userId, myEmail)
       .first<{ total: number }>();
 
     const result = await db
@@ -55,12 +61,12 @@ export async function getArticlesByUser(
         `
           SELECT ${ARTICLE_COLUMNS}
           ${fromClause}
-          WHERE a.user_id = ?
+          WHERE ${byUserOrEmail}
           ORDER BY a.submitted_at DESC
           LIMIT ? OFFSET ?
-        `
+        `,
       )
-      .bind(userId, safeLimit, offset)
+      .bind(userId, myEmail, safeLimit, offset)
       .all<Article>();
 
     const total = countResult?.total ?? 0;
@@ -82,13 +88,13 @@ export async function getArticlesByUser(
       `
         SELECT ${ARTICLE_COLUMNS}
         ${fromClause}
-        WHERE a.user_id = ?
+        WHERE ${byUserOrEmail}
           AND a.month_year = ?
         ORDER BY a.submitted_at DESC
         LIMIT 100
-      `
+      `,
     )
-    .bind(userId, month || new Date().toISOString().slice(0, 7))
+    .bind(userId, myEmail, month || new Date().toISOString().slice(0, 7))
     .all<Article>();
 
   return {
@@ -99,7 +105,7 @@ export async function getArticlesByUser(
 export async function getArticleById(
   db: D1Database,
   articleId: string,
-  userId: string
+  userId: string,
 ): Promise<Article | null> {
   return db
     .prepare(
@@ -110,7 +116,7 @@ export async function getArticleById(
         WHERE a.id = ?
           AND a.user_id = ?
         LIMIT 1
-      `
+      `,
     )
     .bind(articleId, userId)
     .first<Article>();
@@ -129,7 +135,7 @@ export async function createArticle(
     submitted_at: string;
     month_year: string;
     retry_count: number;
-  }
+  },
 ): Promise<void> {
   await db
     .prepare(
@@ -147,7 +153,7 @@ export async function createArticle(
           retry_count
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `
+      `,
     )
     .bind(
       article.id,
@@ -159,7 +165,7 @@ export async function createArticle(
       article.version,
       article.submitted_at,
       article.month_year,
-      article.retry_count
+      article.retry_count,
     )
     .run();
 }
@@ -167,7 +173,7 @@ export async function createArticle(
 export async function updateArticleStatus(
   db: D1Database,
   articleId: string,
-  status: string
+  status: string,
 ) {
   await db
     .prepare(`UPDATE articles SET status = ? WHERE id = ?`)

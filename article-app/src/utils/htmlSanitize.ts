@@ -27,10 +27,27 @@ const ALLOWED = [
   "strong",
   "em",
 ];
+
+/**
+ * Sanitize pasted HTML for the editor.
+ * Intentionally omits `style` — inline CSS is an XSS vector (expression/url/behavior).
+ * Structural tags + href/src/alt are enough; TipTap marks carry formatting.
+ */
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ALLOWED,
-    ALLOWED_ATTR: ["href", "src", "alt", "colspan", "rowspan"],
+    ALLOWED_ATTR: [
+      "href",
+      "src",
+      "alt",
+      "colspan",
+      "rowspan",
+      "width",
+      "height",
+      "title",
+    ],
+    ALLOW_DATA_ATTR: false,
+    ALLOW_UNKNOWN_PROTOCOLS: false,
     KEEP_CONTENT: true,
   });
 }

@@ -130,6 +130,38 @@ function detectAndConvertBoldHeadings(html: string): string {
     if (/MsoHeading\s*3/i.test(cls)) return "h3";
     return null;
   };
+  const getHeadingFromCcp = (v: string): string | null => {
+    const t = v.trim().toLowerCase();
+    if (t === "title") return "h1";
+    const m = t.match(/^heading\s*(\d)/i);
+    if (m) return `h${Math.min(6, Math.max(1, parseInt(m[1], 10)))}`;
+    return null;
+  };
+
+    // 0) Word Online modern: data-ccp-parastyle="Title" / "Heading 1" -> heading
+  doc.querySelectorAll("[data-ccp-parastyle]").forEach((el) => {
+    if (el.closest("h1,h2,h3,h4,h5,h6,li,table")) return;
+    const pv = el.getAttribute("data-ccp-parastyle") || "";
+    const lvl = getHeadingFromCcp(pv);
+    if (!lvl) return;
+    const text = (el.textContent || "").trim().replace(/\s+/g, " ");
+    if (!text || text.length > 600) return;
+    // Use block-level wrapper if el is a fragment root, else wrap el itself
+    const tag = el.tagName.toLowerCase();
+    if (tag === "p" || tag === "div" || tag === "h1" || tag === "h2" || tag === "h3") {
+      const h = doc.createElement(lvl);
+      // Collapse Word line-break fragmentation inside Title (EV Customer : Automating Chargefox...)
+      const inner = (el as HTMLElement).innerHTML.replace(/\s+/g, " ").trim();
+      h.innerHTML = inner;
+      el.replaceWith(h);
+    } else {
+      // Inline Title span — wrap parent block or create heading from its parent
+      const block = (el as HTMLElement).closest("p,div") || el;
+      const h = doc.createElement(lvl);
+      h.innerHTML = (block as HTMLElement).innerHTML.replace(/\s+/g, " ").trim();
+      (block as Element).replaceWith(h);
+    }
+  });
 
   // 1) Convert Word paragraphs that are actually headings (MsoHeading, outline-level, large bold)
   doc.querySelectorAll("p").forEach((p) => {
@@ -148,17 +180,26 @@ function detectAndConvertBoldHeadings(html: string): string {
     if (outlineMatch) level = `h${outlineMatch[1]}`;
     else if (styleNameMatch) level = `h${styleNameMatch[1]}`;
     else if (classHeading) level = classHeading;
-    // Fallback: large + bold heuristic for Google Docs / unstyled Word export
+    // Fallback: large + bold heuristic for Google Docs / unstyled Word export — also scan descendant spans for Word Online Title (font-size on inner span)
     if (!level) {
-      const fsMatch = /font-size\s*:\s*(\d+)\s*(?:pt|px)/i.exec(style);
-      const fwMatch = /font-weight\s*:\s*(bold|\d{2,3})/i.exec(style);
+      let searchStyle = style;
+      if (!searchStyle) {
+        const inner = p.querySelector("span[style]") as HTMLElement | null;
+        if (inner) searchStyle = inner.getAttribute("style") || "";
+        // Also scan innerHTML for font-size as last resort
+        if (!searchStyle) {
+          const m = /font-size\s*:\s*(\d+)\s*(?:pt|px)/i.exec(p.innerHTML);
+          if (m) searchStyle = m[0];
+        }
+      }
+      const fsMatch = /font-size\s*:\s*(\d+)\s*(?:pt|px)/i.exec(searchStyle);
+      const fwMatch = /font-weight\s*:\s*(bold|\d{2,3})/i.exec(searchStyle) || /font-weight\s*:\s*(bold|\d{2,3})/i.exec(p.innerHTML);
       let fontSize = fsMatch ? parseInt(fsMatch[1], 10) : 0;
-      // pt to px approx
       if (fsMatch && /pt/i.test(fsMatch[0])) fontSize = Math.round(fontSize * 1.33);
-      const isBold = fwMatch !== null || !!p.querySelector("b,strong") || /font-weight:\s*bold/i.test(style);
-      const hasLarge = fontSize >= 16;
-      // Only promote short paragraphs that are bold+larger than body
-      if (isBold && hasLarge) {
+      const isBold = fwMatch !== null || !!p.querySelector("b,strong") || /font-weight:\s*bold/i.test(searchStyle) || /font-weight:\s*bold/i.test(p.innerHTML);
+      const ccp = p.querySelector("[data-ccp-parastyle]")?.getAttribute("data-ccp-parastyle");
+      if (ccp) level = getHeadingFromCcp(ccp);
+      else if (isBold && fontSize >= 16) {
         level = fontSize >= 22 ? "h1" : fontSize >= 18 ? "h2" : "h3";
       } else if (classHeading) {
         level = classHeading;
@@ -213,6 +254,7 @@ export function cleanPastedHtml(rawHtml: string): string {
   // Kill IE conditional comments + Word's <style> blob before parsing:
   // they can hold megabytes of mso rules and confuse the parser.
   let html = rawHtml
+    .replace(/<!--StartFragment-->|<!--EndFragment-->/gi, "")
     .replace(/<!--\[if[\s\S]*?<!\[endif\]-->/gi, "")
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -377,13 +419,29 @@ export function cleanPastedHtml(rawHtml: string): string {
     }
   }
 
+  // Fragment fallback: inline-only paste (line-by-line) -> wrap in <p> so Tiptap doesn't leak tags
+  {
+    const hasBlock = !!doc.body.querySelector("p,h1,h2,h3,h4,h5,h6,ul,ol,table,blockquote,pre");
+    const bodyText = (doc.body.textContent || "").trim();
+    const bodyHtml = doc.body.innerHTML.trim();
+    if (!hasBlock && bodyText && bodyHtml) {
+      // Wrap bare inline content in a paragraph; keep already-semantic inline tags
+      doc.body.innerHTML = `<p>${bodyHtml}</p>`;
+    }
+  }
+
   // Word emits empty "spacer" paragraphs by the dozen.
   doc.querySelectorAll("p").forEach((p) => {
     const text = (p.textContent || "").replace(/\u00a0|\s/g, "");
     if (!text && !p.querySelector("img,table,br")) p.remove();
   });
 
-  return doc.body.innerHTML;
+  // Merge adjacent fragmented inline runs that Word split into many spans
+  // (avoid heavy DOM churn — text already coalesced by p wrapper above)
+  let out = doc.body.innerHTML;
+  // Defensive: strip any lingering outer <html><body> if DOMParser injected
+  out = out.replace(/^\s*<html[^>]*><body[^>]*>/i, "").replace(/<\/body><\/html>\s*$/i, "");
+  return out;
 }
 
 /** True when the clipboard HTML came from Word / Outlook / Google Docs. */

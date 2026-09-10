@@ -59,13 +59,14 @@ const STATUS_CONFIG: Record<
 };
 
 function getNameInitials(name: string) {
+  if (!name || typeof name !== "string") return "?";
   return name
     .trim()
     .split(/\s+/)
     .map((part) => part[0])
     .join("")
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase() || "?";
 }
 
 export default function ArticlesTableContent({
@@ -187,7 +188,7 @@ export default function ArticlesTableContent({
         key: "status",
         width: 115,
         render: (status: ArticleStatus) => {
-          const cfg = STATUS_CONFIG[status];
+          const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.unknown;
           return (
             <Tag
               color={cfg.color}
