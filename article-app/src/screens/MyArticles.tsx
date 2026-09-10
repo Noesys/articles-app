@@ -33,14 +33,27 @@ import {
 } from "@tanstack/react-table";
 import { api } from "@/http-client";
 import { ArticleListItem } from "@/utils/types";
+import {
+  contiqTableContainerClassName,
+  contiqTableLayout,
+} from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
 
 type ArticleStatus = "accepted" | "rejected" | "scoring";
 
 const STATUS_CONFIG: Record<string, { className: string; label: string }> = {
-  accepted: { className: "bg-emerald-50 text-emerald-700", label: "Accepted" },
-  rejected: { className: "bg-red-50 text-red-600", label: "Rejected" },
-  scoring: { className: "bg-slate-100 text-slate-600", label: "Scoring..." },
+  accepted: {
+    className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 border-transparent",
+    label: "Accepted",
+  },
+  rejected: {
+    className: "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
+    label: "Rejected",
+  },
+  scoring: {
+    className: "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
+    label: "Scoring...",
+  },
 };
 
 function getDisplayStatus(article: { status: string; ai_score: number | null }): {
@@ -52,7 +65,7 @@ function getDisplayStatus(article: { status: string; ai_score: number | null }):
     return {
       key: "rejected",
       label: "Failed",
-      className: "bg-orange-50 text-orange-700",
+      className: "bg-orange-50 text-orange-700 ring-1 ring-orange-200/80 border-transparent",
     };
   }
 
@@ -407,7 +420,10 @@ function MyArticlesTable({
         header: "Type",
         size: 130,
         cell: ({ getValue }) => (
-          <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-normal">
+          <Badge
+            variant="outline"
+            className="bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
+          >
             {getValue() as string}
           </Badge>
         ),
@@ -447,7 +463,7 @@ function MyArticlesTable({
         cell: ({ row }) => {
           const cfg = getDisplayStatus(row.original);
           return (
-            <Badge variant="secondary" className={cfg.className}>
+            <Badge variant="outline" className={cn("font-medium", cfg.className)}>
               {cfg.label}
             </Badge>
           );
@@ -487,10 +503,10 @@ function MyArticlesTable({
       emptyMessage={
         viewAll ? "No articles found." : `No articles for ${dayjs(month).format("MMMM-YYYY")}.`
       }
-      tableLayout={{ cellBorder: true, dense: true }}
+      tableLayout={contiqTableLayout}
     >
       <div className="w-full space-y-2.5">
-        <DataGridContainer className="rounded-xl border border-border bg-background overflow-hidden">
+        <DataGridContainer className={contiqTableContainerClassName}>
           <DataGridScrollArea>
             <DataGridTable />
           </DataGridScrollArea>

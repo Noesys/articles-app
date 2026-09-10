@@ -14,6 +14,10 @@ import {
 } from "@/components/reui/data-grid/data-grid-table";
 import { ColumnDef, useTable } from "@tanstack/react-table";
 import { EmployeeSubmissionRow, EmployeeSubmissionsResult } from "@/admin/utils/types";
+import {
+  contiqTableContainerClassName,
+  contiqTableLayout,
+} from "@/admin/utils/contiq-data-grid";
 import { api } from "@/http-client";
 
 const MONTH_LABELS = [
@@ -120,28 +124,27 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
       table={table}
       recordCount={rows.length}
       tableLayout={{
-        cellBorder: true,
-        dense: true,
+        ...contiqTableLayout,
         columnsPinnable: true,
         footerBackground: true,
       }}
     >
-      <DataGridContainer className="rounded-xl border border-border bg-background overflow-hidden">
+      <DataGridContainer className={contiqTableContainerClassName}>
         <DataGridScrollArea>
           <DataGridTable
             footerContent={
               <DataGridTableFootRow>
-                <DataGridTableFootRowCell colSpan={2} className="bg-slate-200">
-                  <span className="text-slate-700">Total: </span>
-                  <span className="font-bold text-slate-700">{data.rows.length}</span>
+                <DataGridTableFootRowCell colSpan={2} className="bg-muted">
+                  <span className="text-muted-foreground">Total: </span>
+                  <span className="font-semibold text-foreground">{data.rows.length}</span>
                 </DataGridTableFootRowCell>
                 {data.months.map((m) => (
-                  <DataGridTableFootRowCell key={m} className="bg-slate-200 text-center">
-                    <span className="font-bold text-slate-700">{data.monthlyTotals[m]}</span>
+                  <DataGridTableFootRowCell key={m} className="bg-muted text-center">
+                    <span className="font-semibold text-foreground">{data.monthlyTotals[m]}</span>
                   </DataGridTableFootRowCell>
                 ))}
-                <DataGridTableFootRowCell className="bg-slate-200 text-center">
-                  <span className="font-bold text-slate-700">{data.grandTotal}</span>
+                <DataGridTableFootRowCell className="bg-muted text-center">
+                  <span className="font-semibold text-foreground">{data.grandTotal}</span>
                 </DataGridTableFootRowCell>
               </DataGridTableFootRow>
             }

@@ -10,6 +10,9 @@ import {
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ColumnDef, SortingState, useTable } from "@tanstack/react-table";
+import {
+  contiqTableLayout,
+} from "@/admin/utils/contiq-data-grid";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -39,10 +42,22 @@ function formatAiScore(s: number) {
 }
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  approved: { label: "Accepted", className: "bg-emerald-50 text-emerald-700" },
-  rewrite_required: { label: "Rejected", className: "bg-red-50 text-red-600" },
-  pending: { label: "Scoring...", className: "bg-slate-100 text-slate-600" },
-  failed: { label: "Rejected", className: "bg-red-50 text-red-600" },
+  approved: {
+    label: "Accepted",
+    className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 border-transparent",
+  },
+  rewrite_required: {
+    label: "Rejected",
+    className: "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
+  },
+  pending: {
+    label: "Scoring...",
+    className: "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
+  },
+  failed: {
+    label: "Rejected",
+    className: "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
+  },
 };
 
 export default function ScoringHistoryTable({
@@ -102,7 +117,7 @@ export default function ScoringHistoryTable({
         cell: ({ row }) => {
           const cfg = STATUS_MAP[row.original.status] || STATUS_MAP.pending;
           return (
-            <Badge variant="secondary" className={cfg.className}>
+            <Badge variant="outline" className={cn("font-medium", cfg.className)}>
               {cfg.label}
             </Badge>
           );
@@ -148,17 +163,17 @@ export default function ScoringHistoryTable({
   });
 
   return (
-    <div className="bg-white border-[1.5px] border-gray-300 rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
-      <div className="flex items-center justify-between px-5 py-3.5 border-b-[1.5px] border-gray-300">
-        <span className="text-[15px] font-semibold text-gray-900">Scoring History</span>
-        <span className="text-[13px] text-slate-500">{history.length} versions</span>
+    <div className="rounded-lg border border-border bg-background shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/40">
+        <span className="text-sm font-semibold text-foreground">Scoring History</span>
+        <span className="text-xs text-muted-foreground">{history.length} versions</span>
       </div>
 
       <DataGrid
         table={table}
         recordCount={history.length}
         emptyMessage="No scoring history yet."
-        tableLayout={{ cellBorder: true, dense: true }}
+        tableLayout={contiqTableLayout}
       >
         <DataGridContainer className="border-0 rounded-none shadow-none">
           <DataGridScrollArea>

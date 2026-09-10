@@ -33,6 +33,10 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthRole, User } from "@/admin/utils/types";
+import {
+  contiqTableContainerClassName,
+  contiqTableLayout,
+} from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
 
 const ROLE_LABELS: Record<AuthRole, string> = {
@@ -105,12 +109,12 @@ export default function UsersTable({
       {
         accessorKey: "name",
         header: "Name",
-        size: 220,
+        size: 280,
         cell: ({ row }) => {
           const u = row.original;
           const active = u.is_active === 1;
           return (
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0 py-0.5">
               <div
                 className={cn(
                   "size-8 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold",
@@ -119,25 +123,24 @@ export default function UsersTable({
               >
                 {getInitials(u.name)}
               </div>
-              <span className="font-medium text-foreground truncate">{u.name}</span>
+              <div className="min-w-0 flex flex-col gap-0.5">
+                <span className="font-semibold text-foreground truncate leading-tight">
+                  {u.name}
+                </span>
+                <span className="text-xs text-muted-foreground truncate leading-tight">
+                  {u.email}
+                </span>
+              </div>
             </div>
           );
         },
-      },
-      {
-        accessorKey: "email",
-        header: "Email",
-        size: 220,
-        cell: ({ getValue }) => (
-          <span className="truncate text-muted-foreground">{getValue() as string}</span>
-        ),
       },
       {
         accessorKey: "job_role",
         header: "Job role",
         size: 160,
         cell: ({ getValue }) => (
-          <span className="truncate text-muted-foreground">
+          <span className="truncate text-sm text-muted-foreground">
             {(getValue() as string) || "—"}
           </span>
         ),
@@ -150,11 +153,12 @@ export default function UsersTable({
           const role = getValue() as AuthRole;
           return (
             <Badge
-              variant="secondary"
+              variant="outline"
               className={cn(
-                role === "super_admin" && "bg-purple-50 text-purple-700",
-                role === "admin" && "bg-indigo-50 text-indigo-700",
-                role === "user" && "bg-slate-100 text-slate-600",
+                "font-medium border-transparent",
+                role === "super_admin" && "bg-violet-50 text-violet-700 ring-1 ring-violet-200/80",
+                role === "admin" && "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200/80",
+                role === "user" && "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80",
               )}
             >
               {ROLE_LABELS[role]}
@@ -171,10 +175,12 @@ export default function UsersTable({
           const active = row.original.is_active === 1;
           return (
             <Badge
-              variant="secondary"
+              variant="outline"
               className={cn(
-                "gap-1.5",
-                active ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600",
+                "gap-1.5 font-medium border-transparent",
+                active
+                  ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80"
+                  : "bg-red-50 text-red-600 ring-1 ring-red-200/80",
               )}
             >
               <span
@@ -191,7 +197,7 @@ export default function UsersTable({
       {
         id: "actions",
         header: "Actions",
-        size: 280,
+        size: 300,
         enableSorting: false,
         cell: ({ row }) => {
           const u = row.original;
@@ -203,10 +209,10 @@ export default function UsersTable({
                   size="sm"
                   variant="outline"
                   className={cn(
-                    "h-7 px-2 text-xs",
+                    "h-7 px-2.5 text-xs font-medium shadow-none",
                     active
-                      ? "border-red-200 text-red-600 hover:bg-red-50"
-                      : "border-emerald-200 text-emerald-700 hover:bg-emerald-50",
+                      ? "border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      : "border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800",
                   )}
                   onClick={() => setPending({ type: "status", user: u })}
                 >
@@ -217,7 +223,8 @@ export default function UsersTable({
               {canPromote(u) && (
                 <Button
                   size="sm"
-                  className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                  variant="outline"
+                  className="h-7 px-2.5 text-xs font-medium shadow-none border-slate-200 text-slate-700 hover:bg-slate-50"
                   onClick={() => setPending({ type: "role", user: u, role: "admin" })}
                 >
                   <ArrowUpCircle className="size-3.5" />
@@ -228,7 +235,7 @@ export default function UsersTable({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 px-2 text-xs"
+                  className="h-7 px-2.5 text-xs font-medium shadow-none border-slate-200 text-slate-700 hover:bg-slate-50"
                   onClick={() => setPending({ type: "role", user: u, role: "user" })}
                 >
                   <ArrowDownCircle className="size-3.5" />
@@ -238,8 +245,8 @@ export default function UsersTable({
               {canViewArticles(u) && (
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="h-7 px-2 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                  variant="ghost"
+                  className="h-7 px-2.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
                   onClick={() => onUserClick?.(u.id)}
                 >
                   Articles
@@ -292,10 +299,10 @@ export default function UsersTable({
         table={table}
         recordCount={users.length}
         isLoading={loading}
-        tableLayout={{ cellBorder: true, dense: true }}
+        tableLayout={contiqTableLayout}
       >
         <div className="w-full space-y-2.5">
-          <DataGridContainer className="rounded-lg border border-border bg-background">
+          <DataGridContainer className={contiqTableContainerClassName}>
             <DataGridScrollArea>
               <DataGridTable />
             </DataGridScrollArea>
@@ -318,7 +325,7 @@ export default function UsersTable({
             </DialogDescription>
           </DialogHeader>
           {statusUser?.auth_role === "super_admin" && (
-            <div className="flex items-start gap-2 rounded-lg bg-purple-50 px-3 py-2 text-xs text-purple-700">
+            <div className="flex items-start gap-2 rounded-lg bg-violet-50 px-3 py-2 text-xs text-violet-700">
               <ShieldCheck size={14} className="shrink-0 mt-0.5" />
               This is a super admin account. Make sure this action is intended.
             </div>

@@ -21,6 +21,10 @@ import {
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ColumnDef, useTable } from "@tanstack/react-table";
+import {
+  contiqTableContainerClassName,
+  contiqTableLayout,
+} from "@/admin/utils/contiq-data-grid";
 
 const EMPTY_FORM: FormState = {
   name: "",
@@ -479,9 +483,9 @@ function ParametersTable({
           No parameters yet — optional, but useful for multi-criteria scoring.
         </span>
       }
-      tableLayout={{ cellBorder: true, dense: true }}
+      tableLayout={contiqTableLayout}
     >
-      <DataGridContainer className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+      <DataGridContainer className={contiqTableContainerClassName}>
         <DataGridScrollArea>
           <DataGridTable />
         </DataGridScrollArea>

@@ -32,6 +32,10 @@ import {
   NumericDistributionBucket,
   ParameterSummary,
 } from "@/admin/utils/types";
+import {
+  contiqTableContainerClassName,
+  contiqTableLayout,
+} from "@/admin/utils/contiq-data-grid";
 import { api } from "@/http-client";
 
 function NumericDistribution({ distribution }: { distribution: NumericDistributionBucket[] }) {
@@ -143,8 +147,8 @@ function ParametersTable({ parameters }: { parameters: ParameterSummary[] }) {
   });
 
   return (
-    <DataGrid table={table} recordCount={parameters.length} tableLayout={{ cellBorder: true, dense: true }}>
-      <DataGridContainer className="rounded-xl border border-border bg-background overflow-hidden">
+    <DataGrid table={table} recordCount={parameters.length} tableLayout={contiqTableLayout}>
+      <DataGridContainer className={contiqTableContainerClassName}>
         <DataGridScrollArea>
           <DataGridTable />
         </DataGridScrollArea>

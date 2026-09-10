@@ -88,7 +88,8 @@ function DataGridPagination(props: DataGridPaginationProps): JSX.Element {
           aria-label={i18n.labels.goToPage(i + 1)}
           aria-current={pageIndex === i ? "page" : undefined}
           className={cn(btnBaseClasses, "text-muted-foreground", {
-            "bg-accent text-accent-foreground": pageIndex === i,
+            "bg-slate-900 text-white hover:bg-slate-800 hover:text-white":
+              pageIndex === i,
           })}
           onClick={() => {
             if (pageIndex !== i) {
@@ -141,7 +142,7 @@ function DataGridPagination(props: DataGridPaginationProps): JSX.Element {
     <div
       data-slot="data-grid-pagination"
       className={cn(
-        "flex grow flex-col flex-wrap items-center justify-between gap-2.5 py-2.5 sm:flex-row sm:py-0",
+        "flex grow flex-col flex-wrap items-center justify-between gap-2.5 py-3 sm:flex-row sm:py-2.5",
         mergedProps.className
       )}
     >
@@ -166,7 +167,7 @@ function DataGridPagination(props: DataGridPaginationProps): JSX.Element {
                   1-2 digit ones from collapsing narrower than 64px. */}
               <SelectTrigger
                 aria-label={mergedProps.rowsPerPageLabel}
-                className="w-fit min-w-16"
+                className="w-fit min-w-16 bg-background"
                 size="sm"
               >
                 <SelectValue />

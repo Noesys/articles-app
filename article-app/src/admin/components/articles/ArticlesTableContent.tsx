@@ -25,6 +25,10 @@ import {
   SortingState,
   useTable,
 } from "@tanstack/react-table";
+import {
+  contiqTableContainerClassName,
+  contiqTableLayout,
+} from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
 
 type ArticlesTableProps = {
@@ -56,24 +60,24 @@ const STATUS_CONFIG: Record<
   { className: string; label: string; icon?: boolean }
 > = {
   approved: {
-    className: "bg-emerald-50 text-emerald-700",
+    className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 border-transparent",
     label: "Accepted",
   },
   rewrite_required: {
-    className: "bg-red-50 text-red-600",
+    className: "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
     label: "Rejected",
   },
   pending: {
-    className: "bg-amber-50 text-amber-700 gap-1",
+    className: "bg-amber-50 text-amber-700 gap-1 ring-1 ring-amber-200/80 border-transparent",
     label: "Pending",
     icon: true,
   },
   failed: {
-    className: "bg-orange-50 text-orange-700",
+    className: "bg-orange-50 text-orange-700 ring-1 ring-orange-200/80 border-transparent",
     label: "Failed",
   },
   unknown: {
-    className: "bg-slate-100 text-slate-600",
+    className: "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
     label: "Unavailable",
   },
 };
@@ -151,10 +155,10 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
           const name = getValue() as string;
           return (
             <div className="flex items-center gap-2 min-w-0">
-              <div className="size-[26px] shrink-0 rounded-full bg-[#7f77dd] text-white text-[11px] font-medium flex items-center justify-center">
+              <div className="size-7 shrink-0 rounded-full bg-indigo-600 text-white text-[11px] font-semibold flex items-center justify-center">
                 {getNameInitials(name)}
               </div>
-              <span className="truncate text-[13px]">{name}</span>
+              <span className="truncate text-sm font-medium text-foreground">{name}</span>
             </div>
           );
         },
@@ -164,7 +168,10 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
         header: "Type",
         size: 130,
         cell: ({ getValue }) => (
-          <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-normal">
+          <Badge
+            variant="outline"
+            className="bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
+          >
             {getValue() as string}
           </Badge>
         ),
@@ -177,7 +184,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
           const status = getValue() as ArticleStatus;
           const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.unknown;
           return (
-            <Badge variant="secondary" className={cfg.className}>
+            <Badge variant="outline" className={cn("font-medium", cfg.className)}>
               {cfg.icon ? <Clock className="size-3" /> : null}
               {cfg.label}
             </Badge>
@@ -275,10 +282,10 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
         recordCount={locallyFilteredArticles.length}
         onRowClick={onRowClick ? (row) => onRowClick(row.id) : undefined}
         emptyMessage="No articles found"
-        tableLayout={{ cellBorder: true, dense: true }}
+        tableLayout={contiqTableLayout}
       >
         <div className="w-full space-y-2.5">
-          <DataGridContainer className="rounded-xl border border-border bg-background overflow-hidden">
+          <DataGridContainer className={contiqTableContainerClassName}>
             <DataGridScrollArea>
               <DataGridTable />
             </DataGridScrollArea>
