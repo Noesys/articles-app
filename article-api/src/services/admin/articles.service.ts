@@ -66,7 +66,7 @@ export async function getArticles(
     FROM articles a
 
     LEFT JOIN users u
-      ON u.id = a.user_id
+      ON lower(u.email) = lower(a.employee_email)
 
     JOIN article_types at
       ON at.id = a.article_type_id
@@ -139,7 +139,7 @@ export async function getArticleById(
   u.job_role
 FROM articles a
 LEFT JOIN users u
-  ON u.id = a.user_id
+  ON lower(u.email) = lower(a.employee_email)
 INNER JOIN article_types at
   ON at.id = a.article_type_id
 WHERE a.id = ?

@@ -4,7 +4,13 @@ import { DatabaseSync } from "node:sqlite";
 import mammoth from "mammoth";
 import matter from "gray-matter";
 import XLSX from "xlsx";
-const ROOT = process.cwd();
+// Credentials from article-api/wrangler.toml [[d1_databases]]
+const DB_NAME = "noesys-articles";
+const DB_ID = "acc066a7-2084-4d5e-89b0-90c20c4ceb6c";
+const ROOT = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")),
+  "..",
+);
 const FOLDER = path.join(ROOT, "Article_folder");
 const DRY = process.argv.includes("--dry-run");
 const VERBOSE = process.argv.includes("--verbose");
@@ -91,35 +97,74 @@ for (const line of md.split(/\r?\n/)) {
 }
 console.log(`MD parsed: ${map.size} articles`);
 // load Primary Purpose mapping (xlsx — full 133 including Aug)
-const xlsxPath = path.join(ROOT, "scripts/article_primary_purpose_mapping.xlsx");
+const xlsxPath = path.join(
+  ROOT,
+  "scripts/article_primary_purpose_mapping.xlsx",
+);
 const wb = XLSX.readFile(xlsxPath);
 const sh = wb.Sheets[wb.SheetNames[0]];
 const rows = XLSX.utils.sheet_to_json(sh, { header: 1, defval: "" });
 const purposeMap = new Map();
 for (const r of rows.slice(1)) {
-  const fn = String(r[0] || "").trim().toLowerCase();
+  const fn = String(r[0] || "")
+    .trim()
+    .toLowerCase();
   const p = String(r[1] || "").trim();
   if (fn && p) purposeMap.set(fn, p);
 }
-const db = new DatabaseSync(DB);db.exec("PRAGMA foreign_keys=OFF");
-try {
-  db.exec(
-    fs.readFileSync(
-      path.join(
-        ROOT,
-        "article-api/src/migrations/0007_add_evaluatable_and_employee_link.sql",
+const db = new DatabaseSync(DB);
+db.exec("PRAGMA foreign_keys=OFF");
+for (const mig of [
+  "0007_article_types_is_active.sql",
+  "0008_unique_index.sql",
+  "0009_evaluatable_flag_employee_linkage.sql",
+]) {
+  try {
+    db.exec(
+      fs.readFileSync(
+        path.join(ROOT, `article-api/src/migrations/${mig}`),
+        "utf8",
       ),
-      "utf8",
-    ),
-  );
-} catch {}
+    );
+  } catch {}
+}
 const typeRows = db.prepare("SELECT id,name FROM article_types").all();
 const typeMap = new Map(typeRows.map((r) => [r.name.toLowerCase(), r.id]));
 if (!typeMap.has("not suitable")) {
   console.error("Run phase1 first");
   process.exit(1);
 }
+// ensure stub users for admin Author column (so LEFT JOIN on email resolves to name, not email)
 if (!DRY) {
+  const empRows = [
+    ...md.matchAll(
+      /\|\s*(E\d+)\s*\|\s*([^|]+?)\s*\|\s*([^\s|]+@[^\s|]+)\s*\|/g,
+    ),
+  ].map((m) => [m[1], m[2].trim(), m[3].trim().toLowerCase()]);
+  for (const [empId, name, email] of empRows) {
+    const ex = db
+      .prepare("select id from users where lower(email)=lower(?)")
+      .get(email);
+    if (!ex)
+      try {
+        db.prepare(
+          "insert into users(id,email,name,auth_role,job_role,created_at,is_active)values(?,?,?,?,?,?,?)",
+        ).run(
+          "usr_" + empId.toLowerCase(),
+          email,
+          name,
+          "user",
+          "Employee",
+          new Date().toISOString(),
+          1,
+        );
+      } catch {}
+    else
+      db.prepare("update users set name=? where lower(email)=lower(?)").run(
+        name,
+        email,
+      );
+  }
   db.prepare(
     "DELETE FROM article_history WHERE article_id IN (SELECT id FROM articles WHERE employee_email IS NOT NULL)",
   ).run();

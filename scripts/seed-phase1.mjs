@@ -1,7 +1,13 @@
 import fs from "fs";
 import path from "path";
 import { DatabaseSync } from "node:sqlite";
-const ROOT = process.cwd();
+// Credentials from article-api/wrangler.toml [[d1_databases]]
+const DB_NAME = "noesys-articles";
+const DB_ID = "acc066a7-2084-4d5e-89b0-90c20c4ceb6c";
+const ROOT = path.resolve(
+  path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")),
+  "..",
+);
 function findDB() {
   const p = path.join(
     ROOT,
@@ -16,20 +22,28 @@ function findDB() {
   );
 }
 const DB = process.env.SEED_DB ?? findDB();
+if (!DB && !process.env.SEED_REMOTE)
+  console.warn(
+    `Local D1 not found. Run with SEED_REMOTE=1 to target production ${DB_NAME} (${DB_ID}) via wrangler d1 execute --remote, or set SEED_DB=<path>.`,
+  );
 const DRY = process.argv.includes("--dry-run");
 const db = new DatabaseSync(DB);
-try {
-  db.exec(
-    fs.readFileSync(
-      path.join(
-        ROOT,
-        "article-api/src/migrations/0007_add_evaluatable_and_employee_link.sql",
+// Apply migrations required for this project (noesys-articles) - order matters, idempotent
+for (const mig of [
+  "0007_article_types_is_active.sql",
+  "0008_unique_index.sql",
+  "0009_evaluatable_flag_employee_linkage.sql",
+]) {
+  try {
+    db.exec(
+      fs.readFileSync(
+        path.join(ROOT, `article-api/src/migrations/${mig}`),
+        "utf8",
       ),
-      "utf8",
-    ),
-  );
-} catch (e) {
-  console.log("migration 0007:", e.message.slice(0, 120));
+    );
+  } catch (e) {
+    console.log(`migration ${mig}:`, e.message.slice(0, 120));
+  }
 }
 if (!DRY && !db.prepare("SELECT id FROM users WHERE id='seed_bot_001'").get())
   db.prepare(

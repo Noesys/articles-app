@@ -2,7 +2,10 @@ import fs from "fs";
 import path from "path";
 import { DatabaseSync } from "node:sqlite";
 import crypto from "crypto";
-const ROOT = process.cwd();
+// Credentials from article-api/wrangler.toml [[d1_databases]]
+const DB_NAME = "noesys-articles";
+const DB_ID = "acc066a7-2084-4d5e-89b0-90c20c4ceb6c";
+const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")), "..");
 const p = path.join(
   ROOT,
   "article-api/.wrangler/state/v3/d1/miniflare-D1DatabaseObject",
