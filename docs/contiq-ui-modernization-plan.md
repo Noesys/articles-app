@@ -16,7 +16,7 @@
 | **D** — Forms, dialogs, selects, toasts | [x] Complete | Dialog md; TipTap/sonner/forms aligned |
 | **E** — Micro-interactions (no route fade) | [x] Complete | Component-level only; no route fade |
 | **F** — Empty/loading/error + a11y | [x] Complete | EmptyState/InlineAlert/skeletons |
-| **G** — Verification + deploy | [~] Blocked | Build ✓; deploy blocked (Wrangler OAuth expired) |
+| **G** — Verification + deploy | [~] Deployed | Live at https://article-api.infoveave.workers.dev (Version ID `eca88233-781b-44cb-8c8a-bb58af4330ad`); visual QA / stakeholder sign-off still open |
 
 ---
 
@@ -292,7 +292,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 
 ### Phase G — Verification + deploy
 
-**Effort: S–M** · **Status: blocked on Cloudflare auth**
+**Effort: S–M** · **Status: deployed** (QA / sign-off remaining)
 
 #### Checklist
 
@@ -302,7 +302,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 - [x] Confirm indigo primary everywhere expected
 - [x] Build + preview smoke
 - [ ] Stakeholder sign-off on A–F screenshots
-- [ ] Deploy per team process — **blocked**: Wrangler OAuth expired; run `npx wrangler login` then `npm run deploy` / `npx wrangler deploy --env=""`
+- [x] Deploy per team process — https://article-api.infoveave.workers.dev · Version ID `eca88233-781b-44cb-8c8a-bb58af4330ad`
 
 **Routes:** Admin Articles, Article Types, Users, Insights, My Article/create/detail; User My Articles/create/detail; auth edges.
 
@@ -352,7 +352,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 - [x] No route fade; component motion only + reduced-motion
 - [x] Density stays data-first (dial 7)
 - [x] Build passes; key flows regression-clean
-- [ ] Deploy only after Phase G review — pending re-auth
+- [x] Deploy only after Phase G review — deployed `eca88233-781b-44cb-8c8a-bb58af4330ad` → https://article-api.infoveave.workers.dev
 
 ---
 
