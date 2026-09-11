@@ -21,7 +21,7 @@ export default function Header() {
           <img
             src={logoImage}
             alt="Contiq"
-            className="h-9 w-auto shrink-0 object-contain"
+            className="h-10 w-auto shrink-0 object-contain"
           />
         </div>
         <div className="flex items-center gap-3">
