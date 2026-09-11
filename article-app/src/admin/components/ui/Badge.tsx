@@ -11,7 +11,7 @@ const VARIANT_STYLES: Record<BadgeVariant, string> = {
   warning: "bg-amber-50 text-amber-700 ring-amber-600/10",
   danger: "bg-red-50 text-red-700 ring-red-600/10",
   neutral: "bg-slate-100 text-slate-600 ring-slate-500/10",
-  indigo: "bg-indigo-50 text-indigo-700 ring-indigo-600/10",
+  indigo: "bg-teal-50 text-teal-700 ring-teal-600/10",
 };
 
 type BadgeProps = {

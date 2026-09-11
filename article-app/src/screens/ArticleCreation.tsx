@@ -348,7 +348,7 @@ export default function ArticleCreation() {
                 onValueChange={(value: string) => setValues({ ...values, article_type_id: value })}
                 disabled={loadingTypes}
               >
-                <SelectTrigger className="w-full border-slate-400 bg-white shadow-sm text-slate-900 [&_span[data-placeholder]]:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <SelectTrigger className="w-full border-slate-400 bg-white shadow-sm text-slate-900 [&_span[data-placeholder]]:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500">
                   <SelectValue placeholder="Select an article type" />
                 </SelectTrigger>
 
@@ -370,7 +370,7 @@ export default function ArticleCreation() {
                 value={values.title}
                 onChange={(e) => setValues({ ...values, title: e.target.value })}
                 placeholder="Enter article title"
-                className="w-full rounded-lg border border-slate-400 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-slate-400 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
@@ -420,7 +420,7 @@ export default function ArticleCreation() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg py-2.5 transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg py-2.5 transition-colors"
             >
               {submitting ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
               {submitting ? "Submitting..." : "Submit Article"}

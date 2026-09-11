@@ -55,7 +55,7 @@ function ToolbarButton({
         <button
           type="button"
           onClick={onClick}
-          className={`rounded-sm border border-transparent p-1.5 outline-none transition-[color,background-color,border-color] duration-[var(--duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "text-slate-600 hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900"}`}
+          className={`rounded-sm border border-transparent p-1.5 outline-none transition-[color,background-color,border-color] duration-[var(--duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 ${active ? "border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100" : "text-slate-600 hover:border-slate-200 hover:bg-slate-100 hover:text-slate-900"}`}
           aria-label={tip}
           aria-pressed={active}
         >
@@ -122,7 +122,7 @@ export default function TiptapEditor({
 
   if (!editor) return null;
   return (
-    <div className="overflow-hidden rounded-sm border border-border bg-white shadow-[var(--shadow-card)] focus-within:border-transparent focus-within:ring-2 focus-within:ring-indigo-500/40">
+    <div className="overflow-hidden rounded-sm border border-border bg-white shadow-[var(--shadow-card)] focus-within:border-transparent focus-within:ring-2 focus-within:ring-teal-500/40">
       <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-slate-50 px-2 py-1.5">
         <ToolbarButton tip="Undo" onClick={() => editor.chain().focus().undo().run()}>
           <Undo2 size={16} />

@@ -269,7 +269,7 @@ export default function ArticleTypesForm() {
             value={form.name}
             onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))}
             placeholder="e.g. Marketing, Software, HR"
-            className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
+            className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
           />
         </div>
         <div className="grid grid-cols-10 gap-4">
@@ -280,7 +280,7 @@ export default function ArticleTypesForm() {
               value={form.description}
               onChange={(e) => setForm((c) => ({ ...c, description: e.target.value }))}
               placeholder="Short description (optional)"
-              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
+              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
             />
           </div>
           <div className="col-span-3">
@@ -306,7 +306,7 @@ export default function ArticleTypesForm() {
                 }));
               }}
               placeholder="10"
-              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
+              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
             />
           </div>
         </div>
@@ -317,7 +317,7 @@ export default function ArticleTypesForm() {
             onChange={(e) => setForm((c) => ({ ...c, promptContent: e.target.value }))}
             placeholder="The full AI scoring prompt for this article type..."
             rows={8}
-            className="w-full resize-y rounded-sm border border-border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
+            className="w-full resize-y rounded-sm border border-border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
           />
         </div>
 
@@ -442,7 +442,7 @@ function ParametersTable({
             <button
               type="button"
               onClick={() => onEdit(row.original)}
-              className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
+              className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-teal-600"
             >
               <Pencil size={13} />
             </button>

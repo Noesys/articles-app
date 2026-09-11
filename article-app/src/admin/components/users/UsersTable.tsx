@@ -39,6 +39,7 @@ import {
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
+import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
 
 const ROLE_LABELS: Record<AuthRole, string> = {
   super_admin: "Super Admin",
@@ -119,7 +120,7 @@ export default function UsersTable({
               <div
                 className={cn(
                   "size-8 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold",
-                  active ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-500",
+                  active ? "bg-teal-600 text-white" : "bg-slate-200 text-slate-500",
                 )}
               >
                 {getInitials(u.name)}
@@ -157,7 +158,7 @@ export default function UsersTable({
               variant="outline"
               className={cn(
                 "font-medium border-transparent",
-                role === "super_admin" && "bg-indigo-50 text-indigo-800 ring-1 ring-indigo-300/80",
+                role === "super_admin" && "bg-teal-50 text-teal-800 ring-1 ring-teal-300/80",
                 role === "admin" && "bg-sky-50 text-sky-700 ring-1 ring-sky-200/80",
                 role === "user" && "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80",
               )}
@@ -247,7 +248,7 @@ export default function UsersTable({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 px-2.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800"
+                  className="h-7 px-2.5 text-xs font-medium text-teal-700 hover:bg-teal-50 hover:text-teal-800"
                   onClick={() => onUserClick?.(u.id)}
                 >
                   Articles
@@ -294,13 +295,15 @@ export default function UsersTable({
   const rolePending = pending?.type === "role" ? pending : null;
   const statusActive = statusUser?.is_active === 1;
 
+  if (loading) {
+    return <DataGridSkeleton rows={8} cols={5} />;
+  }
+
   return (
     <>
       <DataGrid
         table={table}
         recordCount={users.length}
-        isLoading={loading}
-        loadingMode="skeleton"
         tableLayout={contiqTableLayout}
         tableClassNames={contiqTableClassNames}
       >
@@ -328,7 +331,7 @@ export default function UsersTable({
             </DialogDescription>
           </DialogHeader>
           {statusUser?.auth_role === "super_admin" && (
-            <div className="flex items-start gap-2 rounded-sm bg-indigo-50 px-3 py-2 text-xs text-indigo-800">
+            <div className="flex items-start gap-2 rounded-sm bg-teal-50 px-3 py-2 text-xs text-teal-800">
               <ShieldCheck size={14} className="shrink-0 mt-0.5" />
               This is a super admin account. Make sure this action is intended.
             </div>

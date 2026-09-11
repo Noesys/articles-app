@@ -18,7 +18,11 @@ export default function Header() {
         style={{ height: "var(--header-height)" }}
       >
         <div className="flex items-center gap-2">
-          <img src={logoImage} alt="Contiq" className="h-10 w-auto max-w-[7.5rem] object-contain" />
+          <img
+            src={logoImage}
+            alt="Contiq"
+            className="h-9 w-auto shrink-0 object-contain"
+          />
         </div>
         <div className="flex items-center gap-3">
           {user && <span className="hidden text-sm text-slate-500 sm:block">{user.name}</span>}

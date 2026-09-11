@@ -98,7 +98,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
             icon={<Pencil size={15} />}
             label={`Edit ${type.name}`}
             onClick={() => onEdit(type)}
-            hoverClass="hover:bg-slate-100 hover:text-indigo-600"
+            hoverClass="hover:bg-slate-100 hover:text-teal-600"
           />
           <ActionButton
             icon={<Trash2 size={15} />}

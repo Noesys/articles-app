@@ -41,7 +41,7 @@ const NAV_ITEMS = [
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
     "flex items-center justify-center gap-2 rounded-sm px-2.5 xl:px-3 py-2 text-sm font-medium outline-none transition-[color,background-color] duration-[var(--duration-fast)] ease-[var(--ease-out-contiq)] focus-visible:ring-3 focus-visible:ring-ring/50",
-    isActive ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+    isActive ? "bg-teal-600 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
   );
 
 export default function AdminHeader({ title }: { title?: string }) {
@@ -61,26 +61,29 @@ export default function AdminHeader({ title }: { title?: string }) {
         className="flex w-full items-center justify-between gap-3 px-[var(--page-pad-x)] md:px-[var(--page-pad-x-md)]"
         style={{ height: "var(--header-height)" }}
       >
-        <div className="flex shrink-0 items-center gap-2">
-          <img src={logoImage} alt="Contiq" className="h-10 w-auto max-w-[7.5rem] object-contain" />
+        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+          <img
+            src={logoImage}
+            alt="Contiq"
+            className="h-9 w-auto shrink-0 object-contain"
+          />
+          {title && (
+            <span className="hidden truncate text-sm font-medium text-slate-700 2xl:block">
+              {title}
+            </span>
+          )}
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Admin">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink key={item.key} to={item.to} className={navLinkClass}>
+                  <Icon size={16} aria-hidden />
+                  <span className="hidden xl:inline">{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
         </div>
-        {title && (
-          <span className="hidden truncate text-sm font-medium text-slate-700 xl:block">
-            {title}
-          </span>
-        )}
-
-        <nav className="hidden flex-1 items-center justify-center gap-1 lg:flex" aria-label="Admin">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink key={item.key} to={item.to} className={navLinkClass}>
-                <Icon size={16} aria-hidden />
-                <span className="hidden xl:inline">{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
 
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
           {user && (
@@ -123,7 +126,7 @@ export default function AdminHeader({ title }: { title?: string }) {
                     cn(
                       "flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium outline-none transition-[color,background-color] duration-[var(--duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50",
                       isActive
-                        ? "bg-indigo-600 text-white"
+                        ? "bg-teal-600 text-white"
                         : "text-slate-600 hover:bg-slate-100",
                     )
                   }

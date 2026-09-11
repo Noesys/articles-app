@@ -388,7 +388,7 @@ export default function AdminArticleDetail() {
 
           <button
             onClick={() => navigate("/admin/articles")}
-            className="text-sm text-indigo-600 hover:underline"
+            className="text-sm text-teal-600 hover:underline"
           >
             Back to Articles
           </button>

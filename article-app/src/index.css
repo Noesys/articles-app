@@ -9,7 +9,7 @@
 
 /*
   Contiq design tokens (Phase A)
-  - Primary: indigo globally
+  - Primary: logo teal (teal-600) globally — matches Contiq "iq"/icon
   - Radius: sm-first (--radius = --radius-sm); dialogs may use rounded-md
   - Borders: soft slate #e2e8f0 — never black/currentColor on DataGrid
   - Motion: component-level only; no route fade
@@ -37,23 +37,23 @@ body,
     --popover: #ffffff;
     --popover-foreground: #0f172a;
 
-    /* Contiq indigo primary (not near-black) */
-    --primary: #4f46e5; /* indigo-600 */
+    /* Contiq logo teal primary (matches Contiq "iq"/icon ~#00a694) */
+    --primary: #0d9488; /* teal-600 */
     --primary-foreground: #ffffff;
 
     --secondary: #f8fafc; /* slate-50 */
     --secondary-foreground: #0f172a;
     --muted: #f8fafc;
     --muted-foreground: #64748b; /* slate-500 */
-    --accent: #eef2ff; /* indigo-50 */
-    --accent-foreground: #3730a3; /* indigo-800 */
+    --accent: #f0fdfa; /* teal-50 */
+    --accent-foreground: #115e59; /* teal-800 */
 
     --destructive: oklch(0.577 0.245 27.325);
 
     /* Soft slate border lock */
     --border: #e2e8f0; /* slate-200 */
     --input: #e2e8f0;
-    --ring: color-mix(in oklab, #4f46e5 45%, transparent);
+    --ring: color-mix(in oklab, #0d9488 45%, transparent);
 
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
@@ -88,12 +88,12 @@ body,
 
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: #4f46e5;
+    --sidebar-primary: #0d9488;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #eef2ff;
-    --sidebar-accent-foreground: #3730a3;
+    --sidebar-accent: #f0fdfa;
+    --sidebar-accent-foreground: #115e59;
     --sidebar-border: #e2e8f0;
-    --sidebar-ring: color-mix(in oklab, #4f46e5 45%, transparent);
+    --sidebar-ring: color-mix(in oklab, #0d9488 45%, transparent);
   }
 
   .dark {
@@ -103,7 +103,7 @@ body,
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: #818cf8; /* indigo-400 — dormant dark */
+    --primary: #2dd4bf; /* teal-400 — dormant dark */
     --primary-foreground: #0f172a;
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
@@ -114,7 +114,7 @@ body,
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: color-mix(in oklab, #818cf8 45%, transparent);
+    --ring: color-mix(in oklab, #2dd4bf 45%, transparent);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -217,9 +217,9 @@ body,
   --destructive-foreground: var(--color-red-800);
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-900);
-  /* info → Contiq indigo (not violet / AI-purple) */
-  --info: #4f46e5;
-  --info-foreground: #312e81;
+  /* info → Contiq teal (logo primary family) */
+  --info: #0d9488;
+  --info-foreground: #115e59;
   --warning: var(--color-yellow-500);
   --warning-foreground: var(--color-yellow-900);
   --invert: var(--color-zinc-900);
@@ -230,8 +230,8 @@ body,
   --destructive-foreground: var(--color-red-600);
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-600);
-  --info: #818cf8;
-  --info-foreground: #c7d2fe;
+  --info: #2dd4bf;
+  --info-foreground: #99f6e4;
   --warning: var(--color-yellow-500);
   --warning-foreground: var(--color-yellow-600);
   --invert: var(--color-zinc-700);

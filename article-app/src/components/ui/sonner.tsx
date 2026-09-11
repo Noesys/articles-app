@@ -16,7 +16,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4 text-emerald-600" />,
-        info: <InfoIcon className="size-4 text-indigo-600" />,
+        info: <InfoIcon className="size-4 text-teal-600" />,
         warning: <TriangleAlertIcon className="size-4 text-amber-600" />,
         error: <OctagonXIcon className="size-4 text-red-600" />,
         loading: <Loader2Icon className="size-4 animate-spin text-slate-500" />,
@@ -42,7 +42,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           success: "border-emerald-200 bg-emerald-50",
           error: "border-red-200 bg-red-50",
           warning: "border-amber-200 bg-amber-50",
-          info: "border-indigo-200 bg-indigo-50",
+          info: "border-teal-200 bg-teal-50",
         },
       }}
       {...props}

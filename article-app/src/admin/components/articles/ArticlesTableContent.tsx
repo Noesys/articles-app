@@ -138,7 +138,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="block truncate font-medium text-indigo-600 text-[13px]">
+                  <span className="block truncate font-medium text-teal-600 text-[13px]">
                     {title}
                   </span>
                 </TooltipTrigger>
@@ -156,7 +156,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
           const name = getValue() as string;
           return (
             <div className="flex items-center gap-2 min-w-0">
-              <div className="size-7 shrink-0 rounded-full bg-indigo-600 text-white text-[11px] font-semibold flex items-center justify-center">
+              <div className="size-7 shrink-0 rounded-full bg-teal-600 text-white text-[11px] font-semibold flex items-center justify-center">
                 {getNameInitials(name)}
               </div>
               <span className="truncate text-sm font-medium text-foreground">{name}</span>
@@ -279,7 +279,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
           onChange={(e) => setTitleFilter(e.target.value)}
           placeholder="Search title..."
           aria-label="Search title"
-          className="h-9 w-full rounded-sm border border-border bg-white py-2 pr-3 pl-9 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-indigo-500/40"
+          className="h-9 w-full rounded-sm border border-border bg-white py-2 pr-3 pl-9 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
         />
       </div>
 

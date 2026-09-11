@@ -1,6 +1,6 @@
 # Contiq UI Modernization Plan
 
-> **Design Read:** Contiq is an **admin / product app** (articles scoring, Users DataGrid, insights)—not a landing page. Target language: Linear / Notion / Stripe Dashboard / Vercel admin, on existing **shadcn + ReUI DataGrid**, preserving Contiq brand (Geist, slate, indigo).
+> **Design Read:** Contiq is an **admin / product app** (articles scoring, Users DataGrid, insights)—not a landing page. Target language: Linear / Notion / Stripe Dashboard / Vercel admin, on existing **shadcn + ReUI DataGrid**, preserving Contiq brand (Geist, slate, logo teal).
 
 **Honesty (tasteskill §13):** No heroes, bento, marquees, or marketing choreography. Elevate post-antd→ReUI surfaces that still feel basic.
 
@@ -16,7 +16,7 @@
 | **D** — Forms, dialogs, selects, toasts | [x] Complete | Dialog md; TipTap/sonner/forms aligned |
 | **E** — Micro-interactions (no route fade) | [x] Complete | Component-level only; no route fade |
 | **F** — Empty/loading/error + a11y | [x] Complete | EmptyState/InlineAlert/skeletons |
-| **G** — Verification + deploy | [x] Deployed | Live at https://article-api.infoveave.workers.dev (Version ID `226af886-e8be-48f0-8d7e-1f34ba23f834`); visual QA / stakeholder sign-off still open |
+| **G** — Verification + deploy | [ ] In progress | Primary overridden to logo teal; header layout + my-articles skeletons polishing |
 
 ---
 
@@ -34,13 +34,13 @@
 
 | Decision | Lock |
 |---|---|
-| **Primary** | Contiq **indigo** globally (`--primary` → indigo-600 family) |
+| **Primary** | Contiq **logo teal** globally (`--primary` → teal-600 `#0d9488`; matches Contiq "iq"/icon ~`#00a694`) — **overrides prior indigo lock** |
 | **Border radius** | Normalize to **`sm`** (`rounded-sm` / `--radius-sm`) across the board |
 | **Dialog radius** | One step up (`rounded-md`) **only** when hierarchy needs it; default everything else to sm |
 | **Borders** | Soft slate (`border-slate-200` / `--border: #e2e8f0`)—no black/`currentColor` regression; no random slate-300/400 mix |
 | **Table headers** | **Sentence-case semibold** (`text-sm font-semibold text-slate-700`) |
 | **Route fade** | **Off** (hard cuts); component-level motion only |
-| **Brand** | Contiq logo, Geist, indigo accent—no AI-purple wash |
+| **Brand** | Contiq logo, Geist, teal accent—no AI-purple wash |
 | **DataGrid borders** | Soft slate lock from `9cb80bf` must hold |
 
 ---
@@ -59,7 +59,7 @@
 | DataGrid container | `rounded-sm` | `border-slate-200` / `--border` |
 | DataGrid cells | n/a | `--border` `#e2e8f0` (forced; never `currentColor`) |
 | Pagination active page | `rounded-sm` | soft slate fill, not black pill |
-| Nav active pill | `rounded-sm` | indigo fill |
+| Nav active pill | `rounded-sm` | teal fill |
 | Dialog / modal | `rounded-md` (hierarchy exception) | `ring-slate-200` / soft border |
 | Avatar / progress track | `rounded-full` (shape requires it) | soft where bordered |
 | Toast | `rounded-sm` | soft slate |
@@ -88,10 +88,10 @@
 | `--border` | Soft lines | `#e2e8f0` **lock** |
 | `--muted` | Header wash | slate-50 |
 | `--muted-foreground` | Meta / email | slate-500 |
-| `--primary` | CTA | indigo-600 `#4f46e5` |
+| `--primary` | CTA | teal-600 `#0d9488` (logo family) |
 | `--primary-foreground` | CTA text | white |
-| `--ring` | Focus | indigo family ~40% |
-| `--info` | Informational | indigo/sky—**not** violet |
+| `--ring` | Focus | teal family ~40% |
+| `--info` | Informational | teal—**not** violet |
 | `--shadow-card` | Table/panel | tinted slate stack |
 | `--shadow-overlay` | Modals | deeper tinted stack |
 | `--header-height` | Shell | `3.25rem`–`3.5rem` (≤64px) |

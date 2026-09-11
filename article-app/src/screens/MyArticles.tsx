@@ -42,6 +42,7 @@ import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
 import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import EmptyState from "@/admin/components/ui/EmptyState";
+import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
 
 type ArticleStatus = "accepted" | "rejected" | "scoring";
 
@@ -298,14 +299,17 @@ export default function MyArticles() {
         )}
         {error && <InlineAlert>{error}</InlineAlert>}
 
-        <MyArticlesTable
-          articles={filteredArticles}
-          loading={loading}
-          onRowClick={(id) => navigate(`/articles/${id}`)}
-          month={month}
-          viewAll={viewAll}
-          onCreate={() => navigate("/articles/new")}
-        />
+        {loading ? (
+          <DataGridSkeleton rows={8} cols={6} />
+        ) : (
+          <MyArticlesTable
+            articles={filteredArticles}
+            onRowClick={(id) => navigate(`/articles/${id}`)}
+            month={month}
+            viewAll={viewAll}
+            onCreate={() => navigate("/articles/new")}
+          />
+        )}
 
         {viewAll && totalPages > 1 && (
           <div className="mt-4 flex items-center justify-between">
@@ -347,14 +351,12 @@ export default function MyArticles() {
 
 function MyArticlesTable({
   articles,
-  loading,
   onRowClick,
   month,
   viewAll,
   onCreate,
 }: {
   articles: ArticleListItem[];
-  loading: boolean;
   onRowClick: (id: string) => void;
   month: string;
   viewAll: boolean;
@@ -469,7 +471,7 @@ function MyArticlesTable({
     onSortingChange: setSorting,
   });
 
-  if (!loading && articles.length === 0) {
+  if (articles.length === 0) {
     return (
       <EmptyState
         icon={<FileText size={20} />}
@@ -489,8 +491,6 @@ function MyArticlesTable({
     <DataGrid
       table={table}
       recordCount={articles.length}
-      isLoading={loading}
-      loadingMode="skeleton"
       onRowClick={(row) => onRowClick(row.id)}
       emptyMessage={
         viewAll ? "No articles found." : `No articles for ${dayjs(month).format("MMMM YYYY")}.`

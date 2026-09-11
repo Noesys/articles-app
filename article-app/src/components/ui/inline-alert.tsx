@@ -20,7 +20,7 @@ const VARIANT: Record<
     Icon: CheckCircle2,
   },
   info: {
-    className: "border-indigo-200 bg-indigo-50 text-indigo-800",
+    className: "border-teal-200 bg-teal-50 text-teal-800",
     Icon: Info,
   },
 };

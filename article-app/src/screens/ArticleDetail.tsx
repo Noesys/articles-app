@@ -218,7 +218,7 @@ export default function ArticleDetail() {
         <div className="text-center">
           <p className="text-slate-500 mb-4">{error}</p>
 
-          <button onClick={() => navigate("/")} className="text-sm text-indigo-600 hover:underline">
+          <button onClick={() => navigate("/")} className="text-sm text-teal-600 hover:underline">
             Back to Articles
           </button>
         </div>
@@ -266,7 +266,7 @@ export default function ArticleDetail() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Article title"
-              className="flex-1 bg-white text-sm font-medium rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 bg-white text-sm font-medium rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           ) : (
             <h1 className="text-2xl font-semibold text-slate-900 leading-snug">{displayTitle}</h1>
@@ -298,7 +298,7 @@ export default function ArticleDetail() {
               <button
                 onClick={handleSubmitRewrite}
                 disabled={submitting}
-                className="flex items-center gap-1.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white rounded-lg px-3 py-2 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-lg px-3 py-2 transition-colors"
               >
                 {submitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Submit Rewrite
@@ -310,7 +310,7 @@ export default function ArticleDetail() {
                 setEditing(true);
                 setContentCollapsed(false);
               }}
-              className="flex items-center gap-1.5 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3 py-2 transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-3 py-2 transition-colors shrink-0"
             >
               <Edit3 size={14} />
               Rewrite Article
