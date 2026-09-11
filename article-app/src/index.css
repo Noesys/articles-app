@@ -186,7 +186,7 @@ body,
   --tw-prose-body: #334155;
   --tw-prose-headings: #0f172a;
   --tw-prose-bold: #0f172a;
-  --tw-prose-links: #4f46e5;
+  --tw-prose-links: var(--primary);
   --tw-prose-quotes: #475569;
   --tw-prose-quote-borders: #e2e8f0;
   --tw-prose-code: #1e293b;

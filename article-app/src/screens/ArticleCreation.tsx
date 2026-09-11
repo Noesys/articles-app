@@ -19,7 +19,7 @@ const ArticleViewer = lazy(() => import("@/components/shadcnEditor/ArticleViewer
 
 function EditorFallback() {
   return (
-    <div className="min-h-[240px] flex items-center justify-center rounded-lg border border-slate-200 bg-white">
+    <div className="min-h-[240px] flex items-center justify-center rounded-sm border border-slate-200 bg-white">
       <Loader2 size={22} className="animate-spin text-slate-400" />
     </div>
   );
@@ -332,7 +332,7 @@ export default function ArticleCreation() {
 
         <div>
           {typesError && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
+            <div className="mb-4 rounded-sm bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600">
               {typesError}
             </div>
           )}
@@ -348,7 +348,7 @@ export default function ArticleCreation() {
                 onValueChange={(value: string) => setValues({ ...values, article_type_id: value })}
                 disabled={loadingTypes}
               >
-                <SelectTrigger className="w-full border-slate-400 bg-white shadow-sm text-slate-900 [&_span[data-placeholder]]:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500">
+                <SelectTrigger className="w-full border-border bg-white shadow-sm text-slate-900 [&_span[data-placeholder]]:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500">
                   <SelectValue placeholder="Select an article type" />
                 </SelectTrigger>
 
@@ -370,7 +370,7 @@ export default function ArticleCreation() {
                 value={values.title}
                 onChange={(e) => setValues({ ...values, title: e.target.value })}
                 placeholder="Enter article title"
-                className="w-full rounded-lg border border-slate-400 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full rounded-sm border border-border bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
@@ -378,7 +378,7 @@ export default function ArticleCreation() {
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Content</label>
 
               <div className="space-y-2">
-                <div className="flex bg-slate-100 rounded-lg p-0.5 w-fit">
+                <div className="flex bg-slate-100 rounded-sm p-0.5 w-fit">
                   <button
                     type="button"
                     onClick={() => setEditorView("editor")}
@@ -420,7 +420,7 @@ export default function ArticleCreation() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg py-2.5 transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-sm font-medium rounded-sm py-2.5 transition-colors"
             >
               {submitting ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
               {submitting ? "Submitting..." : "Submit Article"}

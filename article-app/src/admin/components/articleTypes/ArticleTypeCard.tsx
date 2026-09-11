@@ -158,7 +158,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                       maxValue?: string | number | null;
                     }[]
                   ).map((param) => (
-                    <div key={param.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div key={param.id} className="rounded-sm border border-slate-200 bg-white p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
                           <h4 className="font-medium text-slate-900">{param.name}</h4>

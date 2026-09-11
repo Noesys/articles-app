@@ -312,7 +312,7 @@ function DataGridColumnHeaderInner<TData extends object, TValue>({
           <Button
             size="icon-sm"
             variant="ghost"
-            className="rounded-lg -me-1 size-7"
+            className="rounded-sm -me-1 size-7"
             onClick={() => column.pin(false)}
             aria-label={i18n.labels.unpinColumn(resolvedTitle)}
             title={i18n.labels.unpinColumn(resolvedTitle)}

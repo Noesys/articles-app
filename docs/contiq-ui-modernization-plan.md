@@ -129,7 +129,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 #### Checklist
 
 - [x] Write durable plan file (`docs/contiq-ui-modernization-plan.md`)
-- [x] Update `:root` Contiq semantic tokens in `article-app/src/index.css` (primary indigo, soft `--border`, muted/foreground slate)
+- [x] Update `:root` Contiq semantic tokens in `article-app/src/index.css` (primary teal, soft `--border`, muted/foreground slate)
 - [x] Set `--radius` / `--radius-sm` so utilities resolve to **sm**; document md exception for dialogs
 - [x] Add tinted `--shadow-card` / `--shadow-overlay`
 - [x] Add motion vars (`--ease-out-contiq`, `--duration-fast`, `--duration-med`)
@@ -140,7 +140,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 - [x] Remove dead `.ant-*` CSS overrides
 - [x] Add `prefers-reduced-motion` base rules
 - [x] Document token usage in CSS comment block
-- [x] Align shadcn `button.tsx` to `rounded-sm` (primary inherits indigo via tokens)
+- [x] Align shadcn `button.tsx` to `rounded-sm` (primary inherits teal via tokens)
 - [x] Soften admin `Button.tsx` to `rounded-sm`
 - [x] Soften `input.tsx` to `rounded-sm`
 - [x] Soften `badge.tsx` (shadcn) to `rounded-sm`
@@ -151,7 +151,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 
 **Acceptance**
 
-- [x] Default Button reads Contiq indigo (not near-black)
+- [x] Default Button reads Contiq teal (not near-black)
 - [x] DataGrid borders remain soft slate (no black regression)
 - [x] Light theme only for v1 (dark tokens can stay dormant)
 - [ ] WCAG AA spot-check on primary button & body text (verify in Phase G screenshots)
@@ -225,7 +225,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 - [x] Form rhythm: label above, `gap-2`, helper/error below; indigo focus ring
 - [x] Dialog: opaque white, soft ring, footer slate-50; `rounded-md`; `--duration-med`
 - [x] Select / popover / autocomplete: sm radius, soft border/ring (Phase A started; finish parity)
-- [x] Sonner: slate border, indigo/success/danger icons
+- [x] Sonner: slate border, teal/success/danger icons
 - [x] Article Types parameter modal polish
 - [x] Consolidate admin Badge → shadcn Badge + Contiq semantic classes (or document dual use)
 - [x] TipTap: editor border/focus/toolbar align with tokens
@@ -299,7 +299,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 - [ ] Visual QA checklist per admin + user route
 - [ ] Regression: scoring, promote/deactivate, filters/URL, pagination, TipTap
 - [x] Confirm no black DataGrid border regression
-- [x] Confirm indigo primary everywhere expected
+- [x] Confirm teal primary everywhere expected
 - [x] Build + preview smoke
 - [ ] Stakeholder sign-off on A–F screenshots
 - [x] Deploy per team process — https://article-api.infoveave.workers.dev · Version ID `226af886-e8be-48f0-8d7e-1f34ba23f834`
@@ -345,7 +345,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 
 ## 8. Acceptance criteria (program-level)
 
-- [x] One accent: Contiq indigo; no AI-purple
+- [x] One accent: Contiq teal; no AI-purple
 - [x] Radius = sm everywhere except dialogs (`md`) and true circles (avatar)
 - [x] Borders = soft slate-200; DataGrid never black
 - [x] Table headers = sentence-case semibold

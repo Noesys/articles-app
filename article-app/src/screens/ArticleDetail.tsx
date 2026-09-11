@@ -21,7 +21,7 @@ const ArticleViewer = lazy(() => import("@/components/shadcnEditor/ArticleViewer
 
 function EditorFallback() {
   return (
-    <div className="min-h-[200px] flex items-center justify-center rounded-lg border border-slate-200 bg-white">
+    <div className="min-h-[200px] flex items-center justify-center rounded-sm border border-slate-200 bg-white">
       <Loader2 size={22} className="animate-spin text-slate-400" />
     </div>
   );
@@ -243,7 +243,7 @@ export default function ArticleDetail() {
 
         {effectiveSnapshot && (
           <div className="mb-4 flex items-center gap-2">
-            <span className="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">
+            <span className="text-xs px-2.5 py-1 rounded-sm bg-amber-100 text-amber-700 font-medium">
               Version {effectiveSnapshot.version} Snapshot
             </span>
             {displaySubmittedAt && (
@@ -254,7 +254,7 @@ export default function ArticleDetail() {
           </div>
         )}
         {isPending && !effectiveSnapshot && (
-          <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
+          <div className="mb-4 rounded-sm bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
             <Loader2 size={14} className="animate-spin" /> Processing your submission — scoring in
             background...
           </div>
@@ -266,14 +266,14 @@ export default function ArticleDetail() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Article title"
-              className="flex-1 bg-white text-sm font-medium rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              className="flex-1 bg-white text-sm font-medium rounded-sm border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           ) : (
             <h1 className="text-2xl font-semibold text-slate-900 leading-snug">{displayTitle}</h1>
           )}
 
           {effectiveSnapshot ? null : isPending ? (
-            <span className="text-xs px-3 py-2 rounded-lg bg-amber-100 text-amber-700 font-medium">
+            <span className="text-xs px-3 py-2 rounded-sm bg-amber-100 text-amber-700 font-medium">
               Scoring — edits disabled
             </span>
           ) : editing ? (
@@ -289,7 +289,7 @@ export default function ArticleDetail() {
 
                   setSubmitError(null);
                 }}
-                className="flex items-center gap-1.5 text-sm font-medium bg-white text-slate-700 border border-slate-200 rounded-lg px-3 py-2 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium bg-white text-slate-700 border border-slate-200 rounded-sm px-3 py-2 transition-colors"
               >
                 <X size={14} />
                 Cancel
@@ -298,7 +298,7 @@ export default function ArticleDetail() {
               <button
                 onClick={handleSubmitRewrite}
                 disabled={submitting}
-                className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-lg px-3 py-2 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-sm px-3 py-2 transition-colors"
               >
                 {submitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Submit Rewrite
@@ -310,7 +310,7 @@ export default function ArticleDetail() {
                 setEditing(true);
                 setContentCollapsed(false);
               }}
-              className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-3 py-2 transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 text-white rounded-sm px-3 py-2 transition-colors shrink-0"
             >
               <Edit3 size={14} />
               Rewrite Article
@@ -320,7 +320,7 @@ export default function ArticleDetail() {
 
         <div className="space-y-6">
           {/* Current Score */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-sm border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-md font-semibold uppercase tracking-wide text-slate-600 mb-1">
               Current Score
             </p>
@@ -364,7 +364,7 @@ export default function ArticleDetail() {
           </div>
 
           {/* Feedback */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-sm border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <p className="text-md font-semibold uppercase tracking-wide text-slate-600">
                 Feedback
@@ -378,7 +378,7 @@ export default function ArticleDetail() {
                 Evaluation failed. Please rewrite the article and submit it again.
               </p>
             ) : displayScore === null ? (
-              <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-sm border border-slate-200 shadow-sm">
                 <Loader2 size={16} className="animate-spin text-slate-400" />
                 <span>Scoring...</span>
               </div>
@@ -389,7 +389,7 @@ export default function ArticleDetail() {
           <ParameterResultsBox results={parameterResults} />
 
           {/* Content - COLLAPSIBLE */}
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
             <div
               className="flex items-center justify-between px-5 py-4 border-b border-slate-100 cursor-pointer"
               onClick={() => setContentCollapsed(!contentCollapsed)}
@@ -399,7 +399,7 @@ export default function ArticleDetail() {
               <div className="flex items-center gap-2">
                 {article && (
                   <div className="flex items-center">
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-full px-2.5 py-1">
+                    <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-sm px-2.5 py-1">
                       {article.article_type_name}
                     </span>
                     <ArticleCopyButton title={title} text={content} />
@@ -420,7 +420,7 @@ export default function ArticleDetail() {
               <div className="px-5 py-4">
                 {editing ? (
                   <div>
-                    <div className="flex bg-slate-100 rounded-lg p-0.5 w-fit">
+                    <div className="flex bg-slate-100 rounded-sm p-0.5 w-fit">
                       <button
                         type="button"
                         onClick={() => setEditorView("editor")}

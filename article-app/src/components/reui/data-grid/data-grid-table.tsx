@@ -2015,7 +2015,7 @@ function DataGridTableLoader() {
 
   return (
     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-      <div className="text-muted-foreground bg-card rounded-lg flex items-center gap-2 border px-4 py-2 text-sm leading-none font-medium">
+      <div className="text-muted-foreground bg-card rounded-sm flex items-center gap-2 border px-4 py-2 text-sm leading-none font-medium">
         <Spinner className="size-5 opacity-60" />
         {props.loadingMessage || i18n.labels.loading}
       </div>
@@ -2046,7 +2046,7 @@ function DataGridTableRowPin<TData extends object>({
         }
       }}
       className={cn(
-        "text-muted-foreground hover:text-foreground rounded-lg inline-flex size-7 items-center justify-center transition-colors",
+        "text-muted-foreground hover:text-foreground rounded-sm inline-flex size-7 items-center justify-center transition-colors",
         isPinned && "text-primary hover:text-primary/80"
       )}
     >
@@ -2197,7 +2197,7 @@ function DataGridTableRowExpand<TData extends object>({
             row.toggleExpanded()
           }}
           className={cn(
-            "text-muted-foreground hover:text-foreground rounded-lg inline-flex items-center justify-center transition-colors",
+            "text-muted-foreground hover:text-foreground rounded-sm inline-flex items-center justify-center transition-colors",
             controlSize
           )}
         >
