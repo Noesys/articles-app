@@ -16,7 +16,7 @@
 | **D** — Forms, dialogs, selects, toasts | [x] Complete | Dialog md; TipTap/sonner/forms aligned |
 | **E** — Micro-interactions (no route fade) | [x] Complete | Component-level only; no route fade |
 | **F** — Empty/loading/error + a11y | [x] Complete | EmptyState/InlineAlert/skeletons |
-| **G** — Verification + deploy | [~] Deployed | Live at https://article-api.infoveave.workers.dev (Version ID `eca88233-781b-44cb-8c8a-bb58af4330ad`); visual QA / stakeholder sign-off still open |
+| **G** — Verification + deploy | [x] Deployed | Live at https://article-api.infoveave.workers.dev (Version ID `226af886-e8be-48f0-8d7e-1f34ba23f834`); visual QA / stakeholder sign-off still open |
 
 ---
 
@@ -302,7 +302,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 - [x] Confirm indigo primary everywhere expected
 - [x] Build + preview smoke
 - [ ] Stakeholder sign-off on A–F screenshots
-- [x] Deploy per team process — https://article-api.infoveave.workers.dev · Version ID `eca88233-781b-44cb-8c8a-bb58af4330ad`
+- [x] Deploy per team process — https://article-api.infoveave.workers.dev · Version ID `226af886-e8be-48f0-8d7e-1f34ba23f834`
 
 **Routes:** Admin Articles, Article Types, Users, Insights, My Article/create/detail; User My Articles/create/detail; auth edges.
 
@@ -352,7 +352,7 @@ Suggested PR order: `A → B → C → D → E → F → G`. **A must land first
 - [x] No route fade; component motion only + reduced-motion
 - [x] Density stays data-first (dial 7)
 - [x] Build passes; key flows regression-clean
-- [x] Deploy only after Phase G review — deployed `eca88233-781b-44cb-8c8a-bb58af4330ad` → https://article-api.infoveave.workers.dev
+- [x] Deploy only after Phase G review — deployed `226af886-e8be-48f0-8d7e-1f34ba23f834` → https://article-api.infoveave.workers.dev
 
 ---
 
