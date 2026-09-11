@@ -16,7 +16,7 @@
 | **D** — Forms, dialogs, selects, toasts | [x] Complete | Dialog md; TipTap/sonner/forms aligned |
 | **E** — Micro-interactions (no route fade) | [x] Complete | Component-level only; no route fade |
 | **F** — Empty/loading/error + a11y | [x] Complete | EmptyState/InlineAlert/skeletons |
-| **G** — Verification + deploy | [ ] In progress | Primary overridden to logo teal; header layout + my-articles skeletons polishing |
+| **G** — Verification + deploy | [x] Deployed | Live at https://article-api.infoveave.workers.dev (Version ID `c553bdcd-7436-4536-a7bb-6571c4c26dbc`); primary = logo teal; header left-cluster + table skeletons |
 
 ---
 
