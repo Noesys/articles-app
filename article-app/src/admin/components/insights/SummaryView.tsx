@@ -19,8 +19,8 @@ function NumericDistribution({ distribution }: { distribution: NumericDistributi
             <div
               className={
                 bucket.count === 0
-                  ? "w-full rounded-sm bg-slate-100 border border-slate-200"
-                  : "w-full rounded-sm bg-[#534ab7]"
+                  ? "w-full rounded-sm bg-slate-100 border border-slate-300"
+                  : "w-full rounded-sm bg-[#4f46e5]"
               }
               style={{
                 height: `${Math.max((bucket.count / maxCount) * 100, bucket.count === 0 ? 6 : 10)}%`,
@@ -71,7 +71,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
     <ConfigProvider
       theme={{
         algorithm: antdTheme.defaultAlgorithm,
-        token: { colorPrimary: "#534ab7", borderRadius: 8 },
+        token: { colorPrimary: "#4f46e5", borderRadius: 8 },
         components: {
           Table: {
             headerBg: "#e2e8f0",
@@ -129,8 +129,8 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
                             key={o.label}
                             className={
                               o.count === 0
-                                ? "inline-flex items-center rounded-full bg-slate-50 border border-dashed border-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-400"
-                                : "inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-medium text-slate-700"
+                                ? "inline-flex items-center rounded-full bg-slate-50 border border-dashed border-slate-300 px-2.5 py-0.5 text-xs font-medium text-slate-400"
+                                : "inline-flex items-center rounded-full bg-slate-100 border border-slate-300 px-2.5 py-0.5 text-xs font-medium text-slate-700"
                             }
                           >
                             {o.label}: {o.count}
@@ -154,7 +154,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
                 {
                   background: "#fff",
                   border: "1px solid #e2e8f0",
-                  borderRadius: 12,
+                  borderRadius: 8,
                   overflow: "hidden",
                 } as React.CSSProperties
               }

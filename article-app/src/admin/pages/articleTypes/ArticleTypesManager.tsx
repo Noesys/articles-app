@@ -90,7 +90,7 @@ export default function ArticleTypesManager({ articleTypes, onDelete }: ArticleT
             description="Try a different search term or filter."
           />
         ) : (
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+          <div className="bg-white border border-slate-300 rounded-lg overflow-hidden divide-y divide-slate-100">
             {filtered.map((type) => (
               <ArticleTypeCard
                 key={type.id}

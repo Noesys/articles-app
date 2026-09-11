@@ -69,7 +69,7 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
     <ConfigProvider
       theme={{
         algorithm: antdTheme.defaultAlgorithm,
-        token: { colorPrimary: "#534ab7", borderRadius: 8 },
+        token: { colorPrimary: "#4f46e5", borderRadius: 8 },
         components: {
           Table: {
             headerBg: "#e2e8f0",
@@ -83,7 +83,7 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
         style={{
           background: "var(--ant-color-bg-container)",
           border: "1px solid var(--ant-color-border-secondary)",
-          borderRadius: 12,
+          borderRadius: 8,
           overflow: "hidden",
         }}
       >

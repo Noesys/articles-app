@@ -257,7 +257,7 @@ export default function ArticleDetail() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Article title"
-              className="flex-1 bg-white text-sm font-medium rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 bg-white text-sm font-medium rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           ) : (
             <h1 className="text-2xl font-semibold text-slate-900 leading-snug">{displayTitle}</h1>
@@ -280,7 +280,7 @@ export default function ArticleDetail() {
 
                   setSubmitError(null);
                 }}
-                className="flex items-center gap-1.5 text-sm font-medium bg-white text-slate-700 border border-slate-200 rounded-lg px-3 py-2 transition-colors"
+                className="flex items-center gap-1.5 text-sm font-medium bg-white text-slate-700 border border-slate-300 rounded-lg px-3 py-2 transition-colors"
               >
                 <X size={14} />
                 Cancel
@@ -311,7 +311,7 @@ export default function ArticleDetail() {
 
         <div className="space-y-6">
           {/* Current Score */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
             <p className="text-md font-semibold uppercase tracking-wide text-slate-600 mb-1">
               Current Score
             </p>
@@ -355,7 +355,7 @@ export default function ArticleDetail() {
           </div>
 
           {/* Feedback */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <p className="text-md font-semibold uppercase tracking-wide text-slate-600">
                 Feedback
@@ -369,7 +369,7 @@ export default function ArticleDetail() {
                 Evaluation failed. Please rewrite the article and submit it again.
               </p>
             ) : displayScore === null ? (
-              <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-lg border border-slate-300 shadow-sm">
                 <Loader2 size={16} className="animate-spin text-slate-400" />
                 <span>Scoring...</span>
               </div>
@@ -380,7 +380,7 @@ export default function ArticleDetail() {
           <ParameterResultsBox results={parameterResults} />
 
           {/* Content - COLLAPSIBLE */}
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-white border border-slate-300 rounded-lg overflow-hidden shadow-sm">
             <div
               className="flex items-center justify-between px-5 py-4 border-b border-slate-100 cursor-pointer"
               onClick={() => setContentCollapsed(!contentCollapsed)}
@@ -415,7 +415,7 @@ export default function ArticleDetail() {
                       <button
                         type="button"
                         onClick={() => setEditorView("editor")}
-                        className={`px-3 py-1 text-xs font-medium rounded-md ${
+                        className={`px-3 py-1 text-xs font-medium rounded-lg ${
                           editorView === "editor"
                             ? "bg-white text-slate-900 shadow-sm"
                             : "text-slate-500 hover:text-slate-700"
@@ -426,7 +426,7 @@ export default function ArticleDetail() {
                       <button
                         type="button"
                         onClick={() => setEditorView("preview")}
-                        className={`px-3 py-1 text-xs font-medium rounded-md ${
+                        className={`px-3 py-1 text-xs font-medium rounded-lg ${
                           editorView === "preview"
                             ? "bg-white text-slate-900 shadow-sm"
                             : "text-slate-500 hover:text-slate-700"

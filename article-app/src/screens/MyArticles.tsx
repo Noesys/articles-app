@@ -75,9 +75,9 @@ function getDisplayStatus(article: { status: string; ai_score: number | null }):
 }
 
 function getAiScoreColor(status: string) {
-  if (status === "approved") return "#389e0d";
-  if (status === "rewrite_required" || status === "failed") return "#cf1322";
-  return "#d48806";
+  if (status === "approved") return "#16a34a";
+  if (status === "rewrite_required" || status === "failed") return "#dc2626";
+  return "#d97706";
 }
 
 const ResizeableTitle = ({
@@ -224,7 +224,7 @@ export default function MyArticles() {
                 <Calendar className="h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-64 p-3">
+            <PopoverContent align="center" sideOffset={4} className="w-64 p-3 rounded-lg">
               <div className="flex items-center justify-between mb-3">
                 <Button
                   variant="ghost"
@@ -250,9 +250,9 @@ export default function MyArticles() {
                   return (
                     <Button
                       key={i}
-                      variant={isSelected ? "default" : "ghost"}
+                      variant="ghost"
                       onClick={() => setFilterParam("month", m, currentMonth)}
-                      className={`h-9 text-sm ${isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"}`}
+                      className={`h-9 text-sm rounded-lg !ring-0 !outline-none focus-visible:!ring-0 focus:!ring-0 ${isSelected ? "!bg-indigo-600 !text-white shadow-none hover:!bg-indigo-700 hover:!text-white focus-visible:!bg-indigo-600" : "hover:bg-accent hover:text-accent-foreground"}`}
                     >
                       {dayjs().month(i).format("MMM")}
                       {isCurrent && (
@@ -264,21 +264,6 @@ export default function MyArticles() {
               </div>
             </PopoverContent>
           </Popover>
-
-          <button
-            onClick={() => {
-              setSearchParams((current) => {
-                const next = new URLSearchParams(current);
-                if (viewAll) next.delete("viewAll");
-                else next.set("viewAll", "true");
-                next.delete("page");
-                return next;
-              });
-            }}
-            className="h-9 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg px-3 hover:bg-slate-50 transition-colors"
-          >
-            {viewAll ? "Current Month" : "View All"}
-          </button>
 
           <AntSelect
             value={typeFilter}
@@ -327,6 +312,20 @@ export default function MyArticles() {
                 .includes(input.toLowerCase())
             }
           />
+          <button
+            onClick={() => {
+              setSearchParams((current) => {
+                const next = new URLSearchParams(current);
+                if (viewAll) next.delete("viewAll");
+                else next.set("viewAll", "true");
+                next.delete("page");
+                return next;
+              });
+            }}
+            className="h-9 text-sm font-medium text-slate-600 bg-white border border-slate-300 rounded-lg px-3 hover:bg-slate-50 transition-colors"
+          >
+            {viewAll ? "Current Month" : "View All"}
+          </button>
         </div>
 
         {typesError && (
@@ -372,7 +371,7 @@ export default function MyArticles() {
               <button
                 onClick={() => setFilterParam("page", String(Math.max(1, currentPage - 1)), "1")}
                 disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+                className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 transition-colors"
               >
                 <ChevronLeft size={16} />
               </button>
@@ -381,7 +380,7 @@ export default function MyArticles() {
                   setFilterParam("page", String(Math.min(totalPages, currentPage + 1)), "1")
                 }
                 disabled={currentPage === totalPages}
-                className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+                className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 transition-colors"
               >
                 <ChevronRight size={16} />
               </button>
@@ -523,7 +522,7 @@ function MyArticlesTable({
     <ConfigProvider
       theme={{
         algorithm: antdTheme.defaultAlgorithm,
-        token: { colorPrimary: "#534ab7", borderRadius: 8 },
+        token: { colorPrimary: "#4f46e5", borderRadius: 8 },
         components: {
           Table: {
             headerBg: "#e2e8f0",
@@ -537,7 +536,7 @@ function MyArticlesTable({
         style={{
           background: "var(--ant-color-bg-container)",
           border: "1px solid var(--ant-color-border-secondary)",
-          borderRadius: 12,
+          borderRadius: 8,
           overflow: "hidden",
         }}
       >

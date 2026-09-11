@@ -35,10 +35,10 @@ export function DownloadMarkdownButton({
     <button
       type="button"
       onClick={handleDownload}
-      className="inline-flex items-center gap-2 rounded-md cursor-pointer px-3 py-2 text-sm text-gray-500"
+      className="inline-flex items-center gap-2 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors cursor-pointer"
+      title="Download MD"
     >
       <Download className="h-4 w-4" />
-      Download MD
     </button>
   );
 }

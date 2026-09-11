@@ -1,6 +1,6 @@
-import { ChevronDown, Clock, FileText, Pencil, Tag, Trash2 } from "lucide-react";
+import { ChevronDown, Clock, FileText, Pencil, Tag as LucideTag, Trash2 } from "lucide-react";
 import { formatDateToUSLocale } from "../../utils/date";
-import Badge from "../ui/Badge";
+import { Tag } from "antd";
 import { ArticleTypeWithPrompt, ParameterOptionDraft } from "@/admin/utils/types";
 import MarkdownContent from "@/components/markdown/MarkdownContent";
 
@@ -50,7 +50,7 @@ function ActionButton({
           onClick(e as unknown as React.MouseEvent);
         }
       }}
-      className={`p-2 rounded-md text-slate-400 transition-colors ${hoverClass}`}
+      className={`p-2 rounded-lg text-slate-400 transition-colors ${hoverClass}`}
       aria-label={label}
     >
       {icon}
@@ -68,24 +68,20 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
         <div
           className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center font-semibold text-sm ${getAvatarColor(type.name)}`}
         >
-          {type.name.charAt(0).toUpperCase() || <Tag size={16} />}
+          {type.name.charAt(0).toUpperCase() || <LucideTag size={16} />}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-slate-900">{type.name}</span>
             {type.pass_threshold !== undefined && type.pass_threshold !== null && (
-              <Badge variant="indigo">Pass: {type.pass_threshold}</Badge>
+              <Tag bordered={false} style={{ color: "#334155", fontSize: 13 }}>Pass: {type.pass_threshold}</Tag>
             )}
             {!type.is_active && (
-              <Badge variant="danger" dot>
-                Inactive
-              </Badge>
+              <Tag color="red" style={{ fontSize: 13 }}>Inactive</Tag>
             )}
             {!type.score_prompt && (
-              <Badge variant="warning" dot>
-                No prompt set
-              </Badge>
+              <Tag color="gold" style={{ fontSize: 13 }}>No prompt set</Tag>
             )}
           </div>
           {type.description && (
@@ -130,7 +126,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                 Scoring Prompt
               </div>
               {type.score_prompt ? (
-                <MarkdownContent className="bg-white p-3 rounded-lg border border-slate-200 max-h-85 overflow-y-auto shadow-sm">
+                <MarkdownContent className="bg-white p-3 rounded-lg border border-slate-300 max-h-85 overflow-y-auto shadow-sm">
                   {type.score_prompt}
                 </MarkdownContent>
               ) : (
@@ -141,7 +137,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
             </div>
             <div>
               <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
-                <Tag size={13} />
+                <LucideTag size={13} />
                 Parameters
               </div>
 
@@ -158,7 +154,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                       maxValue?: string | number | null;
                     }[]
                   ).map((param) => (
-                    <div key={param.id} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div key={param.id} className="rounded-lg border border-slate-300 bg-white p-4">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
                           <h4 className="font-medium text-slate-900">{param.name}</h4>
@@ -168,21 +164,21 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                           ) : null}
                         </div>
 
-                        <Badge variant="indigo">{param.scopeType.toUpperCase()}</Badge>
+                        <Tag bordered={false} style={{ color: "#334155", fontSize: 13 }}>{param.scopeType.toUpperCase()}</Tag>
                       </div>
 
-                      <div className="flex gap-1 my-1">
+                      <div className="flex gap-1 my-1 flex-wrap">
                         {param.options?.map((option: ParameterOptionDraft) => (
-                          <Badge key={option.id} variant="indigo">
+                          <Tag key={option.id} bordered={false} style={{ color: "#334155", fontSize: 13 }}>
                             {option.label}
-                          </Badge>
+                          </Tag>
                         ))}
                       </div>
 
                       {(param.options?.length ?? 0) === 0 && (
-                        <Badge variant="indigo">
+                        <Tag bordered={false} style={{ color: "#334155", fontSize: 13 }}>
                           {param.minValue} - {param.maxValue}
-                        </Badge>
+                        </Tag>
                       )}
                     </div>
                   ))}

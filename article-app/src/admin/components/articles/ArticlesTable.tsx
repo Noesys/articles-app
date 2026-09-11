@@ -13,7 +13,7 @@ export default function ArticlesTable(props: ArticlesTableProps) {
       theme={{
         algorithm: antdTheme.defaultAlgorithm,
         token: {
-          colorPrimary: "#534ab7",
+          colorPrimary: "#4f46e5",
           borderRadius: 8,
         },
         components: {

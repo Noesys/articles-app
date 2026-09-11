@@ -339,7 +339,7 @@ export default function ArticleCreation() {
                 onValueChange={(value: string) => setValues({ ...values, article_type_id: value })}
                 disabled={loadingTypes}
               >
-                <SelectTrigger className="w-full border-slate-400 bg-white shadow-sm text-slate-900 [&_span[data-placeholder]]:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <SelectTrigger className="w-full border-slate-300 bg-white shadow-sm text-slate-900 [&_span[data-placeholder]]:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                   <SelectValue placeholder="Select an article type" />
                 </SelectTrigger>
 
@@ -361,7 +361,7 @@ export default function ArticleCreation() {
                 value={values.title}
                 onChange={(e) => setValues({ ...values, title: e.target.value })}
                 placeholder="Enter article title"
-                className="w-full rounded-lg border border-slate-400 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -373,7 +373,7 @@ export default function ArticleCreation() {
                   <button
                     type="button"
                     onClick={() => setEditorView("editor")}
-                    className={`px-3 py-1 text-xs font-medium rounded-md ${
+                    className={`px-3 py-1 text-xs font-medium rounded-lg ${
                       editorView === "editor"
                         ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
@@ -384,7 +384,7 @@ export default function ArticleCreation() {
                   <button
                     type="button"
                     onClick={() => setEditorView("preview")}
-                    className={`px-3 py-1 text-xs font-medium rounded-md ${
+                    className={`px-3 py-1 text-xs font-medium rounded-lg ${
                       editorView === "preview"
                         ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"

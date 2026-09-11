@@ -46,7 +46,7 @@ export default function AdminHeader({ title }: { title?: string }) {
   }
 
   return (
-    <header className="sticky top-0 bg-white border-b border-slate-200 z-50">
+    <header className="sticky top-0 bg-white border-b border-slate-300 z-50">
       <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 shrink-0">
           <img src={logoImage} alt="Logo" className="h-13 w-26" />
@@ -79,7 +79,7 @@ export default function AdminHeader({ title }: { title?: string }) {
 
         <div className="hidden lg:flex items-center gap-3 shrink-0">
           {user && (
-            <span className="text-sm text-slate-500 hidden 2xl:block max-w-48 truncate">
+            <span className="text-sm text-slate-500 hidden xl:block max-w-48 truncate">
               {user.name}
             </span>
           )}

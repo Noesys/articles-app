@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Loader2, ChevronDown, ChevronUp, Pencil, Check, X } from "lucide-react";
-import { Select, message } from "antd";
+import { Select, message, Tag } from "antd";
 import dayjs from "dayjs";
 import { api } from "../../../http-client";
 import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
@@ -434,14 +434,14 @@ export default function AdminArticleDetail() {
                   if (e.key === "Escape") cancelEditTitle();
                 }}
                 disabled={titleBusy}
-                className="flex-1 min-w-[220px] text-2xl font-semibold text-slate-900 leading-snug rounded-md border border-slate-300 px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="flex-1 min-w-[220px] text-2xl font-semibold text-slate-900 leading-snug rounded-lg border border-slate-300 px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 autoFocus
               />
               <button
                 type="button"
                 disabled={titleBusy}
                 onClick={() => void handleSaveTitle()}
-                className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40 transition-colors"
               >
                 {titleBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Save
@@ -450,7 +450,7 @@ export default function AdminArticleDetail() {
                 type="button"
                 disabled={titleBusy}
                 onClick={cancelEditTitle}
-                className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
               >
                 <X size={14} />
                 Cancel
@@ -464,10 +464,10 @@ export default function AdminArticleDetail() {
                   type="button"
                   onClick={startEditTitle}
                   disabled={titleBusy || applyBusy || scoringInFlight}
-                  className="mt-1 inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 transition-colors"
                   title="Edit title"
                 >
-                  <Pencil size={12} />
+                  <Pencil size={14} />
                   Edit
                 </button>
               )}
@@ -475,7 +475,7 @@ export default function AdminArticleDetail() {
           )}
 
           {!effectiveSnapshot && suggestedTitle && (
-            <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+            <div className="mt-3 rounded-lg border border-slate-300 bg-white px-3 py-2.5">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
                 AI suggested title
               </p>
@@ -491,7 +491,7 @@ export default function AdminArticleDetail() {
                     scoringInFlight
                   }
                   onClick={() => void handleApplySuggestedTitle()}
-                  className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-40"
+                  className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
                 >
                   {applyBusy ? "Applying…" : suggestionMatchesTitle ? "Applied" : "Apply"}
                 </button>
@@ -501,7 +501,7 @@ export default function AdminArticleDetail() {
         </div>
 
         {!effectiveSnapshot && (
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm mb-6">
+            <div className="rounded-lg border border-slate-300 bg-white p-4 shadow-sm mb-6">
             <p className="text-md font-semibold uppercase tracking-wide text-slate-600 mb-3">
               Article type
             </p>
@@ -520,7 +520,7 @@ export default function AdminArticleDetail() {
                 type="button"
                 disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}
                 onClick={() => handleChangeType(true)}
-                className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+                className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40 transition-colors"
               >
                 {typeBusy ? "Saving…" : "Change type & re-evaluate"}
               </button>
@@ -528,7 +528,7 @@ export default function AdminArticleDetail() {
                 type="button"
                 disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}
                 onClick={() => handleChangeType(false)}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
               >
                 Change type only
               </button>
@@ -536,7 +536,7 @@ export default function AdminArticleDetail() {
                 type="button"
                 disabled={typeBusy || reevalBusy || scoringInFlight || !!typeChanged}
                 onClick={handleReevaluate}
-                className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
               >
                 {reevalBusy ? "Starting…" : scoringInFlight ? "Scoring…" : "Re-evaluate"}
               </button>
@@ -548,7 +548,7 @@ export default function AdminArticleDetail() {
         )}
 
         <div className="space-y-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
             <p className="text-md font-semibold uppercase tracking-wide text-slate-600 mb-1">
               Current Score
             </p>
@@ -598,7 +598,7 @@ export default function AdminArticleDetail() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-lg border border-slate-300 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <p className="text-md font-semibold uppercase tracking-wide text-slate-600">
                 Feedback
@@ -631,7 +631,7 @@ export default function AdminArticleDetail() {
           </div>
           <ParameterResultsBox results={parameterResults} />
 
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-white border border-slate-300 rounded-lg overflow-hidden shadow-sm">
             <div
               className="flex items-center justify-between px-5 py-4 border-b border-slate-100 cursor-pointer"
               onClick={() => setContentCollapsed(!contentCollapsed)}
@@ -640,10 +640,10 @@ export default function AdminArticleDetail() {
 
               <div className="flex items-center gap-2">
                 {article && (
-                  <div className="flex items-center">
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-full px-2.5 py-1">
+                  <div className="flex items-center gap-1">
+                    <Tag bordered={false} style={{ color: "#334155", fontSize: 13 }}>
                       {article.article_type_name}
-                    </span>
+                    </Tag>
                     <ArticleCopyButton title={`# ${displayTitle}`} text={displayContent} />
                     <DownloadMarkdownButton
                       title={displayTitle}

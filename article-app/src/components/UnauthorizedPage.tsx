@@ -16,7 +16,7 @@ export function UnauthorizedPage({
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans antialiased text-slate-800">
       {/* Top Header - matches Header.tsx */}
-      <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white border-b border-slate-300 shadow-sm">
         <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <img src={logoImage} alt="Logo" className="h-13 w-26" />
@@ -31,9 +31,9 @@ export function UnauthorizedPage({
 
       {/* Main Content Card */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-        <div className="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-xl p-8 text-center flex flex-col items-center">
+        <div className="max-w-md w-full bg-white rounded-lg border border-slate-300 shadow-xl p-8 text-center flex flex-col items-center">
           {/* Icon Badge */}
-          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-center mb-6 shadow-sm">
+          <div className="w-16 h-16 rounded-lg bg-amber-50 border border-amber-200/80 flex items-center justify-center mb-6 shadow-sm">
             <ShieldAlert className="w-8 h-8 text-amber-600" />
           </div>
 
@@ -43,7 +43,7 @@ export function UnauthorizedPage({
 
           {/* Additional Info Pill if logged in */}
           {user && (
-            <div className="w-full bg-slate-50 border border-slate-200/80 rounded-xl p-3 mb-6 text-left text-xs text-slate-600 space-y-1">
+            <div className="w-full bg-slate-50 border border-slate-300/80 rounded-lg p-3 mb-6 text-left text-xs text-slate-600 space-y-1">
               <div className="flex items-center gap-1.5 font-medium text-slate-700">
                 <Lock className="w-3.5 h-3.5 text-slate-400" />
                 Account Status

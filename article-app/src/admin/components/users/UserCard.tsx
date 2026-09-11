@@ -82,7 +82,7 @@ export default function UserCard({
 
   return (
     <>
-      <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-4 hover:border-slate-300 transition-colors">
+      <div className="bg-white border border-slate-300 rounded-lg p-4 flex items-start gap-4 hover:border-slate-300 transition-colors">
         {/* Avatar */}
         <div
           className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center text-sm font-semibold
@@ -187,7 +187,7 @@ export default function UserCard({
             className="absolute inset-0 bg-slate-900/40"
             onClick={() => !submitting && setModalOpen(false)}
           />
-          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-5">
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm p-5">
             <div className="flex items-start justify-between">
               <div
                 className={`w-10 h-10 rounded-full flex items-center justify-center
@@ -202,7 +202,7 @@ export default function UserCard({
               <button
                 onClick={() => setModalOpen(false)}
                 disabled={submitting}
-                className="p-1 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
                 aria-label="Close"
               >
                 <X size={18} />
@@ -254,7 +254,7 @@ export default function UserCard({
             className="absolute inset-0 bg-slate-900/40"
             onClick={() => !submitting && setRoleModalOpen(false)}
           />
-          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-5">
+          <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm p-5">
             <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center">
               <ShieldCheck size={18} className="text-indigo-600" />
             </div>

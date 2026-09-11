@@ -7,7 +7,7 @@ export default function FeedbackBlock({ feedback }: { feedback: string }) {
   const fmt = formatFeedbackAsMarkdown(stripped);
 
   return (
-    <MarkdownContent className="bg-white p-4 rounded-lg border border-slate-200">
+    <MarkdownContent className="bg-white p-4 rounded-lg border border-slate-300">
       {fmt}
     </MarkdownContent>
   );

@@ -1,5 +1,5 @@
 import { ParameterDraft, ScopeType } from "@/admin/utils/types";
-import Button from "../ui/Button";
+import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { Input, Modal, Select } from "antd";
 import { WheelEvent } from "react";
@@ -149,7 +149,7 @@ export default function ArticleTypesParameterModal({
                     />
                     <button
                       type="button"
-                      className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
                       onClick={() => {
                         const next = modalDraft.options.filter((_, i) => i !== index);
                         setModalDraft({ ...modalDraft, options: next });

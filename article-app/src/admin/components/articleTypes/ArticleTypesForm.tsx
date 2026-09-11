@@ -2,7 +2,7 @@ import { useEffect, useState, WheelEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { ConfigProvider, Table, theme as antdTheme } from "antd";
-import Button from "../../components/ui/Button";
+import { Button } from "@/components/ui/button";
 import DeleteConfirmation from "./DeleteConfirmation";
 import { api, apiFull } from "@/http-client";
 import Badge from "../../components/ui/Badge";
@@ -317,7 +317,7 @@ export default function ArticleTypesForm() {
             <Button
               variant="ghost"
               size="sm"
-              icon={<Plus size={13} />}
+              
               type="button"
               onClick={openAddModal}
             >
@@ -328,7 +328,7 @@ export default function ArticleTypesForm() {
           <ConfigProvider
             theme={{
               algorithm: antdTheme.defaultAlgorithm,
-              token: { colorPrimary: "#534ab7", borderRadius: 8 },
+              token: { colorPrimary: "#4f46e5", borderRadius: 8 },
               components: {
                 Table: {
                   headerBg: "#e2e8f0",
@@ -392,14 +392,14 @@ export default function ArticleTypesForm() {
                       <button
                         type="button"
                         onClick={() => openEditModal(r)}
-                        className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
+                        className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-indigo-600"
                       >
                         <Pencil size={13} />
                       </button>
                       <button
                         type="button"
                         onClick={() => setPendingDelete(r)}
-                        className="p-1.5 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -426,7 +426,7 @@ export default function ArticleTypesForm() {
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} loading={submitting} disabled={!canSubmit} type="button">
+          <Button onClick={handleSubmit} disabled={submitting || !canSubmit} type="button">
             {isEditing ? "Save Changes" : "Create Type"}
           </Button>
         </div>

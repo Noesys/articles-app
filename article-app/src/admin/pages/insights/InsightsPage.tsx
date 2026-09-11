@@ -40,9 +40,9 @@ const InsightsPage = () => {
           ]}
         />
         <span className="font-bold text-sm">Start Date</span>
-        <MonthYearPicker label="Start" value={start} onChange={setStart} />
+        <MonthYearPicker value={start} onChange={setStart} />
         <span className="font-bold text-sm">End Date</span>
-        <MonthYearPicker label="End" value={end} onChange={setEnd} minValue={start} />
+        <MonthYearPicker value={end} onChange={setEnd} minValue={start} />
       </div>
       <div>
         {insights === "Summary" ? (

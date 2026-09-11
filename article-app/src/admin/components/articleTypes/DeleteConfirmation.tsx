@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react";
-import Button from "../ui/Button";
+import { Button } from "@/components/ui/button";
 
 type DeleteVariant = "articleType" | "parameter";
 
@@ -29,7 +29,7 @@ const DeleteConfirmation = ({
           className="absolute inset-0 bg-slate-900/40"
           onClick={() => !submitting && onClose()}
         />
-        <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-5">
+        <div className="relative bg-white rounded-lg shadow-xl w-full max-w-sm p-5">
           <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
             <Trash2 size={18} className="text-red-600" />
           </div>
@@ -51,9 +51,9 @@ const DeleteConfirmation = ({
               Cancel
             </Button>
             <Button
-              variant="danger"
+              variant="destructive"
               onClick={onConfirm}
-              loading={submitting}
+              disabled={submitting}
               type="button"
               className="min-w-[90px]"
             >

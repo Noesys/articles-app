@@ -54,7 +54,7 @@ function ToolbarButton({
       <button
         type="button"
         onClick={onClick}
-        className={`p-1.5 rounded border border-transparent ${active ? "bg-slate-800 text-white hover:bg-slate-900 border-slate-800" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-200"}`}
+        className={`p-1.5 rounded border border-transparent ${active ? "bg-slate-800 text-white hover:bg-slate-900 border-slate-800" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300"}`}
       >
         {children}
       </button>

@@ -7,12 +7,12 @@ import type { Components } from "react-markdown";
  */
 export const markdownComponents: Components = {
   h1: ({ children }) => (
-    <h1 className="text-xl font-bold text-slate-900 mt-5 mb-3 pb-2 border-b border-slate-200">
+    <h1 className="text-xl font-bold text-slate-900 mt-5 mb-3 pb-2 border-b border-slate-300">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 className="text-lg font-bold text-slate-900 mt-5 mb-3 pb-2 border-b border-slate-200">
+    <h2 className="text-lg font-bold text-slate-900 mt-5 mb-3 pb-2 border-b border-slate-300">
       {children}
     </h2>
   ),
@@ -47,7 +47,7 @@ export const markdownComponents: Components = {
       {children}
     </blockquote>
   ),
-  hr: () => <hr className="my-5 border-slate-200" />,
+  hr: () => <hr className="my-5 border-slate-300" />,
   code: ({ className, children }) => {
     const isBlock = Boolean(className?.includes("language-"));
     if (isBlock) {
@@ -60,20 +60,20 @@ export const markdownComponents: Components = {
     );
   },
   pre: ({ children }) => (
-    <pre className="mb-3 overflow-x-auto rounded-md border border-slate-200 bg-slate-900 p-3 text-slate-100">
+    <pre className="mb-3 overflow-x-auto rounded-lg border border-slate-300 bg-slate-900 p-3 text-slate-100">
       {children}
     </pre>
   ),
   table: ({ children }) => (
-    <div className="my-4 w-full overflow-x-auto rounded-md border border-slate-200">
+    <div className="my-4 w-full overflow-x-auto rounded-lg border border-slate-300">
       <table className="w-full min-w-[28rem] border-collapse text-left text-sm">{children}</table>
     </div>
   ),
   thead: ({ children }) => <thead className="bg-slate-50">{children}</thead>,
   tbody: ({ children }) => <tbody className="bg-white">{children}</tbody>,
-  tr: ({ children }) => <tr className="border-b border-slate-200 last:border-b-0">{children}</tr>,
+  tr: ({ children }) => <tr className="border-b border-slate-300 last:border-b-0">{children}</tr>,
   th: ({ children }) => (
-    <th className="border-b border-slate-200 px-3 py-2.5 align-top font-semibold text-slate-800 whitespace-nowrap">
+    <th className="border-b border-slate-300 px-3 py-2.5 align-top font-semibold text-slate-800 whitespace-nowrap">
       {children}
     </th>
   ),

@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function getAiScoreColor(status: HistoryItem["status"]) {
-  if (status === "approved") return "#389e0d";
-  if (status === "rewrite_required" || status === "failed") return "#cf1322";
-  return "#d48806";
+  if (status === "approved") return "#16a34a";
+  if (status === "rewrite_required" || status === "failed") return "#dc2626";
+  return "#d97706";
 }
 
 function formatAiScore(s: number) {
@@ -171,7 +171,7 @@ export default function ScoringHistoryTable({
         },
       }}
     >
-      <div className="bg-white border-[1.5px] border-gray-300 rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+      <div className="bg-white border-[1.5px] border-gray-300 rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
         <div className="flex items-center justify-between px-5 py-3.5 border-b-[1.5px] border-gray-300">
           <span className="text-[15px] font-semibold text-gray-900">Scoring History</span>
 

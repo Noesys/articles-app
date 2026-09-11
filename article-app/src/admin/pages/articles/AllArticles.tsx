@@ -222,7 +222,7 @@ const AllArticles = () => {
             </Button>
           </PopoverTrigger>
 
-          <PopoverContent className="w-64 p-3">
+          <PopoverContent align="center" sideOffset={4} className="w-64 p-3 rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <Button
                 variant="ghost"
@@ -254,11 +254,9 @@ const AllArticles = () => {
                 return (
                   <Button
                     key={i}
-                    variant={isSelected ? "default" : "ghost"}
+                    variant="ghost"
                     onClick={() => setFilterParam("month", month.format("YYYY-MM"))}
-                    className={`h-9 text-sm ${
-                      isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"
-                    }`}
+                    className={`h-9 text-sm rounded-lg !ring-0 !outline-none focus-visible:!ring-0 focus:!ring-0 ${isSelected ? "!bg-indigo-600 !text-white shadow-none hover:!bg-indigo-700 hover:!text-white focus-visible:!bg-indigo-600" : "hover:bg-accent hover:text-accent-foreground"}`}
                   >
                     {month.format("MMM")}
                     {isCurrent && (
@@ -373,11 +371,11 @@ const AllArticles = () => {
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
         </div>
       ) : loading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
+        <div className="rounded-lg border border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
           Loading articles
         </div>
       ) : (

@@ -26,12 +26,12 @@ type ArticlesTableProps = {
 const { Text } = Typography;
 
 function getAiScoreColor(status: ArticleStatus) {
-  if (status === "approved") return "#389e0d";
-  if (status === "rewrite_required" || status === "failed") return "#cf1322";
-  return "#d48806";
+  if (status === "approved") return "#16a34a";
+  if (status === "rewrite_required" || status === "failed") return "#dc2626";
+  return "#d97706";
 }
 
-const STATUS_CONFIG: Record<ArticleStatus, { color: string; label: string; icon?: boolean }> = {
+const STATUS_CONFIG: Record<ArticleStatus, { color: string; label: string }> = {
   approved: {
     color: "green",
     label: "Accepted",
@@ -41,12 +41,11 @@ const STATUS_CONFIG: Record<ArticleStatus, { color: string; label: string; icon?
     label: "Rejected",
   },
   pending: {
-    color: "gold",
+    color: "default",
     label: "Pending",
-    icon: true,
   },
   failed: {
-    color: "orange",
+    color: "red",
     label: "Failed",
   },
   unknown: {
@@ -163,7 +162,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
         key: "type",
         width: 130,
         render: (type: string) => (
-          <Tag bordered={false} style={{ fontSize: fs }}>
+          <Tag bordered={false} style={{ color: "#334155", fontSize: fs }}>
             {type}
           </Tag>
         ),
@@ -176,11 +175,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
         render: (status: ArticleStatus) => {
           const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.unknown;
           return (
-            <Tag
-              color={cfg.color}
-              icon={cfg.icon ? <ClockCircleOutlined /> : undefined}
-              style={{ fontSize: fs }}
-            >
+            <Tag color={cfg.color} style={{ fontSize: fs }}>
               {cfg.label}
             </Tag>
           );
@@ -290,9 +285,7 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
       </div>
 
       {/* Table */}
-      <div className="rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4"></div>
-
+      <div className="rounded-lg overflow-hidden" style={{ borderRadius: 8 }}>
         <Table<ArticleSummary>
           components={{}}
           columns={columns}
