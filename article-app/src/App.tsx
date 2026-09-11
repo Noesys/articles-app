@@ -5,6 +5,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { RoleBasedRoute } from "./components/RoleBasedRoute";
 import { UnauthorizedPage } from "./components/UnauthorizedPage";
 import AdminHeader from "./admin/components/AdminHeader";
+import Footer from "./components/Footer";
 
 const MyArticles = lazy(() => import("./screens/MyArticles"));
 const ArticleCreation = lazy(() => import("./screens/ArticleCreation"));
@@ -26,13 +27,23 @@ function PageFallback() {
 
 function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row">
       <div className="flex-1 min-w-0 flex flex-col">
         <AdminHeader />
         <div className="flex-1 min-w-0">
           <Suspense fallback={<PageFallback />}>{children}</Suspense>
         </div>
+        <Footer />
       </div>
+    </div>
+  );
+}
+
+function UserLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="min-h-screen flex flex-col">
+      <div className="flex-1">{children}</div>
+      <Footer />
     </div>
   );
 }
@@ -62,7 +73,9 @@ function RootRouteRedirect() {
     return <Navigate to="/admin/articles" replace />;
   return (
     <Suspense fallback={<PageFallback />}>
-      <MyArticles />
+      <UserLayout>
+        <MyArticles />
+      </UserLayout>
     </Suspense>
   );
 }
@@ -76,7 +89,9 @@ export default function App() {
         path="/articles/new"
         element={
           <ProtectedRoute>
-            <ArticleCreation />
+            <UserLayout>
+              <ArticleCreation />
+            </UserLayout>
           </ProtectedRoute>
         }
       />
@@ -84,7 +99,9 @@ export default function App() {
         path="/articles/:id/history/:version"
         element={
           <ProtectedRoute>
-            <ArticleDetail />
+            <UserLayout>
+              <ArticleDetail />
+            </UserLayout>
           </ProtectedRoute>
         }
       />
@@ -92,7 +109,9 @@ export default function App() {
         path="/articles/:id"
         element={
           <ProtectedRoute>
-            <ArticleDetail />
+            <UserLayout>
+              <ArticleDetail />
+            </UserLayout>
           </ProtectedRoute>
         }
       />
