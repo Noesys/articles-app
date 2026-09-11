@@ -1,4 +1,4 @@
-import { ShieldAlert, ArrowLeft, LogOut, Lock } from "lucide-react";
+import { ShieldAlert, Lock } from "lucide-react";
 import logoImage from "../Logo/contiq.png";
 import { useAuth } from "../contexts/AuthContext";
 import Footer from "./Footer";
@@ -19,8 +19,8 @@ export function UnauthorizedPage({
       {/* Top Header - matches Header.tsx */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
         <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img src={logoImage} alt="Logo" className="max-h-7 w-auto" />
+          <div className="flex items-center shrink-0">
+            <img src={logoImage} alt="Logo" className="h-8 w-auto" />
           </div>
           {user && (
             <span className="text-sm text-slate-500 hidden sm:block">

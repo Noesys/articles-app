@@ -8,10 +8,26 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import logoImage from "../../Logo/contiq.png";
 import { NavLink } from "react-router-dom";
+import { Tooltip } from "antd";
+
+function useIsIconOnlyRange() {
+  const [isIconOnly, setIsIconOnly] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px) and (max-width: 1279px)");
+    const handler = (e: MediaQueryListEvent | MediaQueryList) =>
+      setIsIconOnly(e.matches);
+    handler(mq);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  return isIconOnly;
+}
 
 const NAV_ITEMS = [
   {
@@ -49,6 +65,7 @@ const NAV_ITEMS = [
 export default function AdminHeader({ title }: { title?: string }) {
   const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isIconOnly = useIsIconOnlyRange();
 
   function logout() {
     window.location.href = "/cdn-cgi/access/logout";
@@ -56,25 +73,24 @@ export default function AdminHeader({ title }: { title?: string }) {
 
   return (
     <header className="sticky top-0 bg-white border-b border-slate-200 z-50">
-      <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 shrink-0">
-          <img src={logoImage} alt="Logo" className="max-h-7 w-auto" />
+      <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between lg:justify-start gap-3">
+        {/* mobile logo */}
+        <div className="flex lg:hidden items-center shrink-0">
+          <img src={logoImage} alt="Logo" className="h-8 w-auto" />
         </div>
-        {title && (
-          <span className="text-sm font-medium text-slate-700 hidden xl:block truncate">
-            {title}
-          </span>
-        )}
+        <nav className="hidden lg:flex items-center gap-14 flex-1 justify-start">
+          <div className="flex items-center shrink-0">
+            <img src={logoImage} alt="Logo" className="h-8 w-auto" />
+          </div>
 
-        <nav className="hidden lg:flex items-center gap-1 flex-1 justify-around">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            return (
+            const navLink = (
               <NavLink
                 key={item.key}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex items-center justify-center gap-2 rounded-lg px-2 xl:px-3 py-2 text-sm font-medium transition-colors ${
+                  `flex items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors ${
                     isActive
                       ? "bg-indigo-50 text-indigo-700"
                       : "text-slate-600 hover:bg-slate-100"
@@ -85,9 +101,16 @@ export default function AdminHeader({ title }: { title?: string }) {
                 <span className="hidden xl:inline">{item.label}</span>
               </NavLink>
             );
+
+            return isIconOnly ? (
+              <Tooltip key={item.key} title={item.label}>
+                {navLink}
+              </Tooltip>
+            ) : (
+              navLink
+            );
           })}
         </nav>
-
         <div className="hidden lg:flex items-center gap-3 shrink-0">
           {user && (
             <span className="text-sm text-slate-500 hidden lg:block max-w-48 truncate">

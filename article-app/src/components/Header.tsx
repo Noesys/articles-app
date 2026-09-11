@@ -11,8 +11,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
       <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img src={logoImage} alt="Logo" className="max-h-7 w-auto" />
+        <div className="flex items-center shrink-0">
+          <img src={logoImage} alt="Logo" className="h-8 w-auto" />
         </div>
         <div className="flex items-center gap-3">
           {user && (
