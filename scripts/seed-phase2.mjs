@@ -236,6 +236,7 @@ d1ExecBatched(userStmts, { dry: DRY, chunkSize: 40, label: "phase2-users" });
 if (!DRY) {
   d1Exec(
     [
+      `DELETE FROM article_parameter_results WHERE article_id IN (SELECT id FROM articles WHERE employee_email IS NOT NULL)`,
       `DELETE FROM article_history WHERE article_id IN (SELECT id FROM articles WHERE employee_email IS NOT NULL)`,
       `DELETE FROM articles WHERE employee_email IS NOT NULL`,
     ].join(";\n"),
