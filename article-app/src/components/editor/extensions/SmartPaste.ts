@@ -2,11 +2,10 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import {
   cleanPastedHtml,
-  fileToDataUrl,
-  inlineRemoteImages,
   isLikelyMarkdown,
   markdownToHtml,
 } from "../lib/contentNormalize";
+import { uploadArticleImage } from "@/utils/uploadArticleImage";
 
 function escapeHtml(s: string): string {
   return s
@@ -21,12 +20,12 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
   name: "smartPaste",
 
   addOptions() {
-    return { inlineRemoteImages: true };
+    // Remote https images stay as URLs; binary paste/drop goes to R2.
+    return { inlineRemoteImages: false };
   },
 
   addProseMirrorPlugins() {
     const editor = this.editor;
-    const options = this.options;
 
     const insertHtml = (html: string) => {
       const pos = editor.state.selection.$anchor.pos;
@@ -162,12 +161,12 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
               );
 
               // Word dropped its images as file:/// links -> re-attach the
-              // real bitmaps that came along in clipboardData.files.
+              // real bitmaps that came along in clipboardData.files via R2.
               if (imageFiles.length && !/<img/i.test(cleaned)) {
                 void (async () => {
                   for (const file of imageFiles) {
                     try {
-                      const src = await fileToDataUrl(file);
+                      const src = await uploadArticleImage(file);
                       if (editor.isDestroyed) return;
                       editor.chain().focus().setImage({ src }).run();
                     } catch {
@@ -175,24 +174,8 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
                     }
                   }
                 })();
-              } else if (options.inlineRemoteImages && /<img/i.test(cleaned)) {
-                // Replace remote srcs with base64 so the article survives the
-                // source page going away. Best effort; CORS failures are kept
-                // as plain remote URLs.
-                void (async () => {
-                  const withData = await inlineRemoteImages(cleaned);
-                  if (withData !== cleaned) {
-                    // Re-render just the pasted fragment would need position
-                    // bookkeeping; swapping srcs in the whole doc is safe and
-                    // idempotent because data: urls are skipped.
-                    if (editor.isDestroyed) return;
-                    const full = await inlineRemoteImages(editor.getHTML());
-                    if (editor.isDestroyed) return;
-                    if (full !== editor.getHTML())
-                      editor.commands.setContent(full, { emitUpdate: true });
-                  }
-                })();
               }
+              // Remote https img srcs are left as-is (no base64 inline → D1 bloat).
               return true;
             }
 
@@ -202,7 +185,7 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
               void (async () => {
                 for (const file of imageFiles) {
                   try {
-                    const src = await fileToDataUrl(file);
+                    const src = await uploadArticleImage(file);
                     if (editor.isDestroyed) return;
                     editor.chain().focus().setImage({ src }).run();
                   } catch {
@@ -242,7 +225,8 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
               void (async () => {
                 for (const file of images) {
                   try {
-                    const src = await fileToDataUrl(file);
+                    const src = await uploadArticleImage(file);
+                    if (editor.isDestroyed) return;
                     editor.chain().focus().setImage({ src }).run();
                   } catch {
                     /* ignore */

@@ -81,7 +81,10 @@ export interface ArticleRow {
 
 // smart paste
 export interface SmartPasteOptions {
-  /** Convert http(s) images to base64 after paste. Default true. */
+  /**
+   * Legacy: convert http(s) images to base64 after paste.
+   * Default false — R2 uploads handle binary; remote https srcs stay as URLs.
+   */
   inlineRemoteImages: boolean;
 }
 
@@ -94,8 +97,8 @@ export interface SmartPasteOptions {
  *    clipboard carries `text/html`. We clean the Office junk and insert the
  *    WHOLE document — headings, lists, tables, bold/italic and images.
  *    If Word gave us dead `file:///` image links but also put the bitmaps in
- *    `clipboardData.files`, those files are inserted as base64 instead so no
- *    image is lost.
+ *    `clipboardData.files`, those files are uploaded to R2 and inserted as
+ *    `/api/images/...` URLs so D1 never stores base64.
  *
  * 2. Markdown paste (a .md file's text, including `![alt](data:image/png;base64,…)`):
  *    clipboard carries only `text/plain` that looks like markdown. We render it

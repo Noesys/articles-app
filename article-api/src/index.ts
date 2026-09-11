@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 /* USER ROUTES IMPORTS */
 import authRoutes from "./routes/user/auth";
 import articleRoutes from "./routes/user/articles";
+import imageRoutes from "./routes/user/images";
 
 // user service
 import { getArticleTypes } from "./services/user/articleTypes";
@@ -57,6 +58,7 @@ app.get("/api/health", (c) => {
 // user routes (all under /api - matches frontend API_BASE=/api and vite proxy without rewrite)
 app.route("/api/auth", authRoutes);
 app.route("/api/articles", articleRoutes);
+app.route("/api/images", imageRoutes);
 
 app.get("/api/article-types", accessAuth, async (c) => {
   const db = c.env.DB;

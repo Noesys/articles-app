@@ -1,5 +1,7 @@
 export type Bindings = {
   DB: D1Database;
+  /** Article image blobs (TipTap uploads) */
+  IMAGES: R2Bucket;
   DEV_USER_MAIL?: string;
   ENVIRONMENT?: string;
   /** Required when AI_PROVIDER=google; unused for workers-ai */

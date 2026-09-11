@@ -8,7 +8,7 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { useRef, useCallback, useEffect } from "react";
-import { convertImageToBase64 } from "@/utils/imageToBase64";
+import { uploadArticleImage } from "@/utils/uploadArticleImage";
 import {
   Undo2,
   Redo2,
@@ -116,9 +116,9 @@ export default function TiptapEditor({
   const handleImage = useCallback(
     async (file: File) => {
       try {
-        const b64 = await convertImageToBase64(file);
+        const src = await uploadArticleImage(file);
         if (!isLiveEditor(editor)) return;
-        editor.chain().focus().setImage({ src: b64 }).run();
+        editor.chain().focus().setImage({ src }).run();
       } catch (err: unknown) {
         alert(err instanceof Error ? err.message : String(err));
       }

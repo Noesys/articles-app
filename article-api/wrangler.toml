@@ -9,6 +9,10 @@ database_name = "noesys-articles"
 database_id = "acc066a7-2084-4d5e-89b0-90c20c4ceb6c"
 migrations_dir = "src/migrations"
 
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "contiq-article-images"
+
 [ai]
 binding = "AI"
 
