@@ -18,9 +18,11 @@ function formatAiScore(s: number) {
 export default function ScoringHistoryTable({
   history,
   articleId,
+  isAdmin,
 }: {
   history: HistoryItem[];
   articleId: string;
+  isAdmin: boolean;
 }) {
   const navigate = useNavigate();
   const [cols, setCols] = useState<ColumnsType<HistoryItem>>([]);
@@ -34,7 +36,13 @@ export default function ScoringHistoryTable({
         sorter: (a, b) => a.version - b.version,
         render: (v: number, r: HistoryItem) => (
           <span
-            onClick={() => navigate(`/admin/articles/${articleId}?version=${r.version}`)}
+            onClick={() =>
+              navigate(
+                isAdmin
+                  ? `/admin/articles/${articleId}?version=${r.version}`
+                  : `/articles/${articleId}/history/${r.version}`,
+              )
+            }
             className="text-sky-600 font-semibold text-sm cursor-pointer"
           >
             Aritcle Version {v}
@@ -106,7 +114,8 @@ export default function ScoringHistoryTable({
           // Using snapshotted_at for historical timeline display ensures each version's row accurately
           // represents when that version ended and entered history, avoiding duplicated timestamps across versions.
           const dateStr = r.snapshotted_at || r.submitted_at;
-          if (!dateStr) return <span className="text-slate-400 text-[13px]">—</span>;
+          if (!dateStr)
+            return <span className="text-slate-400 text-[13px]">—</span>;
           const normalized =
             typeof dateStr === "string" &&
             dateStr.includes("T") &&
@@ -173,9 +182,13 @@ export default function ScoringHistoryTable({
     >
       <div className="bg-white border-[1.5px] border-gray-300 rounded-xl overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
         <div className="flex items-center justify-between px-5 py-3.5 border-b-[1.5px] border-gray-300">
-          <span className="text-[15px] font-semibold text-gray-900">Scoring History</span>
+          <span className="text-[15px] font-semibold text-gray-900">
+            Scoring History
+          </span>
 
-          <span className="text-[13px] text-slate-500">{history.length} versions</span>
+          <span className="text-[13px] text-slate-500">
+            {history.length} versions
+          </span>
         </div>
 
         <Table<HistoryItem>
