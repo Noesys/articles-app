@@ -14,7 +14,7 @@
 | **1** — R2 bucket + Worker binding | [x] | `contiq-article-images` → `IMAGES` |
 | **2** — Upload + serve API | [x] | `POST/GET /api/images` |
 | **3** — TipTap toolbar / paste / drop → R2 | [x] | Stop writing new base64 from editor |
-| **4** — Deploy + verify | [ ] | `npm run deploy` |
+| **4** — Deploy + verify | [x] | Deployed; see Version ID in commit notes / reply |
 | **5** — Seed/import rewrite (optional) | [ ] | mammoth → R2 → `<img src="/api/images/...">` |
 
 ---
