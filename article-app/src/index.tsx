@@ -6,6 +6,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./index.css";
+import ScrollManager from "./utils/ScrollManager";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -16,6 +17,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       }}
     >
       <TooltipProvider delayDuration={200}>
+        <ScrollManager />
         <AuthProvider>
           <App />
           <Toaster richColors position="top-center" />

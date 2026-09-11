@@ -679,7 +679,7 @@ export default function AdminArticleDetail() {
             )}
           </div>
 
-          {!effectiveSnapshot && <ScoringHistoryTable history={history} articleId={article.id} />}
+          {!effectiveSnapshot && <ScoringHistoryTable isAdmin={true} history={history} articleId={article.id} />}
         </div>
       </div>
     </div>

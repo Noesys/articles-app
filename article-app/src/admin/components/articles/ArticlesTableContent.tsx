@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 type ArticlesTableProps = {
   articles: ArticleSummary[];
   onRowClick?: (id: string) => void;
+  totalCount?: number;
 };
 
 function getAiScoreClasses(status: ArticleStatus) {
@@ -96,7 +97,7 @@ function getNameInitials(name: string) {
   );
 }
 
-export default function ArticlesTableContent({ articles, onRowClick }: ArticlesTableProps) {
+export default function ArticlesTableContent({ articles, onRowClick, totalCount }: ArticlesTableProps) {
   const [titleFilter, setTitleFilter] = useState("");
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -111,7 +112,9 @@ export default function ArticlesTableContent({ articles, onRowClick }: ArticlesT
   }, [articles, titleFilter]);
 
   const dashboard = useMemo(() => {
-    const total = locallyFilteredArticles.length;
+    const total = titleFilter
+    ? locallyFilteredArticles.length
+    : (totalCount ?? locallyFilteredArticles.length);
     const approved = locallyFilteredArticles.filter((a) => a.status === "approved").length;
     const pending = locallyFilteredArticles.filter((a) => a.status === "pending").length;
     const rewriteRequired = locallyFilteredArticles.filter(

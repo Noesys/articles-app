@@ -64,9 +64,11 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
 export default function ScoringHistoryTable({
   history,
   articleId,
+  isAdmin
 }: {
   history: HistoryItem[];
   articleId: string;
+  isAdmin: boolean;
 }) {
   const navigate = useNavigate();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -82,7 +84,11 @@ export default function ScoringHistoryTable({
           <button
             type="button"
             onClick={() =>
-              navigate(`/admin/articles/${articleId}?version=${row.original.version}`)
+              navigate(
+                isAdmin
+                  ? `/admin/articles/${articleId}?version=${row.original.version}`
+                  : `/articles/${articleId}/history/${row.original.version}`,
+              )
             }
             className="text-sky-600 font-semibold text-sm cursor-pointer hover:underline"
           >
