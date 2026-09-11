@@ -3,6 +3,9 @@ import StarterKit from "@tiptap/starter-kit";
 import { ResizableImage } from "./extensions/ResizableImage";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
+import Underline from "@tiptap/extension-underline";
+import Strike from "@tiptap/extension-strike";
+import Link from "@tiptap/extension-link";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
@@ -96,6 +99,9 @@ export default function TiptapEditor({
         heading: { levels: [1, 2, 3] },
       }),
       TextAlign.configure({ types: ["heading", "paragraph", "image"] }),
+      Underline,
+      Strike,
+      Link.configure({ openOnClick: false }),
       ResizableImage,
       Placeholder.configure({
         placeholder: "Write your article content here...",

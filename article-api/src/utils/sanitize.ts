@@ -32,7 +32,7 @@ const VOID_TAGS = new Set(["br", "hr", "img"]);
 
 const ALLOWED_ATTRS: Record<string, Set<string>> = {
   a: new Set(["href", "title", "target", "rel"]),
-  img: new Set(["src", "alt", "title", "width", "height"]),
+  img: new Set(["src", "alt", "title", "width", "height", "style", "data-align"]),
   th: new Set(["colspan", "rowspan"]),
   td: new Set(["colspan", "rowspan"]),
   code: new Set(["class"]),
@@ -76,9 +76,15 @@ export function sanitizeHtmlServer(html: string): string {
         if (allowed) {
           for (const [rawName, rawValue] of Object.entries(attribs)) {
             const attrName = rawName.toLowerCase();
-            if (attrName.startsWith("on") || attrName === "style" || attrName === "xmlns") continue;
+            if (attrName.startsWith("on") || attrName === "xmlns") continue;
+            if (attrName === "style" && tag !== "img") continue;
             if (!allowed.has(attrName)) continue;
-            const v = rawValue ?? "";
+            let v = rawValue ?? "";
+            if (attrName === "style" && tag === "img") {
+              const allowed = v.match(/display\s*:\s*block|margin-(left|right)\s*:\s*auto|margin\s*:[^;]+|width\s*:\s*[^;]+/gi);
+              if (!allowed) continue;
+              v = allowed.join("; ");
+            }
             if (
               (attrName === "href" || attrName === "src") &&
               /^\s*(javascript|data|vbscript):/i.test(v)

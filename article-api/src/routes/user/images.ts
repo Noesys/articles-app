@@ -13,7 +13,7 @@ const EXT_BY_TYPE: Record<string, string> = {
   "image/webp": "webp",
 };
 
-const USER_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const USER_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 const FILENAME_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|gif|webp)$/i;
 
 const imageRoutes = new Hono<AppEnv>();

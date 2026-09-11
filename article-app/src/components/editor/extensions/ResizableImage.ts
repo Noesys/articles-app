@@ -27,19 +27,17 @@ export const ResizableImage = Image.extend({
       textAlign: {
         default: null,
         parseHTML: (el: HTMLElement) => {
-          const explicit = el.getAttribute("textalign") || el.getAttribute("textAlign");
+          const explicit = el.getAttribute("data-align") || el.getAttribute("textalign") || el.getAttribute("textAlign");
           if (explicit) return explicit;
           const style = el.getAttribute("style") || "";
           if (style.includes("margin-left: auto") && style.includes("margin-right: auto"))
             return "center";
-          if (style.includes("margin-left: auto") && style.includes("margin-right: 0"))
-            return "right";
           if (style.includes("margin-left: auto")) return "right";
           return null;
         },
         renderHTML: (attrs: { textAlign?: string | null }) => {
           if (!attrs.textAlign) return {};
-          return { textAlign: attrs.textAlign };
+          return { "data-align": attrs.textAlign };
         },
       },
     };
