@@ -19,7 +19,11 @@ export function UnauthorizedPage({
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
         <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src={logoImage} alt="Logo" className="h-13 w-26" />
+            <img
+            src={logoImage}
+            alt="Contiq"
+            className="h-8 w-auto shrink-0 object-contain"
+          />
           </div>
           {user && (
             <span className="text-sm text-slate-500 hidden sm:block">
