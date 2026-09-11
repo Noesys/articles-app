@@ -383,6 +383,7 @@ const AllArticles = () => {
       ) : (
         <>
           <ArticlesTable
+          totalCount={total}
             articles={displayedArticles}
             onRowClick={(articleId: string) => navigate(`/admin/articles/${articleId}`)}
           />
