@@ -6,12 +6,19 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import dayjs, { type Dayjs } from "dayjs";
 
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { User } from "@/admin/utils/types";
 import { api } from "@/http-client";
 
-async function fetchUsers(month?: string, submissionStatus?: "not_submitted"): Promise<User[]> {
+async function fetchUsers(
+  month?: string,
+  submissionStatus?: "not_submitted",
+): Promise<User[]> {
   const params = new URLSearchParams();
   if (month && submissionStatus) {
     params.set("month", month);
@@ -28,7 +35,9 @@ const UsersPage = () => {
   const [error, setError] = useState<string | null>(null);
   const monthParam = searchParams.get("month");
   const selectedMonthKey =
-    monthParam && /^\d{4}-\d{2}$/.test(monthParam) && dayjs(`${monthParam}-01`).isValid()
+    monthParam &&
+    /^\d{4}-\d{2}$/.test(monthParam) &&
+    dayjs(`${monthParam}-01`).isValid()
       ? monthParam
       : dayjs().format("YYYY-MM");
   const selectedMonth: Dayjs = dayjs(`${selectedMonthKey}-01`).startOf("month");
@@ -37,7 +46,11 @@ const UsersPage = () => {
   const navigate = useNavigate();
   const search = searchParams.get("q") || "";
   const showNotSubmitted = searchParams.get("status") === "not_submitted";
-  const setFilterParam = (name: string, value: string, defaultValue?: string) => {
+  const setFilterParam = (
+    name: string,
+    value: string,
+    defaultValue?: string,
+  ) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
@@ -76,13 +89,18 @@ const UsersPage = () => {
     );
   };
 
-  const handleRoleChange = async (userId: string, nextRole: "user" | "admin" | "super_admin") => {
+  const handleRoleChange = async (
+    userId: string,
+    nextRole: "user" | "admin" | "super_admin",
+  ) => {
     await api(`/admin/users/${userId}/role`, {
       method: "PATCH",
       body: JSON.stringify({ role: nextRole }),
     });
 
-    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, auth_role: nextRole } : u)));
+    setUsers((prev) =>
+      prev.map((u) => (u.id === userId ? { ...u, auth_role: nextRole } : u)),
+    );
   };
 
   const ROLE_ORDER = {
@@ -108,9 +126,14 @@ const UsersPage = () => {
       <h1 className="text-3xl font-semibold">Users List</h1>
       <div className="flex gap-3 my-6 items-center">
         <div className="flex-1 relative">
+          <Search
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10 pointer-events-none"
+          />
           <AutoComplete
             value={search}
             onChange={(value) => setFilterParam("q", value)}
+            onSelect={(value) => setFilterParam("q", value)}
             options={
               search.trim()
                 ? filteredUsers.map((u) => ({
@@ -120,23 +143,13 @@ const UsersPage = () => {
                   }))
                 : []
             }
-            onSelect={(value) => setFilterParam("q", value)}
             style={{ width: "100%" }}
           >
-            <div className="flex items-center gap-2 mb-4 w-full">
-              <div className="relative flex-1">
-                <Search
-                  size={15}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-
-                <input
-                  type="text"
-                  placeholder="Search title..."
-                  className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-9"
-                />
-              </div>
-            </div>
+            <input
+              type="text"
+              placeholder="Search title..."
+              className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent h-9"
+            />
           </AutoComplete>
         </div>
         <button
@@ -170,7 +183,9 @@ const UsersPage = () => {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() => setFilterParam("year", String(focusedYear - 1))}
+                  onClick={() =>
+                    setFilterParam("year", String(focusedYear - 1))
+                  }
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -180,7 +195,9 @@ const UsersPage = () => {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() => setFilterParam("year", String(focusedYear + 1))}
+                  onClick={() =>
+                    setFilterParam("year", String(focusedYear + 1))
+                  }
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -188,19 +205,28 @@ const UsersPage = () => {
 
               <div className="grid grid-cols-3 gap-2">
                 {Array.from({ length: 12 }).map((_, i) => {
-                  const month = dayjs().year(focusedYear).month(i).startOf("month");
+                  const month = dayjs()
+                    .year(focusedYear)
+                    .month(i)
+                    .startOf("month");
 
-                  const isSelected = selectedMonth.format("YYYY-MM") === month.format("YYYY-MM");
+                  const isSelected =
+                    selectedMonth.format("YYYY-MM") === month.format("YYYY-MM");
 
-                  const isCurrent = dayjs().format("YYYY-MM") === month.format("YYYY-MM");
+                  const isCurrent =
+                    dayjs().format("YYYY-MM") === month.format("YYYY-MM");
 
                   return (
                     <Button
                       key={i}
                       variant={isSelected ? "default" : "ghost"}
-                      onClick={() => setFilterParam("month", month.format("YYYY-MM"))}
+                      onClick={() =>
+                        setFilterParam("month", month.format("YYYY-MM"))
+                      }
                       className={`h-9 text-sm ${
-                        isSelected ? "" : "hover:bg-accent hover:text-accent-foreground"
+                        isSelected
+                          ? ""
+                          : "hover:bg-accent hover:text-accent-foreground"
                       }`}
                     >
                       {month.format("MMM")}
