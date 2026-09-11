@@ -65,7 +65,7 @@ export default function AdminHeader({ title }: { title?: string }) {
           <img
             src={logoImage}
             alt="Contiq"
-            className="h-10 w-auto shrink-0 object-contain"
+            className="h-8 w-auto shrink-0 object-contain"
           />
           {title && (
             <span className="hidden truncate text-sm font-medium text-slate-700 2xl:block">
