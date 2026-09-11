@@ -431,7 +431,7 @@ function MyArticlesTable({
         key: "type",
         width: 130,
         render: (v: string) => (
-          <Tag bordered={false} style={{ color: "#334155", fontSize: fs }}>
+          <Tag variant="filled" style={{ color: "#334155", fontSize: fs }}>
             {v}
           </Tag>
         ),

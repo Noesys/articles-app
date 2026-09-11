@@ -184,7 +184,7 @@ export default function ArticlesTableContent({
         key: "type",
         width: 130,
         render: (type: string) => (
-          <Tag bordered={false} style={{ fontSize: fs }}>
+          <Tag variant="filled" style={{ fontSize: fs }}>
             {type}
           </Tag>
         ),
