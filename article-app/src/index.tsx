@@ -6,7 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import './index.css'
 import ScrollManager from './admin/utils/ScrollManager'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter
       future={{
@@ -20,4 +20,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
-)
+);

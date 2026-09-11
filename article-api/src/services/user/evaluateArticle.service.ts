@@ -1,21 +1,12 @@
-import {
-  getArticleTypeConfig,
-  getActiveParameters,
-} from "./evaluation.service";
-import {
-  persistEvaluationResults,
-  handleEvaluationFailure,
-} from "./evaluationPersistence.service";
+import { getArticleTypeConfig, getActiveParameters } from "./evaluation.service";
+import { persistEvaluationResults, handleEvaluationFailure } from "./evaluationPersistence.service";
 import {
   getScoreableParameters,
   buildEvaluationSchema,
   buildEvaluationPrompt,
 } from "./evaluationBuilder.service";
 import { evaluateArticle as callAI } from "./ai.service";
-import type {
-  EvaluationOutcome,
-  ParameterResultInput,
-} from "../../types/user-types";
+import type { EvaluationOutcome, ParameterResultInput } from "../../types/user-types";
 import { Bindings } from "../../types/shared-types";
 
 export async function evaluateArticle(
@@ -25,7 +16,7 @@ export async function evaluateArticle(
   title: string,
   content: string,
   version: number,
-  bindings: Bindings
+  bindings: Bindings,
 ): Promise<void> {
   try {
     const articleType = await getArticleTypeConfig(db, articleTypeId);
@@ -48,20 +39,13 @@ export async function evaluateArticle(
     }
 
     const schema = buildEvaluationSchema(articleType, scoreable);
-    const prompt = buildEvaluationPrompt(
-      articleType,
-      scoreable,
-      title,
-      content,
-    );
+    const prompt = buildEvaluationPrompt(articleType, scoreable, title, content);
 
     const aiResult = await callAI(prompt, schema, bindings);
 
     const parameterResults: ParameterResultInput[] = scoreable.map((p, i) => {
       const key = `p${i}`;
-      const rawValue = (aiResult.parameters as Record<string, number | string>)[
-        key
-      ];
+      const rawValue = (aiResult.parameters as Record<string, number | string>)[key];
 
       if (p.scope_type === "numeric") {
         const numericValue = rawValue as number;
@@ -77,9 +61,7 @@ export async function evaluateArticle(
       const matchedOption = p.options.find((o) => o.label === label);
       if (!matchedOption) {
         // Defensive only — the zod enum should make this unreachable
-        throw new Error(
-          `Unrecognized option "${label}" returned for parameter "${p.name}"`,
-        );
+        throw new Error(`Unrecognized option "${label}" returned for parameter "${p.name}"`);
       }
       return {
         parameter_id: p.id,
@@ -90,13 +72,17 @@ export async function evaluateArticle(
     });
 
     const status: EvaluationOutcome["status"] =
-      aiResult.score >= articleType.pass_threshold
-        ? "approved"
-        : "rewrite_required";
+      aiResult.score >= articleType.pass_threshold ? "approved" : "rewrite_required";
+
+    const suggestedTitle =
+      typeof aiResult.suggested_title === "string"
+        ? aiResult.suggested_title.replace(/\s+/g, " ").trim().slice(0, 500) || null
+        : null;
 
     await persistEvaluationResults(db, articleId, version, {
       ai_score: aiResult.score,
       ai_feedback: aiResult.feedback,
+      suggested_title: suggestedTitle,
       status,
       pass_threshold: articleType.pass_threshold,
       parameter_results: parameterResults,

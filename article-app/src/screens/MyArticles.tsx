@@ -1,21 +1,11 @@
 import Header from "../components/Header";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  Plus,
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  Loader2,
-} from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Calendar, Loader2 } from "lucide-react";
 import dayjs from "dayjs";
 import { useMyArticles } from "../hooks/useMyArticles";
 import { useAuth } from "../contexts/AuthContext";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { api } from "@/http-client";
 import {
@@ -27,7 +17,6 @@ import {
   Empty,
   Select as AntSelect,
   Tooltip,
-  Pagination,
   theme as antdTheme,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -45,10 +34,11 @@ const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   scoring: { color: "default", label: "Scoring..." },
 };
 
-function getDisplayStatus(article: {
-  status: string;
-  ai_score: number | null;
-}): { key: ArticleStatus; label: string; color: string } {
+function getDisplayStatus(article: { status: string; ai_score: number | null }): {
+  key: ArticleStatus;
+  label: string;
+  color: string;
+} {
   if (article.status === "failed") {
     return {
       key: "rejected",
@@ -96,27 +86,18 @@ const ResizeableTitle = ({
   children,
   ...restProps
 }: {
-  onResize?: (
-    e: React.SyntheticEvent,
-    data: { size: { width: number; height: number } },
-  ) => void;
+  onResize?: (e: React.SyntheticEvent, data: { size: { width: number; height: number } }) => void;
   width?: number;
   children?: React.ReactNode;
 } & React.HTMLAttributes<HTMLTableHeaderCellElement>) => {
-  if (!width || typeof width !== "number")
-    return <th {...restProps}>{children}</th>;
+  if (!width || typeof width !== "number") return <th {...restProps}>{children}</th>;
   return (
     <Resizable
       width={width}
       height={10}
       onResize={onResize}
       draggableOpts={{ enableUserSelectHack: false }}
-      handle={
-        <span
-          className="column-resize-handle"
-          onClick={(e) => e.stopPropagation()}
-        />
-      }
+      handle={<span className="column-resize-handle" onClick={(e) => e.stopPropagation()} />}
     >
       <th {...restProps}>{children}</th>
     </Resizable>
@@ -130,56 +111,41 @@ export default function MyArticles() {
 
   const currentMonth = dayjs().format("YYYY-MM");
   const monthParam = searchParams.get("month");
-  const month =
-    monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonth;
-  const focusedYear =
-    Number(searchParams.get("year")) || Number(month.slice(0, 4));
+  const month = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonth;
+  const focusedYear = Number(searchParams.get("year")) || Number(month.slice(0, 4));
   const viewAll = searchParams.get("viewAll") === "true";
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
   const typeFilter = searchParams.get("type") || "all";
   const statusFilter = searchParams.get("status") || "all";
-  const setFilterParam = (
-    name: string,
-    value: string,
-    defaultValue?: string,
-  ) => {
+  const setFilterParam = (name: string, value: string, defaultValue?: string) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
       else next.set(name, value);
-      // Repaginate: filter change should reset to page 1 (mirrors admin/articles)
-      if (name === "type" || name === "status") next.delete("page");
       return next;
     });
   };
-  const [articleTypes, setArticleTypes] = useState<
-    { id: string; name: string }[]
-  >([]);
+  const [articleTypes, setArticleTypes] = useState<{ id: string; name: string }[]>([]);
   const [typesError, setTypesError] = useState<string | null>(null);
 
   useEffect(() => {
     api<{ id: string; name: string }[]>("/article-types")
       .then(setArticleTypes)
-      .catch((err) =>
-        setTypesError(
-          err instanceof Error ? err.message : "Failed to load types",
-        ),
-      );
+      .catch((err) => setTypesError(err instanceof Error ? err.message : "Failed to load types"));
   }, []);
 
-  const { articles, loading, error, pagination, isPolling, refetch } =
-    useMyArticles({
-      month: viewAll ? undefined : month,
-      viewAll,
-      page: viewAll ? currentPage : undefined,
-      limit: 10,
-    });
+  const { articles, loading, error, pagination, isPolling, refetch } = useMyArticles({
+    month: viewAll ? undefined : month,
+    viewAll,
+    page: viewAll ? currentPage : undefined,
+    limit: 10,
+  });
 
   useEffect(() => {
     refetch();
   }, [refetch]);
 
-  const limit = 10;
+  const totalPages = pagination.totalPages || 1;
 
   const filteredArticles = useMemo(() => {
     let out = articles;
@@ -187,8 +153,7 @@ export default function MyArticles() {
     if (typeFilter !== "all") {
       out = out.filter(
         (a) =>
-          a.type === typeFilter ||
-          articleTypes.find((t) => t.id === typeFilter)?.name === a.type,
+          a.type === typeFilter || articleTypes.find((t) => t.id === typeFilter)?.name === a.type,
       );
     }
 
@@ -235,9 +200,7 @@ export default function MyArticles() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-semibold text-slate-900">
-              My Articles
-            </h1>
+            <h1 className="text-3xl font-semibold text-slate-900">My Articles</h1>
           </div>
           <button
             onClick={() => navigate("/articles/new")}
@@ -266,9 +229,7 @@ export default function MyArticles() {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() =>
-                    setFilterParam("year", String(focusedYear - 1))
-                  }
+                  onClick={() => setFilterParam("year", String(focusedYear - 1))}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -276,19 +237,14 @@ export default function MyArticles() {
                 <Button
                   variant="ghost"
                   className="h-7 w-7 p-0 opacity-50 hover:opacity-100"
-                  onClick={() =>
-                    setFilterParam("year", String(focusedYear + 1))
-                  }
+                  onClick={() => setFilterParam("year", String(focusedYear + 1))}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {Array.from({ length: 12 }).map((_, i) => {
-                  const m = dayjs()
-                    .year(focusedYear)
-                    .month(i)
-                    .format("YYYY-MM");
+                  const m = dayjs().year(focusedYear).month(i).format("YYYY-MM");
                   const isSelected = month === m;
                   const isCurrent = dayjs().format("YYYY-MM") === m;
                   return (
@@ -342,7 +298,7 @@ export default function MyArticles() {
               ...articleTypes.map((t) => ({ value: t.id, label: t.name })),
             ]}
             filterOption={(input, option) =>
-              (option?.label as string)
+              String(option?.label ?? "")
                 .toLowerCase()
                 .includes(input.toLowerCase())
             }
@@ -366,7 +322,7 @@ export default function MyArticles() {
               { value: "rejected", label: "Rejected" },
             ]}
             filterOption={(input, option) =>
-              (option?.label as string)
+              String(option?.label ?? "")
                 .toLowerCase()
                 .includes(input.toLowerCase())
             }
@@ -387,8 +343,8 @@ export default function MyArticles() {
         )}
         {isPolling && (
           <div className="mb-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center gap-1">
-            <Loader2 size={12} className="animate-spin" /> Processing your
-            submission — auto-refreshing...
+            <Loader2 size={12} className="animate-spin" /> Processing your submission —
+            auto-refreshing...
           </div>
         )}
         {error && (
@@ -406,16 +362,30 @@ export default function MyArticles() {
           viewAll={viewAll}
         />
 
-        {/* Pagination - antd, matches admin/articles */}
-        {viewAll && pagination.total > limit && (
-          <div className="flex justify-end mt-4">
-            <Pagination
-              current={currentPage}
-              total={pagination.total}
-              pageSize={limit}
-              onChange={(p) => setFilterParam("page", String(p), "1")}
-              showSizeChanger={false}
-            />
+        {/* Pagination */}
+        {viewAll && totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <span className="text-[13.5px] text-slate-700 font-medium">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setFilterParam("page", String(Math.max(1, currentPage - 1)), "1")}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                onClick={() =>
+                  setFilterParam("page", String(Math.min(totalPages, currentPage + 1)), "1")
+                }
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -437,11 +407,6 @@ function MyArticlesTable({
   viewAll: boolean;
 }) {
   const [columns, setColumns] = useState<ColumnsType<ArticleListItem>>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [articles, month]);
 
   useEffect(() => {
     const fs = 13;
@@ -454,10 +419,7 @@ function MyArticlesTable({
         width: 340,
         render: (v: string) => (
           <Tooltip title={v}>
-            <Text
-              ellipsis
-              style={{ color: "#1e293b", fontWeight: 600, fontSize: fs }}
-            >
+            <Text ellipsis style={{ color: "#1e293b", fontWeight: 600, fontSize: fs }}>
               {v}
             </Text>
           </Tooltip>
@@ -494,9 +456,7 @@ function MyArticlesTable({
           score === null ? (
             <Text style={{ color: "#334155", fontSize: fs }}>—</Text>
           ) : (
-            <span
-              style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
-            >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
               <Progress
                 percent={Math.min(Math.max(score, 0), 10) * 10}
                 size="small"
@@ -504,10 +464,7 @@ function MyArticlesTable({
                 strokeColor={getAiScoreColor(record.status)}
                 style={{ width: 56 }}
               />
-              <Text
-                strong
-                style={{ color: getAiScoreColor(record.status), fontSize: fs }}
-              >
+              <Text strong style={{ color: getAiScoreColor(record.status), fontSize: fs }}>
                 {score}
               </Text>
             </span>
@@ -533,9 +490,7 @@ function MyArticlesTable({
         key: "created",
         width: 125,
         render: (d: string) => (
-          <Text style={{ color: "#334155", fontSize: fs }}>
-            {dayjs(d).format("MMM D, YYYY")}
-          </Text>
+          <Text style={{ color: "#334155", fontSize: fs }}>{dayjs(d).format("MMM D, YYYY")}</Text>
         ),
         defaultSortOrder: "descend" as const,
       },
@@ -545,22 +500,22 @@ function MyArticlesTable({
 
   const handleResize =
     (index: number) =>
-      (_: unknown, { size }: { size: { width: number } }) => {
-        setColumns((cur) => {
-          const next = [...cur];
-          next[index] = { ...next[index], width: size.width };
-          return next;
-        });
-      };
+    (_: unknown, { size }: { size: { width: number } }) => {
+      setColumns((cur) => {
+        const next = [...cur];
+        next[index] = { ...next[index], width: size.width };
+        return next;
+      });
+    };
   const mergedColumns = columns.map((col, idx) => ({
     ...col,
     ...(typeof col.width === "number"
       ? {
-        onHeaderCell: () => ({
-          width: col.width,
-          onResize: handleResize(idx),
-        }),
-      }
+          onHeaderCell: () => ({
+            width: col.width,
+            onResize: handleResize(idx),
+          }),
+        }
       : {}),
   }));
 
@@ -592,16 +547,7 @@ function MyArticlesTable({
           dataSource={articles}
           rowKey="id"
           loading={loading}
-          pagination={
-            viewAll
-              ? false
-              : {
-                current: currentPage,
-                pageSize: 10,
-                onChange: (page) => setCurrentPage(page),
-                hideOnSinglePage: true,
-              }
-          }
+          pagination={{ pageSize: 10, hideOnSinglePage: true }}
           scroll={{ x: 925 }}
           onRow={(record) => ({
             onClick: () => onRowClick(record.id),

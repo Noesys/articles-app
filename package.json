@@ -1,45 +1,42 @@
 {
   "name": "noesys-article-platform",
   "version": "1.0.0",
-  "description": "Monorepo for the article platform",
   "private": true,
-  "type": "module",
+  "description": "Monorepo for the article platform",
   "workspaces": [
     "article-app",
     "article-api"
   ],
+  "type": "module",
   "scripts": {
     "dev": "npm run dev --workspaces",
     "build": "npm run build --workspace=article-app",
-    "lint": "npm run lint --workspaces",
+    "lint": "oxlint .",
+    "fmt": "oxfmt .",
+    "fmt:check": "oxfmt --check .",
     "deploy": "npm run build --workspace=article-app && npm run deploy --workspace=article-api"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^9.6.0",
-    "@types/csv-parse": "^1.1.12",
-    "@types/dompurify": "^3.0.5",
-    "@types/react-syntax-highlighter": "^15.5.13",
-    "@types/turndown": "^5.0.6"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
-    "@tiptap/extension-character-count": "^3.30.5",
-    "@tiptap/extension-image": "^3.30.5",
-    "@tiptap/extension-link": "^3.30.5",
-    "@tiptap/extension-placeholder": "^3.30.5",
-    "@tiptap/extension-table": "^3.30.5",
-    "@tiptap/extension-table-cell": "^3.30.5",
-    "@tiptap/extension-table-header": "^3.30.5",
-    "@tiptap/extension-table-row": "^3.30.5",
-    "@tiptap/extension-text-align": "^3.30.5",
-    "@tiptap/extension-underline": "^3.30.5",
-    "@tiptap/pm": "^3.30.5",
-    "@tiptap/react": "^3.30.5",
-    "@tiptap/starter-kit": "^3.30.5",
-    "dompurify": "^3.4.14",
+    "@tiptap/core": "^3.31.3",
+    "@tiptap/extension-character-count": "^3.31.3",
+    "@tiptap/extension-image": "^3.31.3",
+    "@tiptap/extension-link": "^3.31.3",
+    "@tiptap/extension-placeholder": "^3.31.3",
+    "@tiptap/extension-table": "^3.31.3",
+    "@tiptap/extension-table-cell": "^3.31.3",
+    "@tiptap/extension-table-header": "^3.31.3",
+    "@tiptap/extension-table-row": "^3.31.3",
+    "@tiptap/extension-text-align": "^3.31.3",
+    "@tiptap/extension-underline": "^3.31.3",
+    "@tiptap/extensions": "^3.31.3",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
+    "dompurify": "^3.4.15",
     "lowlight": "^3.3.0",
-    "lucide-react": "^1.33.0",
-    "marked": "^18.0.11",
+    "lucide-react": "^1.44.0",
+    "marked": "^18.0.12",
     "react-markdown": "^10.1.0",
     "react-syntax-highlighter": "^16.1.1",
     "remark-gfm": "^4.0.1",
@@ -47,7 +44,19 @@
     "turndown": "^7.2.4",
     "workers-ai-provider": "^4.0.0"
   },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/csv-parse": "^1.1.12",
+    "@types/dompurify": "^3.0.5",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/turndown": "^5.0.6",
+    "oxfmt": "^0.67.0",
+    "oxlint": "^1.82.0"
+  },
   "optionalDependencies": {
     "@rollup/rollup-darwin-arm64": "^4.63.1"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
   }
 }

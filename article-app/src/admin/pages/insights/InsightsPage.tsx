@@ -24,11 +24,13 @@ const InsightsPage = () => {
             popup: {
               root: { background: "#fff" },
             },
-          }}  
+          }}
           showSearch
           optionFilterProp="label"
           filterOption={(input, opt) =>
-            (opt?.label as string).toLowerCase().includes(input.toLowerCase())
+            String(opt?.label ?? "")
+              .toLowerCase()
+              .includes(input.toLowerCase())
           }
           value={insights}
           onChange={setInsights}
@@ -40,12 +42,7 @@ const InsightsPage = () => {
         <span className="font-bold text-sm">Start Date</span>
         <MonthYearPicker label="Start" value={start} onChange={setStart} />
         <span className="font-bold text-sm">End Date</span>
-        <MonthYearPicker
-          label="End"
-          value={end}
-          onChange={setEnd}
-          minValue={start}
-        />
+        <MonthYearPicker label="End" value={end} onChange={setEnd} minValue={start} />
       </div>
       <div>
         {insights === "Summary" ? (

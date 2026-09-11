@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { apiFull } from "../http-client";
 import { ArticleListItem, ArticleRow, PaginationInfo, UseMyArticlesOptions } from "@/utils/types";
 
-
 const POLLING_INTERVAL = 2500;
 const MAX_POLL_DURATION = 300000;
 
@@ -45,8 +44,7 @@ export function useMyArticles(options: UseMyArticlesOptions = {}) {
         );
         if (result.pagination) setPagination(result.pagination);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to load articles";
+        const message = err instanceof Error ? err.message : "Failed to load articles";
         setError(message);
         if (showLoading) setArticles([]);
       } finally {
@@ -113,10 +111,7 @@ export function useMyArticles(options: UseMyArticlesOptions = {}) {
 
     if (pollStartRef.current === null) pollStartRef.current = Date.now();
     const checkTimeout = () => {
-      if (
-        pollStartRef.current !== null &&
-        Date.now() - pollStartRef.current > MAX_POLL_DURATION
-      ) {
+      if (pollStartRef.current !== null && Date.now() - pollStartRef.current > MAX_POLL_DURATION) {
         clear();
         pollStartRef.current = null;
         try {
@@ -136,10 +131,7 @@ export function useMyArticles(options: UseMyArticlesOptions = {}) {
     const onVisibility = () => {
       if (document.visibilityState === "visible" && hasPending) {
         if (!intervalRef.current) {
-          intervalRef.current = window.setInterval(
-            () => refreshSilently(),
-            POLLING_INTERVAL,
-          );
+          intervalRef.current = window.setInterval(() => refreshSilently(), POLLING_INTERVAL);
           setIsPolling(true);
         }
         refreshSilently();

@@ -169,10 +169,7 @@ export interface ArticleByUser {
 
 export type SubmissionStatus = "submitted" | "not_submitted";
 
-export const ALLOWED_SUBMISSION_STATUSES: SubmissionStatus[] = [
-  "submitted",
-  "not_submitted",
-];
+export const ALLOWED_SUBMISSION_STATUSES: SubmissionStatus[] = ["submitted", "not_submitted"];
 
 export type AssignableAuthRole = "user" | "admin";
 export const ALLOWED_AUTH_ROLES: AssignableAuthRole[] = ["user", "admin"];

@@ -11,7 +11,7 @@ export async function getArticleTypes(db: D1Database): Promise<ArticleType[]> {
           created_by,
           created_at,
           updated_at
-        FROM article_types WHERE is_active=1
+        FROM article_types WHERE is_active=1 AND is_evaluatable=1
         ORDER BY name ASC
       `,
     )
@@ -55,12 +55,7 @@ export async function updateArticleEvaluation(
     throw new Error("Article id is required");
   }
 
-  if (
-    typeof score !== "number" ||
-    Number.isNaN(score) ||
-    score < 0 ||
-    score > 10
-  ) {
+  if (typeof score !== "number" || Number.isNaN(score) || score < 0 || score > 10) {
     throw new Error("Score must be between 0 and 10");
   }
 

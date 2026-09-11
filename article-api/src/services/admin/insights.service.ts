@@ -5,14 +5,9 @@ import {
   ParameterSummary,
 } from "../../types/admin-types";
 
-export async function getSummary(
-  db: D1Database,
-  range: DateRange,
-): Promise<ArticleTypeSummary[]> {
+export async function getSummary(db: D1Database, range: DateRange): Promise<ArticleTypeSummary[]> {
   const articleTypes = await db
-    .prepare(
-      `SELECT id, name FROM article_types WHERE is_active = 1 ORDER BY name`,
-    )
+    .prepare(`SELECT id, name FROM article_types WHERE is_active = 1 ORDER BY name`)
     .all();
 
   const result: ArticleTypeSummary[] = [];
@@ -80,13 +75,13 @@ export async function getSummary(
           parameterName: p.name,
           scopeType: "option",
           sortOrder: p.sort_order,
-          options: (
-            rows.results as { label: string; cnt: number; sortOrder: number }[]
-          ).map((r) => ({
-            label: r.label,
-            count: r.cnt,
-            sortOrder: r.sortOrder,
-          })),
+          options: (rows.results as { label: string; cnt: number; sortOrder: number }[]).map(
+            (r) => ({
+              label: r.label,
+              count: r.cnt,
+              sortOrder: r.sortOrder,
+            }),
+          ),
         });
       } else {
         const row = await db
@@ -133,9 +128,7 @@ export async function getSummary(
             .bind(p.min_value, p.max_value, p.id, range.start, range.end)
             .all();
 
-          distribution = (
-            distRows.results as { value: number; cnt: number }[]
-          ).map((r) => ({
+          distribution = (distRows.results as { value: number; cnt: number }[]).map((r) => ({
             value: r.value,
             count: r.cnt,
           }));
@@ -220,9 +213,7 @@ export async function getEmployeeSubmissions(
     .all();
 
   const byUser = new Map<string, EmployeeSubmissionRow>();
-  const monthlyTotals: Record<string, number> = Object.fromEntries(
-    months.map((m) => [m, 0]),
-  );
+  const monthlyTotals: Record<string, number> = Object.fromEntries(months.map((m) => [m, 0]));
   let grandTotal = 0;
 
   for (const r of rowsRaw.results as {

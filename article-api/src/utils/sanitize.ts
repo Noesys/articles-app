@@ -79,8 +79,13 @@ export function sanitizeHtmlServer(html: string): string {
             if (attrName.startsWith("on") || attrName === "style" || attrName === "xmlns") continue;
             if (!allowed.has(attrName)) continue;
             const v = rawValue ?? "";
-            if ((attrName === "href" || attrName === "src") && /^\s*(javascript|data|vbscript):/i.test(v)) continue;
-            if ((attrName === "href" || attrName === "src") && v && !SAFE_URL.test(v.trim())) continue;
+            if (
+              (attrName === "href" || attrName === "src") &&
+              /^\s*(javascript|data|vbscript):/i.test(v)
+            )
+              continue;
+            if ((attrName === "href" || attrName === "src") && v && !SAFE_URL.test(v.trim()))
+              continue;
             attrs += ` ${attrName}="${escapeAttr(v)}"`;
           }
           if (tag === "a" && attrs.includes("href=") && !attrs.includes("rel=")) {

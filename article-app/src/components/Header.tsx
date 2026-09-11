@@ -15,11 +15,7 @@ export default function Header() {
           <img src={logoImage} alt="Logo" className="h-8 w-auto" />
         </div>
         <div className="flex items-center gap-3">
-          {user && (
-            <span className="text-sm text-slate-500 hidden lg:block max-w-48 truncate">
-              {user.name}
-            </span>
-          )}
+          {user && <span className="text-sm text-slate-500 hidden sm:block">{user.name}</span>}
           <button
             onClick={logout}
             className="flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"

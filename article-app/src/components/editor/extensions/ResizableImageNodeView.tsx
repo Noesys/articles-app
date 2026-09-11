@@ -15,19 +15,14 @@ export default function ResizableImageNodeView({
     if (!isEditable) return;
     e.preventDefault();
     const startX = e.clientX;
-    const img = containerRef.current?.querySelector(
-      "img",
-    ) as HTMLImageElement | null;
+    const img = containerRef.current?.querySelector("img") as HTMLImageElement | null;
     const startWidth = img?.clientWidth || 300;
     const onMove = (ev: MouseEvent) => {
       const delta = dir === "e" ? ev.clientX - startX : startX - ev.clientX;
       // for west handle invert
       const newW = Math.max(
         80,
-        Math.min(
-          900,
-          startWidth + (dir === "e" ? delta : dir === "w" ? delta : 0),
-        ),
+        Math.min(900, startWidth + (dir === "e" ? delta : dir === "w" ? delta : 0)),
       );
       // for se handle use delta
       updateAttributes({ width: `${Math.round(newW)}px` });

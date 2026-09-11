@@ -55,7 +55,7 @@ export function isLikelyHtml(value: string): boolean {
 function stripAuthorComment(s: string): string {
   return s.replace(/^\s*<!--\s*author_name:[^>]*-->\s*/i, "");
 }
- /** Decide how to feed stored/incoming content into Tiptap. */
+/** Decide how to feed stored/incoming content into Tiptap. */
 export function resolveContentToHtml(content: string): string {
   if (!content || !content.trim()) return "<p></p>";
   const stripped = stripAuthorComment(content);
@@ -93,8 +93,7 @@ function detectAndConvertInlineFormatting(html: string): string {
 
   doc.querySelectorAll("span[style]").forEach((el) => {
     const style = el.getAttribute("style") || "";
-    const isBold =
-      /font-weight\s*:\s*(bold|7\d\d|[89]\d\d)/i.test(style);
+    const isBold = /font-weight\s*:\s*(bold|7\d\d|[89]\d\d)/i.test(style);
     const isItalic = /font-style\s*:\s*italic/i.test(style);
     const isUnderline = /text-decoration\s*:\s*underline/i.test(style);
     const isStrike = /text-decoration\s*:\s*line-through/i.test(style);
@@ -130,6 +129,38 @@ function detectAndConvertBoldHeadings(html: string): string {
     if (/MsoHeading\s*3/i.test(cls)) return "h3";
     return null;
   };
+  const getHeadingFromCcp = (v: string): string | null => {
+    const t = v.trim().toLowerCase();
+    if (t === "title") return "h1";
+    const m = t.match(/^heading\s*(\d)/i);
+    if (m) return `h${Math.min(6, Math.max(1, parseInt(m[1], 10)))}`;
+    return null;
+  };
+
+  // 0) Word Online modern: data-ccp-parastyle="Title" / "Heading 1" -> heading
+  doc.querySelectorAll("[data-ccp-parastyle]").forEach((el) => {
+    if (el.closest("h1,h2,h3,h4,h5,h6,li,table")) return;
+    const pv = el.getAttribute("data-ccp-parastyle") || "";
+    const lvl = getHeadingFromCcp(pv);
+    if (!lvl) return;
+    const text = (el.textContent || "").trim().replace(/\s+/g, " ");
+    if (!text || text.length > 600) return;
+    // Use block-level wrapper if el is a fragment root, else wrap el itself
+    const tag = el.tagName.toLowerCase();
+    if (tag === "p" || tag === "div" || tag === "h1" || tag === "h2" || tag === "h3") {
+      const h = doc.createElement(lvl);
+      // Collapse Word line-break fragmentation inside Title (EV Customer : Automating Chargefox...)
+      const inner = (el as HTMLElement).innerHTML.replace(/\s+/g, " ").trim();
+      h.innerHTML = inner;
+      el.replaceWith(h);
+    } else {
+      // Inline Title span — wrap parent block or create heading from its parent
+      const block = (el as HTMLElement).closest("p,div") || el;
+      const h = doc.createElement(lvl);
+      h.innerHTML = (block as HTMLElement).innerHTML.replace(/\s+/g, " ").trim();
+      (block as Element).replaceWith(h);
+    }
+  });
 
   // 1) Convert Word paragraphs that are actually headings (MsoHeading, outline-level, large bold)
   doc.querySelectorAll("p").forEach((p) => {
@@ -148,17 +179,32 @@ function detectAndConvertBoldHeadings(html: string): string {
     if (outlineMatch) level = `h${outlineMatch[1]}`;
     else if (styleNameMatch) level = `h${styleNameMatch[1]}`;
     else if (classHeading) level = classHeading;
-    // Fallback: large + bold heuristic for Google Docs / unstyled Word export
+    // Fallback: large + bold heuristic for Google Docs / unstyled Word export — also scan descendant spans for Word Online Title (font-size on inner span)
     if (!level) {
-      const fsMatch = /font-size\s*:\s*(\d+)\s*(?:pt|px)/i.exec(style);
-      const fwMatch = /font-weight\s*:\s*(bold|\d{2,3})/i.exec(style);
+      let searchStyle = style;
+      if (!searchStyle) {
+        const inner = p.querySelector("span[style]") as HTMLElement | null;
+        if (inner) searchStyle = inner.getAttribute("style") || "";
+        // Also scan innerHTML for font-size as last resort
+        if (!searchStyle) {
+          const m = /font-size\s*:\s*(\d+)\s*(?:pt|px)/i.exec(p.innerHTML);
+          if (m) searchStyle = m[0];
+        }
+      }
+      const fsMatch = /font-size\s*:\s*(\d+)\s*(?:pt|px)/i.exec(searchStyle);
+      const fwMatch =
+        /font-weight\s*:\s*(bold|\d{2,3})/i.exec(searchStyle) ||
+        /font-weight\s*:\s*(bold|\d{2,3})/i.exec(p.innerHTML);
       let fontSize = fsMatch ? parseInt(fsMatch[1], 10) : 0;
-      // pt to px approx
       if (fsMatch && /pt/i.test(fsMatch[0])) fontSize = Math.round(fontSize * 1.33);
-      const isBold = fwMatch !== null || !!p.querySelector("b,strong") || /font-weight:\s*bold/i.test(style);
-      const hasLarge = fontSize >= 16;
-      // Only promote short paragraphs that are bold+larger than body
-      if (isBold && hasLarge) {
+      const isBold =
+        fwMatch !== null ||
+        !!p.querySelector("b,strong") ||
+        /font-weight:\s*bold/i.test(searchStyle) ||
+        /font-weight:\s*bold/i.test(p.innerHTML);
+      const ccp = p.querySelector("[data-ccp-parastyle]")?.getAttribute("data-ccp-parastyle");
+      if (ccp) level = getHeadingFromCcp(ccp);
+      else if (isBold && fontSize >= 16) {
         level = fontSize >= 22 ? "h1" : fontSize >= 18 ? "h2" : "h3";
       } else if (classHeading) {
         level = classHeading;
@@ -169,7 +215,9 @@ function detectAndConvertBoldHeadings(html: string): string {
       // Preserve inner formatting (bold/italic) but strip Word junk spans
       h.innerHTML = p.innerHTML;
       // Clean mso tab stops inside heading
-      h.innerHTML = h.innerHTML.replace(/<span[^>]*mso-tab-count[^>]*>[\s\S]*?<\/span>/gi, " ").trim();
+      h.innerHTML = h.innerHTML
+        .replace(/<span[^>]*mso-tab-count[^>]*>[\s\S]*?<\/span>/gi, " ")
+        .trim();
       p.replaceWith(h);
     }
   });
@@ -213,6 +261,7 @@ export function cleanPastedHtml(rawHtml: string): string {
   // Kill IE conditional comments + Word's <style> blob before parsing:
   // they can hold megabytes of mso rules and confuse the parser.
   let html = rawHtml
+    .replace(/<!--StartFragment-->|<!--EndFragment-->/gi, "")
     .replace(/<!--\[if[\s\S]*?<!\[endif\]-->/gi, "")
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
@@ -261,10 +310,7 @@ export function cleanPastedHtml(rawHtml: string): string {
   });
 
   // Before stripping, collect Word list info (mso-list paragraphs)
-  const wordListInfo = new Map<
-    Element,
-    { level: number; isOrdered: boolean }
-  >();
+  const wordListInfo = new Map<Element, { level: number; isOrdered: boolean }>();
   doc.querySelectorAll("p, h1, h2, h3, h4, h5, h6").forEach((el) => {
     const style = el.getAttribute("style") || "";
     const cls = el.getAttribute("class") || "";
@@ -273,7 +319,7 @@ export function cleanPastedHtml(rawHtml: string): string {
       const level = levelMatch ? parseInt(levelMatch[1], 10) : 1;
       // Detect bullet vs numbered: mso-list often contains lfo style but text tells us
       const raw = (el.textContent || "").trim();
-      const isOrdered = /^\d+[\.\)]/.test(raw) || /^\s*\d/.test(raw);
+      const isOrdered = /^\d+[.)]/.test(raw) || /^\s*\d/.test(raw);
       wordListInfo.set(el, { level, isOrdered });
     }
   });
@@ -287,8 +333,7 @@ export function cleanPastedHtml(rawHtml: string): string {
     if (style) {
       // Keep only text-align, which Tiptap's TextAlign extension understands.
       const align = /text-align:\s*(left|center|right|justify)/i.exec(style);
-      if (align)
-        el.setAttribute("style", `text-align:${align[1].toLowerCase()}`);
+      if (align) el.setAttribute("style", `text-align:${align[1].toLowerCase()}`);
       else el.removeAttribute("style");
     }
     if (el.tagName.toLowerCase() === "span" && !el.attributes.length) {
@@ -323,7 +368,7 @@ export function cleanPastedHtml(rawHtml: string): string {
       }
       const li = doc.createElement("li");
       let text = child.innerHTML
-        .replace(/^\s*(?:\d+[\.\)]|•|·)\s*(?:&nbsp;|\u00a0|\s)*/i, "")
+        .replace(/^\s*(?:\d+[.)]|•|·)\s*(?:&nbsp;|\u00a0|\s)*/i, "")
         .replace(/<span[^>]*mso-tab-count[^>]*>[\s\S]*?<\/span>/gi, " ")
         .trim();
       // If this child is already a heading, don't wrap it in a list item
@@ -347,11 +392,7 @@ export function cleanPastedHtml(rawHtml: string): string {
     let run: HTMLElement[] = [];
     for (const p of paras) {
       const t = (p.textContent || "").trim();
-      if (
-        /^\d+[\.\)]\s+\S/.test(t) &&
-        t.length < 200 &&
-        !p.querySelector("img,table")
-      ) {
+      if (/^\d+[.)]\s+\S/.test(t) && t.length < 200 && !p.querySelector("img,table")) {
         run.push(p);
       } else if (run.length >= 2) {
         break;
@@ -367,13 +408,21 @@ export function cleanPastedHtml(rawHtml: string): string {
           p.before(list);
         }
         const li = doc.createElement("li");
-        li.innerHTML =
-          p.innerHTML.replace(/^\s*\d+[\.\)]\s*/, "").trim() ||
-          p.textContent ||
-          "";
+        li.innerHTML = p.innerHTML.replace(/^\s*\d+[.)]\s*/, "").trim() || p.textContent || "";
         list.appendChild(li);
         p.remove();
       }
+    }
+  }
+
+  // Fragment fallback: inline-only paste (line-by-line) -> wrap in <p> so Tiptap doesn't leak tags
+  {
+    const hasBlock = !!doc.body.querySelector("p,h1,h2,h3,h4,h5,h6,ul,ol,table,blockquote,pre");
+    const bodyText = (doc.body.textContent || "").trim();
+    const bodyHtml = doc.body.innerHTML.trim();
+    if (!hasBlock && bodyText && bodyHtml) {
+      // Wrap bare inline content in a paragraph; keep already-semantic inline tags
+      doc.body.innerHTML = `<p>${bodyHtml}</p>`;
     }
   }
 
@@ -383,14 +432,17 @@ export function cleanPastedHtml(rawHtml: string): string {
     if (!text && !p.querySelector("img,table,br")) p.remove();
   });
 
-  return doc.body.innerHTML;
+  // Merge adjacent fragmented inline runs that Word split into many spans
+  // (avoid heavy DOM churn — text already coalesced by p wrapper above)
+  let out = doc.body.innerHTML;
+  // Defensive: strip any lingering outer <html><body> if DOMParser injected
+  out = out.replace(/^\s*<html[^>]*><body[^>]*>/i, "").replace(/<\/body><\/html>\s*$/i, "");
+  return out;
 }
 
 /** True when the clipboard HTML came from Word / Outlook / Google Docs. */
 export function isOfficeHtml(html: string): boolean {
-  return /mso-|urn:schemas-microsoft-com|class="?Mso|docs-internal-guid/i.test(
-    html || "",
-  );
+  return /mso-|urn:schemas-microsoft-com|class="?Mso|docs-internal-guid/i.test(html || "");
 }
 
 /* ------------------------------------------------------------------ */
@@ -404,8 +456,7 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     const res = await fetch(url, { mode: "cors", credentials: "omit" });
     if (!res.ok) return null;
     const blob = await res.blob();
-    if (!blob.type.startsWith("image/") || blob.size > MAX_INLINE_BYTES)
-      return null;
+    if (!blob.type.startsWith("image/") || blob.size > MAX_INLINE_BYTES) return null;
     return await new Promise((resolve) => {
       const fr = new FileReader();
       fr.onload = () => resolve(fr.result as string);
@@ -417,7 +468,6 @@ async function urlToDataUrl(url: string): Promise<string | null> {
     return null;
   }
 }
-
 
 export async function inlineRemoteImages(html: string): Promise<string> {
   if (!html || !/<img/i.test(html)) return html;

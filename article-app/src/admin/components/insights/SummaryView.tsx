@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Collapse,
-  Spin,
-  Empty,
-  ConfigProvider,
-  Table,
-  theme as antdTheme,
-  Tooltip,
-} from "antd";
+import { Collapse, Spin, Empty, ConfigProvider, Table, theme as antdTheme, Tooltip } from "antd";
 import {
   ArticleTypeSummary,
   NumericDistributionBucket,
@@ -15,11 +7,7 @@ import {
 } from "@/admin/utils/types";
 import { api } from "@/http-client";
 
-function NumericDistribution({
-  distribution,
-}: {
-  distribution: NumericDistributionBucket[];
-}) {
+function NumericDistribution({ distribution }: { distribution: NumericDistributionBucket[] }) {
   if (!distribution?.length) return null;
   const maxCount = Math.max(...distribution.map((d) => d.count), 1);
 
@@ -38,9 +26,7 @@ function NumericDistribution({
                 height: `${Math.max((bucket.count / maxCount) * 100, bucket.count === 0 ? 6 : 10)}%`,
               }}
             />
-            <span className="text-[10px] text-slate-400 mt-0.5 leading-none">
-              {bucket.value}
-            </span>
+            <span className="text-[10px] text-slate-400 mt-0.5 leading-none">{bucket.value}</span>
           </div>
         </Tooltip>
       ))}
@@ -53,7 +39,9 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
   const [loading, setLoading] = useState(true);
 
   async function fetchInsightsSummary(start: string, end: string) {
-    const res = await api<ArticleTypeSummary[]>(`/admin/insights/summary?start=${start}&end=${end}`);
+    const res = await api<ArticleTypeSummary[]>(
+      `/admin/insights/summary?start=${start}&end=${end}`,
+    );
     return Array.isArray(res) ? res : [];
   }
 
@@ -102,9 +90,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
           label: (
             <span className="font-medium text-slate-900">
               {at.articleTypeName}{" "}
-              <span className="font-semibold text-slate-700">
-                ({at.totalArticles} articles)
-              </span>
+              <span className="font-semibold text-slate-700">({at.totalArticles} articles)</span>
             </span>
           ),
           children: (
@@ -121,9 +107,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
                   dataIndex: "parameterName",
                   key: "parameterName",
                   width: 220,
-                  render: (v: string) => (
-                    <span className="font-medium text-slate-800">{v}</span>
-                  ),
+                  render: (v: string) => <span className="font-medium text-slate-800">{v}</span>,
                 },
                 {
                   title: "Type",
@@ -131,9 +115,7 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
                   key: "scopeType",
                   width: 90,
                   render: (v: string) => (
-                    <span className="capitalize text-slate-600 text-sm">
-                      {v}
-                    </span>
+                    <span className="capitalize text-slate-600 text-sm">{v}</span>
                   ),
                 },
                 {
@@ -158,13 +140,11 @@ export function SummaryView({ start, end }: { start: string; end: string }) {
                     ) : (
                       <div>
                         <span className="text-sm text-slate-600">
-                          avg {r.numeric?.avg.toFixed(1)} · min {r.numeric?.min}{" "}
-                          · max {r.numeric?.max} · n={r.numeric?.count}
+                          avg {r.numeric?.avg.toFixed(1)} · min {r.numeric?.min} · max{" "}
+                          {r.numeric?.max} · n={r.numeric?.count}
                         </span>
                         {r.numeric?.distribution && (
-                          <NumericDistribution
-                            distribution={r.numeric.distribution}
-                          />
+                          <NumericDistribution distribution={r.numeric.distribution} />
                         )}
                       </div>
                     ),

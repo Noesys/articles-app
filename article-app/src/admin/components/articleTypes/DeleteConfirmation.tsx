@@ -33,9 +33,7 @@ const DeleteConfirmation = ({
           <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
             <Trash2 size={18} className="text-red-600" />
           </div>
-          <h2 className="mt-3 font-semibold text-slate-900">
-            Delete "{name}"?
-          </h2>
+          <h2 className="mt-3 font-semibold text-slate-900">Delete "{name}"?</h2>
           <p className="mt-1 text-sm text-slate-700">
             {isParameter
               ? "This will remove this parameter from the article type. This action cannot be undone."

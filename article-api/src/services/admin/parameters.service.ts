@@ -1,12 +1,9 @@
 import { badRequest, conflict, notFound } from "../../utils/errors";
-import { ParameterInput, Resolved } from "../../types/admin-types"
+import { ParameterInput, Resolved } from "../../types/admin-types";
 
 function validateScope(input: ParameterInput): string | null {
   if (input.scopeType === "numeric") {
-    if (
-      typeof input.minValue !== "number" ||
-      typeof input.maxValue !== "number"
-    ) {
+    if (typeof input.minValue !== "number" || typeof input.maxValue !== "number") {
       return "minValue and maxValue are required for numeric parameters";
     }
     if (input.maxValue <= input.minValue) {
@@ -22,10 +19,7 @@ function validateScope(input: ParameterInput): string | null {
   return null;
 }
 
-export async function getParametersByArticleType(
-  db: D1Database,
-  articleTypeId?: string,
-) {
+export async function getParametersByArticleType(db: D1Database, articleTypeId?: string) {
   if (articleTypeId?.trim() === "" || !articleTypeId) {
     throw badRequest("article type ID is invalid");
   }
@@ -139,9 +133,7 @@ async function syncParameterOptions(
 
   // --- 2. Load the FULL row set once — active AND inactive together.
   const existingResult = await db
-    .prepare(
-      `SELECT id, label, is_active FROM parameter_options WHERE parameter_id = ?`,
-    )
+    .prepare(`SELECT id, label, is_active FROM parameter_options WHERE parameter_id = ?`)
     .bind(parameterId)
     .all<{ id: string; label: string; is_active: number }>();
   const existingRows = existingResult.results ?? [];
@@ -225,9 +217,7 @@ async function syncParameterOptions(
   console.debug(
     "[syncParameterOptions] resolved:",
     resolved.map((r) =>
-      r.isNew
-        ? `INSERT ${r.id}:${r.label}`
-        : `REUSE ${r.id}: ${r.oldLabel} -> ${r.label}`,
+      r.isNew ? `INSERT ${r.id}:${r.label}` : `REUSE ${r.id}: ${r.oldLabel} -> ${r.label}`,
     ),
   );
 
@@ -237,9 +227,7 @@ async function syncParameterOptions(
     if (row.is_active === 1 && !usedExistingIds.has(row.id)) {
       statements.push(
         db
-          .prepare(
-            `UPDATE parameter_options SET is_active = 0 WHERE id = ? AND parameter_id = ?`,
-          )
+          .prepare(`UPDATE parameter_options SET is_active = 0 WHERE id = ? AND parameter_id = ?`)
           .bind(row.id, parameterId),
       );
     }
@@ -253,9 +241,7 @@ async function syncParameterOptions(
     if (!r.isNew && r.oldLabel !== r.label) {
       statements.push(
         db
-          .prepare(
-            `UPDATE parameter_options SET label = ? WHERE id = ? AND parameter_id = ?`,
-          )
+          .prepare(`UPDATE parameter_options SET label = ? WHERE id = ? AND parameter_id = ?`)
           .bind(`__pending_relabel__${r.id}`, r.id, parameterId),
       );
     }
@@ -368,19 +354,13 @@ export async function createParameter(
   return { id: parameterId };
 }
 
-export async function updateParameter(
-  db: D1Database,
-  parameterId: string,
-  input: ParameterInput,
-) {
+export async function updateParameter(db: D1Database, parameterId: string, input: ParameterInput) {
   const scopeError = validateScope(input);
   if (scopeError) {
     throw badRequest(scopeError);
   }
   const existing = await db
-    .prepare(
-      `SELECT article_type_id FROM parameters WHERE id = ? AND is_active = 1`,
-    )
+    .prepare(`SELECT article_type_id FROM parameters WHERE id = ? AND is_active = 1`)
     .bind(parameterId)
     .first<{ article_type_id: string }>();
 

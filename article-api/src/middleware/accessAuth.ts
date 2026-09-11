@@ -20,9 +20,7 @@ type AccessIdentity = {
   jobTitle: string | null;
 };
 
-async function resolveAccessIdentity(
-  c: Context<AppEnv>,
-): Promise<AccessIdentity | null> {
+async function resolveAccessIdentity(c: Context<AppEnv>): Promise<AccessIdentity | null> {
   if (c.executionCtx.access) {
     const identity = await c.executionCtx.access.getIdentity();
     if (identity?.email) {
@@ -30,10 +28,7 @@ async function resolveAccessIdentity(
       return {
         email: identity.email.trim().toLowerCase(),
         name: identity.name?.trim() || null,
-        jobTitle:
-          typeof oidc?.job_title === "string"
-            ? oidc.job_title.trim() || null
-            : null,
+        jobTitle: typeof oidc?.job_title === "string" ? oidc.job_title.trim() || null : null,
       };
     }
   }
@@ -44,9 +39,7 @@ async function resolveAccessIdentity(
 
   if (assertion && teamDomain && aud) {
     try {
-      const JWKS = createRemoteJWKSet(
-        new URL(`${teamDomain}/cdn-cgi/access/certs`),
-      );
+      const JWKS = createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`));
       const { payload } = await jwtVerify(assertion, JWKS, {
         issuer: teamDomain,
         audience: aud,
@@ -60,10 +53,7 @@ async function resolveAccessIdentity(
             .join(" ") ||
           null;
         const oidc = p.oidc_fields as Record<string, unknown> | undefined;
-        const jobTitle =
-          typeof oidc?.job_title === "string"
-            ? oidc.job_title.trim() || null
-            : null;
+        const jobTitle = typeof oidc?.job_title === "string" ? oidc.job_title.trim() || null : null;
 
         return {
           email: payload.email.trim().toLowerCase(),
@@ -96,9 +86,7 @@ async function resolveAccessIdentity(
   return null;
 }
 
-export async function resolveAccessUser(
-  c: Context<AppEnv>,
-): Promise<ResolveResult> {
+export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResult> {
   const hasAccessContext = Boolean(c.executionCtx.access);
   const hasAssertion = Boolean(c.req.header("Cf-Access-Jwt-Assertion"));
 

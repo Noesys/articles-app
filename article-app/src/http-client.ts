@@ -1,7 +1,6 @@
 import { ApiResponse } from "./utils/types";
 
-const API_BASE =
-  (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "/api";
+const API_BASE = (import.meta.env.VITE_BACKEND_URL as string | undefined) ?? "/api";
 
 export class ApiError extends Error {
   status: number;
@@ -18,11 +17,7 @@ async function fetchWithAuth<T>(
   full: true,
 ): Promise<ApiResponse<T>>;
 
-async function fetchWithAuth<T>(
-  path: string,
-  options: RequestInit,
-  full: false,
-): Promise<T>;
+async function fetchWithAuth<T>(path: string, options: RequestInit, full: false): Promise<T>;
 
 async function fetchWithAuth<T>(
   path: string,
@@ -58,41 +53,27 @@ async function fetchWithAuth<T>(
 
   if (res.status === 204) {
     return (
-      full
-        ? { success: true, data: undefined as unknown as T }
-        : (undefined as unknown as T)
+      full ? { success: true, data: undefined as unknown as T } : (undefined as unknown as T)
     ) as T | ApiResponse<T>;
   }
 
   const ct = res.headers.get("content-type") || "";
   if (!ct.includes("application/json")) {
     const text = await res.text().catch(() => "");
-    throw new ApiError(
-      text || `Unexpected response (${res.status})`,
-      res.status,
-    );
+    throw new ApiError(text || `Unexpected response (${res.status})`, res.status);
   }
   const body = (await res.json()) as ApiResponse<T> & { message?: string };
   if (!res.ok) {
-    throw new ApiError(
-      body?.message || `Request failed (${res.status})`,
-      res.status,
-    );
+    throw new ApiError(body?.message || `Request failed (${res.status})`, res.status);
   }
   return full ? (body as ApiResponse<T>) : (body as ApiResponse<T>).data;
 }
 
-export async function api<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   return fetchWithAuth<T>(path, options, false);
 }
 
-export async function apiFull<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<ApiResponse<T>> {
+export async function apiFull<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   return fetchWithAuth<T>(path, options, true);
 }
 

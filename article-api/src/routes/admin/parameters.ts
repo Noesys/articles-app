@@ -63,12 +63,7 @@ parametersRoute.post("/:articleTypeId/parameters", async (c) => {
     return c.json({ message: parsed.error }, 400);
   }
 
-  const data = await createParameter(
-    c.env.DB,
-    parsed,
-    c.get("user").id,
-    articleTypeId,
-  );
+  const data = await createParameter(c.env.DB, parsed, c.get("user").id, articleTypeId);
 
   return c.json({ message: "Parameter created successfully.", data }, 201);
 });

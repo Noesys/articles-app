@@ -1,6 +1,7 @@
 export interface AIEvaluationResult {
   score: number;
   feedback: string;
+  suggested_title: string;
   parameters: Record<string, string | number>;
 }
 
@@ -14,7 +15,6 @@ export type User = {
   created_by: string | null;
   is_active: number;
 };
-
 
 // articles
 
@@ -113,7 +113,6 @@ export type OtpCode = {
   used_at: string | null;
 };
 
-
 // evaluation
 export interface ParameterResultInput {
   parameter_id: string;
@@ -125,6 +124,7 @@ export interface ParameterResultInput {
 export interface EvaluationOutcome {
   ai_score: number;
   ai_feedback: string;
+  suggested_title: string | null;
   status: "approved" | "rewrite_required";
   pass_threshold: number;
   parameter_results: ParameterResultInput[];

@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { Table, Spin, ConfigProvider, theme as antdTheme } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import {
-  EmployeeSubmissionRow,
-  EmployeeSubmissionsResult,
-} from "@/admin/utils/types";
+import { EmployeeSubmissionRow, EmployeeSubmissionsResult } from "@/admin/utils/types";
 import { api } from "@/http-client";
 
 const MONTH_LABELS = [
@@ -26,13 +23,7 @@ const formatMonth = (ym: string) => {
   return `${MONTH_LABELS[Number(m) - 1]}-${y.slice(2)}`;
 };
 
-export function EmployeeSubmissionsTable({
-  start,
-  end,
-}: {
-  start: string;
-  end: string;
-}) {
+export function EmployeeSubmissionsTable({ start, end }: { start: string; end: string }) {
   const [data, setData] = useState<EmployeeSubmissionsResult | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -108,24 +99,15 @@ export function EmployeeSubmissionsTable({
               <Table.Summary.Row className="employee-summary-row">
                 <Table.Summary.Cell index={0} colSpan={2}>
                   <span className="text-slate-700">Total: </span>
-                  <span className="font-bold text-slate-700">
-                    {data.rows.length}
-                  </span>
+                  <span className="font-bold text-slate-700">{data.rows.length}</span>
                 </Table.Summary.Cell>
                 {data.months.map((m, i) => (
                   <Table.Summary.Cell key={m} index={i + 2} align="center">
-                    <span className="font-bold text-slate-700">
-                      {data.monthlyTotals[m]}
-                    </span>
+                    <span className="font-bold text-slate-700">{data.monthlyTotals[m]}</span>
                   </Table.Summary.Cell>
                 ))}
-                <Table.Summary.Cell
-                  index={data.months.length + 2}
-                  align="center"
-                >
-                  <span className="font-bold text-slate-700">
-                    {data.grandTotal}
-                  </span>
+                <Table.Summary.Cell index={data.months.length + 2} align="center">
+                  <span className="font-bold text-slate-700">{data.grandTotal}</span>
                 </Table.Summary.Cell>
               </Table.Summary.Row>
             </Table.Summary>

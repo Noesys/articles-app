@@ -1,15 +1,10 @@
 import { Hono } from "hono";
-import {
-  getArticlesByUser,
-  getArticleById,
-  createArticle,
-} from "../../services/user/articles";
+import { getArticlesByUser, getArticleById, createArticle } from "../../services/user/articles";
 import {
   getArticleHistory,
   snapshotArticle,
   updateArticleForRewrite,
 } from "../../services/user/articleHistory";
-import { getArticleTypes } from "../../services/user/articleTypes";
 import type { AppEnv, Bindings } from "../../types/shared-types";
 import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 import { AppError } from "../../utils/errors";
@@ -26,7 +21,7 @@ function currentMonth(): string {
 
 function validateArticleSize(title: string, content: string): void {
   const MAX_TITLE_BYTES = 500;
-  const MAX_CONTENT_BYTES = 10 * 1024 * 1024; // 10 MB
+  const MAX_CONTENT_BYTES = 5 * 1024 * 1024; // 5 MB;
   if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES)
     throw new AppError("Title too long", 400);
   if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES)
@@ -72,15 +67,7 @@ async function backgroundEvaluateArticle(
   bindings: Bindings,
 ) {
   try {
-    await evaluateArticle(
-      db,
-      articleId,
-      articleTypeId,
-      title,
-      content,
-      version,
-      bindings,
-    );
+    await evaluateArticle(db, articleId, articleTypeId, title, content, version, bindings);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Background evaluation failed:", msg, err);
@@ -114,9 +101,7 @@ articleRoutes.get("/mine", async (c) => {
 
   if (viewAll) {
     page = pageRaw ? Math.max(1, parseInt(pageRaw, 10) || 1) : 1;
-    limit = limitRaw
-      ? Math.min(100, Math.max(1, parseInt(limitRaw, 10) || 10))
-      : 10;
+    limit = limitRaw ? Math.min(100, Math.max(1, parseInt(limitRaw, 10) || 10)) : 10;
   }
 
   const { articles, pagination } = await getArticlesByUser(
@@ -172,12 +157,11 @@ articleRoutes.get("/mine/:id", async (c) => {
     history.sort((a, b) => a.version - b.version);
   }
 
-  const isPending =
-    article.status === "pending" || article.status === "processing";
+  const isPending = article.status === "pending" || article.status === "processing";
   const currentFeedback = isPending
     ? ""
     : article.ai_feedback ||
-    (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
+      (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
 
   // parameter results for current version
   const paramRows: {
@@ -250,11 +234,11 @@ articleRoutes.post("/", async (c) => {
   const user = c.get("user");
   const db = c.env.DB;
 
-  const MAX_BODY_BYTES = 100 * 1024 * 1024;
+  const MAX_BODY_BYTES = 6 * 1024 * 1024;
 
   const contentLength = c.req.header("content-length");
   if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
-    return c.json({ success: false, message: "Request body too large. Should be under 10 MB" }, 413);
+    return c.json({ success: false, message: "Request body too large. Maximum size is 5 MB" }, 413);
   }
 
   type CreateArticleBody = {
@@ -327,22 +311,14 @@ articleRoutes.post("/", async (c) => {
           .bind(historyId, now, requestedId),
         db
           .prepare(
-            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=?, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=?`,
+            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=?`,
           )
-          .bind(title, content, now, rewriteMonth, requestedId),
+          .bind(title, content, rewriteMonth, requestedId),
       ]);
     } catch {
       // Fallback to sequential if batch not supported in local D1
       await snapshotArticle(db, requestedId, historyId, now, user.id);
-      await updateArticleForRewrite(
-        db,
-        requestedId,
-        title,
-        content,
-        rewriteMonth,
-        now,
-        user.id,
-      );
+      await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth, user.id);
     }
 
     articleId = requestedId;
@@ -351,17 +327,8 @@ articleRoutes.post("/", async (c) => {
 
     // ❌ REMOVED: Synchronous evaluation (was blocking)
     // ✅ ADDED: Background evaluation via waitUntil
-    const currentVersion = existingArticle.version;
     c.executionCtx.waitUntil(
-      backgroundEvaluateArticle(
-        db,
-        articleId,
-        article_type_id,
-        title,
-        content,
-        nextVersion,
-        c.env,
-      ),
+      backgroundEvaluateArticle(db, articleId, article_type_id, title, content, nextVersion, c.env),
     );
 
     // Return immediately with pending status
@@ -425,8 +392,7 @@ articleRoutes.get("/:id/status", async (c) => {
   const db = c.env.DB;
   const articleId = c.req.param("id");
   const article = await getArticleById(db, articleId, user.id);
-  if (!article)
-    return c.json({ success: false, message: "Article not found" }, 404);
+  if (!article) return c.json({ success: false, message: "Article not found" }, 404);
   // Map internal status to spec status: pending / accepted / rejected
   let status: string = article.status;
   if (article.ai_score !== null) {

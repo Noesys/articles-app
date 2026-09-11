@@ -114,7 +114,7 @@
 }
 
 .article-viewer .ProseMirror blockquote {
-  border-left: 3px solid #6366f1;
+  border-left: 3px solid #cbd5e1;
   padding-left: 1rem;
   color: #64748b;
   font-style: italic;
@@ -126,4 +126,57 @@
   overflow-x: auto;
   max-width: 100%;
   -webkit-overflow-scrolling: touch;
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0 1rem;
+}
+
+.article-viewer .ProseMirror th,
+.article-viewer .ProseMirror td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.article-viewer .ProseMirror th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.article-viewer .ProseMirror a {
+  color: #0369a1;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.article-viewer .ProseMirror hr {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 1.25rem 0;
+}
+
+.article-viewer .ProseMirror code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  color: #1e293b;
+}
+
+.article-viewer .ProseMirror pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  margin: 0.75rem 0 1rem;
+}
+
+.article-viewer .ProseMirror pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
 }

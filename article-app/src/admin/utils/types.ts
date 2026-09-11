@@ -7,15 +7,9 @@ export interface ArticleTypeInput {
   scoreMax: number;
 }
 
-// articles 
+// articles
 
-export type ArticleStatus =
-  | "approved"
-  | "rewrite_required"
-  | "pending"
-  | "failed"
-  | "unknown";
-
+export type ArticleStatus = "approved" | "rewrite_required" | "pending" | "failed" | "unknown";
 
 export type ArticleParameterResult = {
   parameterId: string;
@@ -43,8 +37,7 @@ export type ArticleRowProps = {
   onClick?: (id: string) => void;
 };
 
-
-// article types 
+// article types
 
 // manager page
 
@@ -86,7 +79,6 @@ export type ParameterDraft = {
   isNew: boolean;
 };
 
-
 export type FormState = {
   name: string;
   description: string;
@@ -117,7 +109,6 @@ export type ParameterResponse = {
   options: ParameterOptionDraft[];
 };
 
-
 // users
 export type AuthRole = "super_admin" | "admin" | "user";
 
@@ -130,7 +121,6 @@ export type User = {
   created_at: string;
   is_active: number; // 1 = active, 0 = inactive
 };
-
 
 // insights
 export interface NumericDistributionBucket {

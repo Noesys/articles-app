@@ -38,7 +38,17 @@ import "./paste-content.css";
 import { SmartPaste } from "./extensions/SmartPaste";
 import { resolveContentToHtml } from "./lib/contentNormalize";
 
-function ToolbarButton({ tip, active, onClick, children }: { tip: string; active?: boolean; onClick: () => void; children: React.ReactNode }) {
+function ToolbarButton({
+  tip,
+  active,
+  onClick,
+  children,
+}: {
+  tip: string;
+  active?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <Tooltip title={tip}>
       <button
@@ -67,7 +77,7 @@ export default function TiptapEditor({
     shouldRerenderOnTransaction: true,
     extensions: [
       StarterKit.configure({
-        heading: { levels: [1, 2, 3] }
+        heading: { levels: [1, 2, 3] },
       }),
       TextAlign.configure({ types: ["heading", "paragraph", "image"] }),
       ResizableImage,
@@ -126,27 +136,21 @@ export default function TiptapEditor({
         <ToolbarButton
           tip="Heading 1"
           active={editor.isActive("heading", { level: 1 })}
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 1 }).run()
-          }
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
         >
           <Heading1 size={16} />
         </ToolbarButton>
         <ToolbarButton
           tip="Heading 2"
           active={editor.isActive("heading", { level: 2 })}
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 2 }).run()
-          }
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
         >
           <Heading2 size={16} />
         </ToolbarButton>
         <ToolbarButton
           tip="Heading 3"
           active={editor.isActive("heading", { level: 3 })}
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 3 }).run()
-          }
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
         >
           <Heading3 size={16} />
         </ToolbarButton>
@@ -227,11 +231,7 @@ export default function TiptapEditor({
           }
           onClick={() => {
             if (editor.isActive("image"))
-              editor
-                .chain()
-                .focus()
-                .updateAttributes("image", { textAlign: "left" })
-                .run();
+              editor.chain().focus().updateAttributes("image", { textAlign: "left" }).run();
             else editor.chain().focus().setTextAlign("left").run();
           }}
         >
@@ -245,11 +245,7 @@ export default function TiptapEditor({
           }
           onClick={() => {
             if (editor.isActive("image"))
-              editor
-                .chain()
-                .focus()
-                .updateAttributes("image", { textAlign: "center" })
-                .run();
+              editor.chain().focus().updateAttributes("image", { textAlign: "center" }).run();
             else editor.chain().focus().setTextAlign("center").run();
           }}
         >
@@ -263,11 +259,7 @@ export default function TiptapEditor({
           }
           onClick={() => {
             if (editor.isActive("image"))
-              editor
-                .chain()
-                .focus()
-                .updateAttributes("image", { textAlign: "right" })
-                .run();
+              editor.chain().focus().updateAttributes("image", { textAlign: "right" }).run();
             else editor.chain().focus().setTextAlign("right").run();
           }}
         >
@@ -284,11 +276,7 @@ export default function TiptapEditor({
         <ToolbarButton
           tip="Insert table"
           onClick={() =>
-            editor
-              .chain()
-              .focus()
-              .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-              .run()
+            editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
           }
         >
           <Table2 size={16} />
@@ -308,10 +296,7 @@ export default function TiptapEditor({
           }}
         />
       </div>
-      <EditorContent
-        editor={editor}
-        className="min-h-[300px] max-h-[75vh] overflow-auto"
-      />
+      <EditorContent editor={editor} className="min-h-[300px] max-h-[75vh] overflow-auto" />
     </div>
   );
 }

@@ -8,19 +8,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ChevronLeft, Send, Loader2, Copy, Check } from "lucide-react";
+import { ChevronLeft, Send, Loader2 } from "lucide-react";
 import { api } from "../http-client";
-import ReactMarkdown, { type Components } from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
-import type { CSSProperties } from "react";
 import TurndownService from "turndown";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminHeader from "@/admin/components/AdminHeader";
 import TiptapEditor from "@/components/editor/TiptapEditor";
 import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
-
-const syntaxTheme = oneDark as { [key: string]: CSSProperties };
 
 const turndown = new TurndownService({
   headingStyle: "atx",
@@ -87,9 +81,7 @@ function toMarkdown(content: string): string {
   };
 
   // Detect rich HTML (from .docx paste or Tiptap formatting) vs raw markdown wrapped in <p>
-  const hasRichElements = !!temp.querySelector(
-    "h1,h2,h3,ul,ol,blockquote,pre,table,strong,em,u",
-  );
+  const hasRichElements = !!temp.querySelector("h1,h2,h3,ul,ol,blockquote,pre,table,strong,em,u");
   const hasImages = !!temp.querySelector("img");
   const hasTable = !!temp.querySelector("table");
 
@@ -251,9 +243,7 @@ export default function ArticleCreation() {
         if (active) setTypes(result);
       } catch (err) {
         if (active) {
-          setTypesError(
-            err instanceof Error ? err.message : "Failed to load article types",
-          );
+          setTypesError(err instanceof Error ? err.message : "Failed to load article types");
         }
       } finally {
         if (active) setLoadingTypes(false);
@@ -303,10 +293,7 @@ export default function ArticleCreation() {
       });
       try {
         sessionStorage.removeItem("toastError");
-        sessionStorage.setItem(
-          "toast",
-          "Article submitted! Scoring in progress...",
-        );
+        sessionStorage.setItem("toast", "Article submitted! Scoring in progress...");
       } catch {}
       navigate(
         user?.auth_role === "admin" || user?.auth_role === "super_admin"
@@ -332,9 +319,7 @@ export default function ArticleCreation() {
           Back to Articles
         </button>
 
-        <h1 className="text-2xl font-semibold text-slate-900 mb-6">
-          Create New Article
-        </h1>
+        <h1 className="text-2xl font-semibold text-slate-900 mb-6">Create New Article</h1>
 
         <div>
           {typesError && (
@@ -351,9 +336,7 @@ export default function ArticleCreation() {
 
               <Select
                 value={values.article_type_id}
-                onValueChange={(value: string) =>
-                  setValues({ ...values, article_type_id: value })
-                }
+                onValueChange={(value: string) => setValues({ ...values, article_type_id: value })}
                 disabled={loadingTypes}
               >
                 <SelectTrigger className="w-full border-slate-400 bg-white shadow-sm text-slate-900 [&_span[data-placeholder]]:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -371,25 +354,19 @@ export default function ArticleCreation() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Title
-              </label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Title</label>
 
               <input
                 type="text"
                 value={values.title}
-                onChange={(e) =>
-                  setValues({ ...values, title: e.target.value })
-                }
+                onChange={(e) => setValues({ ...values, title: e.target.value })}
                 placeholder="Enter article title"
                 className="w-full rounded-lg border border-slate-400 bg-white px-3 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Content
-              </label>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Content</label>
 
               <div className="space-y-2">
                 <div className="flex bg-slate-100 rounded-lg p-0.5 w-fit">
@@ -424,9 +401,7 @@ export default function ArticleCreation() {
                   />
                 )}
 
-                {editorView === "preview" && (
-                  <ArticleViewer content={values.content} />
-                )}
+                {editorView === "preview" && <ArticleViewer content={values.content} />}
               </div>
             </div>
 
@@ -437,11 +412,7 @@ export default function ArticleCreation() {
               disabled={submitting}
               className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-medium rounded-lg py-2.5 transition-colors"
             >
-              {submitting ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <Send size={15} />
-              )}
+              {submitting ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
               {submitting ? "Submitting..." : "Submit Article"}
             </button>
           </form>

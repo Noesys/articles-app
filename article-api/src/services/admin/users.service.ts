@@ -100,10 +100,7 @@ export async function getUsers(
   return result.results;
 }
 
-export async function getUserById(
-  db: D1Database,
-  id: string,
-): Promise<UserProfile | null> {
+export async function getUserById(db: D1Database, id: string): Promise<UserProfile | null> {
   const user = await db
     .prepare(
       `
@@ -148,11 +145,7 @@ export async function updateUser(
     .run();
 }
 
-export async function updateUserAuthRole(
-  db: D1Database,
-  id: string,
-  role: string,
-): Promise<void> {
+export async function updateUserAuthRole(db: D1Database, id: string, role: string): Promise<void> {
   if (!ALLOWED_AUTH_ROLES.includes(role as AssignableAuthRole)) {
     throw badRequest("Invalid role");
   }
@@ -249,9 +242,7 @@ export async function getArticlesByUser(
       .bind(...params, limit, offset)
       .all<ArticleRow>()
   ).results;
-  const data = results.map(
-    (article): ArticleByUser => ({ ...article, parameters: [] }),
-  );
+  const data = results.map((article): ArticleByUser => ({ ...article, parameters: [] }));
   return { data, total };
 }
 

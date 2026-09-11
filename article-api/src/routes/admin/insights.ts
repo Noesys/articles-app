@@ -1,8 +1,5 @@
 import { Hono } from "hono";
-import {
-  getSummary,
-  getEmployeeSubmissions,
-} from "../../services/admin/insights.service";
+import { getSummary, getEmployeeSubmissions } from "../../services/admin/insights.service";
 import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 

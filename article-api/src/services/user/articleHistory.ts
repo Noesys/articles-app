@@ -3,7 +3,7 @@ import { ArticleHistory } from "../../types/user-types";
 export async function getArticleHistory(
   db: D1Database,
   articleId: string,
-  userId?: string
+  userId?: string,
 ): Promise<ArticleHistory[]> {
   // Defense-in-depth: when a userId is provided, only return history rows
   // whose article belongs to that user. Route layer should already enforce
@@ -29,7 +29,7 @@ export async function getArticleHistory(
         WHERE h.article_id = ?
         ${userId ? "AND a.user_id = ?" : ""}
         ORDER BY h.version ASC
-      `
+      `,
     )
     .bind(...(userId ? [articleId, userId] : [articleId]))
     .all<ArticleHistory>();
@@ -42,7 +42,7 @@ export async function snapshotArticle(
   articleId: string,
   historyId: string,
   snapshottedAt: string,
-  userId?: string
+  userId?: string,
 ): Promise<void> {
   // When userId is provided, the snapshot is a no-op if the article does
   // not belong to the user (defense-in-depth — never insert a snapshot
@@ -88,7 +88,7 @@ export async function snapshotArticle(
           ?
         FROM articles
         WHERE id = ?
-      `
+      `,
     )
     .bind(historyId, snapshottedAt, articleId)
     .run();
@@ -100,9 +100,10 @@ export async function updateArticleForRewrite(
   title: string,
   content: string,
   monthYear: string,
-  now: string,
-  userId?: string
+  userId?: string,
 ): Promise<void> {
+  // Defense-in-depth: when userId is provided, the UPDATE matches no rows
+  // if the article does not belong to the user.
   await db
     .prepare(
       `
@@ -115,14 +116,18 @@ export async function updateArticleForRewrite(
           ai_score = NULL,
           ai_feedback = NULL,
           pass_threshold = NULL,
-          submitted_at = ?,
+          submitted_at = CURRENT_TIMESTAMP,
           scored_at = NULL,
           month_year = ?,
           retry_count = retry_count + 1
         WHERE id = ?
         ${userId ? "AND user_id = ?" : ""}
-      `
+      `,
     )
-    .bind(...(userId ? [title, content, now, monthYear, articleId, userId] : [title, content, now, monthYear, articleId]))
+    .bind(
+      ...(userId
+        ? [title, content, monthYear, articleId, userId]
+        : [title, content, monthYear, articleId]),
+    )
     .run();
 }

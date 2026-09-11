@@ -1,7 +1,6 @@
 import { ShieldAlert, Lock } from "lucide-react";
 import logoImage from "../Logo/contiq.png";
 import { useAuth } from "../contexts/AuthContext";
-import Footer from "./Footer";
 
 interface UnauthorizedPageProps {
   title?: string;
@@ -19,8 +18,8 @@ export function UnauthorizedPage({
       {/* Top Header - matches Header.tsx */}
       <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
         <div className="w-full px-4 md:px-8 h-13 flex items-center justify-between">
-          <div className="flex items-center shrink-0">
-            <img src={logoImage} alt="Logo" className="h-8 w-auto" />
+          <div className="flex items-center gap-2">
+            <img src={logoImage} alt="Logo" className="h-13 w-26" />
           </div>
           {user && (
             <span className="text-sm text-slate-500 hidden sm:block">
@@ -40,9 +39,7 @@ export function UnauthorizedPage({
 
           {/* Heading & Text */}
           <h1 className="text-2xl font-bold text-slate-900 mb-2">{title}</h1>
-          <p className="text-slate-600 text-sm leading-relaxed mb-6">
-            {message}
-          </p>
+          <p className="text-slate-600 text-sm leading-relaxed mb-6">{message}</p>
 
           {/* Additional Info Pill if logged in */}
           {user && (
@@ -52,23 +49,16 @@ export function UnauthorizedPage({
                 Account Status
               </div>
               <p>
-                Logged in as:{" "}
-                <span className="font-semibold text-slate-900">
-                  {user.email}
-                </span>
+                Logged in as: <span className="font-semibold text-slate-900">{user.email}</span>
               </p>
               <p>
                 Role:{" "}
-                <span className="capitalize font-semibold text-slate-900">
-                  {user.auth_role}
-                </span>
+                <span className="capitalize font-semibold text-slate-900">{user.auth_role}</span>
               </p>
             </div>
           )}
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }
