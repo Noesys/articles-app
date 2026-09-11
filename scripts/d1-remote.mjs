@@ -14,6 +14,36 @@ export const API_DIR = path.join(ROOT, "article-api");
 export const DB_NAME = "noesys-articles";
 export const DB_ID = "acc066a7-2084-4d5e-89b0-90c20c4ceb6c";
 
+export const R2_BUCKET = "contiq-article-images";
+export const ALLOWED_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+export const MAX_BYTES = 2 * 1024 * 1024;
+export const EXT_BY_MIME = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
+export function mimeToExt(mime) {
+  return EXT_BY_MIME[mime.toLowerCase()] || null;
+}
+
+export function r2PutRemote(key, filePath, contentType) {
+  const cmd = ["r2", "object", "put", `${R2_BUCKET}/${key}`, "--file", filePath, "--content-type", contentType, "--remote"];
+  try {
+    execFileSync("npx", ["wrangler", ...cmd], {
+      cwd: API_DIR,
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return { success: true, key, url: `/api/images/${key}` };
+  } catch (e) {
+    const detail = [e.stdout, e.stderr].filter(Boolean).join("\n").trim().slice(0, 2000);
+    throw new Error(`r2Put failed for ${key}: ${detail || e.message.slice(0, 500)}`);
+  }
+}
+
 export function sqlStr(value) {
   if (value === null || value === undefined) return "NULL";
   return `'${String(value).replace(/'/g, "''")}'`;

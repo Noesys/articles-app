@@ -43,7 +43,7 @@ export function UnauthorizedPage({
 
           {/* Additional Info Pill if logged in */}
           {user && (
-            <div className="w-full bg-slate-50 border border-slate-200/80 rounded-xl p-3 mb-6 text-left text-xs text-slate-600 space-y-1">
+            <div className="w-full bg-slate-50 border border-slate-200/80 rounded-sm p-3 mb-6 text-left text-xs text-slate-600 space-y-1">
               <div className="flex items-center gap-1.5 font-medium text-slate-700">
                 <Lock className="w-3.5 h-3.5 text-slate-400" />
                 Account Status

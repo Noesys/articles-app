@@ -15,7 +15,7 @@
 | **2** — Upload + serve API | [x] | `POST/GET /api/images` |
 | **3** — TipTap toolbar / paste / drop → R2 | [x] | Stop writing new base64 from editor |
 | **4** — Deploy + verify | [x] | Deployed; see Version ID in commit notes / reply |
-| **5** — Seed/import rewrite (optional) | [ ] | mammoth → R2 → `<img src="/api/images/...">` |
+| **5** — Seed/import rewrite (optional) | [x] | mammoth → R2 → `<img src="/api/images/...">` via `scripts/d1-remote.mjs:r2PutRemote` + `seed-phase2.mjs:decodeAndPrepareImage` |
 
 ---
 

@@ -9,7 +9,7 @@ export default function ParameterResultsBox({
   const [open, setOpen] = useState(false);
   if (!results || !results.length)
     return (
-      <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-sm border border-slate-200 bg-white shadow-sm overflow-hidden">
         <button
           onClick={() => setOpen((v) => !v)}
           className="w-full flex items-center justify-between px-4 py-3"
@@ -31,7 +31,7 @@ export default function ParameterResultsBox({
       </div>
     );
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-sm border border-slate-200 bg-white shadow-sm overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3"
@@ -59,7 +59,7 @@ export default function ParameterResultsBox({
                 <span className="text-sm font-medium text-slate-700">
                   {r.parameter_name || r.name}
                 </span>
-                <span className="text-sm font-semibold text-slate-900 bg-white border border-slate-200 rounded-full px-2.5 py-0.5">
+                <span className="text-sm font-semibold text-slate-900 bg-white border border-slate-200 rounded-sm px-2.5 py-0.5">
                   {r.value == null ? "—" : String(r.value)}
                 </span>
               </div>

@@ -76,14 +76,23 @@ export default function ResizableImageNodeView({
       >
         <img
           src={src}
-          alt={alt}
+          alt={alt || "image"}
           title={title}
+          loading="lazy"
+          onError={(e) => {
+            const t = e.currentTarget;
+            t.style.border = "1px dashed #e2e8f0";
+            t.style.padding = "12px";
+            t.style.minHeight = "80px";
+          }}
           style={{
             ...imgStyle,
             maxWidth: "100%",
             height: "auto",
             display: "block",
             borderRadius: 6,
+            minHeight: src ? undefined : "40px",
+            background: src ? undefined : "#f8fafc",
           }}
         />
         {selected && isEditable && (
@@ -97,7 +106,7 @@ export default function ResizableImageNodeView({
                 transform: "translateY(-50%)",
                 width: 8,
                 height: 40,
-                background: "#6366f1",
+                background: "var(--primary)",
                 borderRadius: 4,
                 cursor: "ew-resize",
               }}
@@ -111,7 +120,7 @@ export default function ResizableImageNodeView({
                 transform: "translateY(-50%)",
                 width: 8,
                 height: 40,
-                background: "#6366f1",
+                background: "var(--primary)",
                 borderRadius: 4,
                 cursor: "ew-resize",
               }}
@@ -124,7 +133,7 @@ export default function ResizableImageNodeView({
                 bottom: -4,
                 width: 12,
                 height: 12,
-                background: "#6366f1",
+                background: "var(--primary)",
                 borderRadius: 2,
                 cursor: "nwse-resize",
               }}

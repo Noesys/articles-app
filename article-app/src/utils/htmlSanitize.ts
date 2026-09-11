@@ -34,11 +34,16 @@ const ALLOWED = [
  * Structural tags + href/src/alt are enough; TipTap marks carry formatting.
  */
 export function sanitizeHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
+  const clean = DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ALLOWED,
-    ALLOWED_ATTR: ["href", "src", "alt", "colspan", "rowspan", "width", "height", "title"],
+    ALLOWED_ATTR: ["href", "src", "alt", "colspan", "rowspan", "width", "height", "title", "style", "data-align"],
     ALLOW_DATA_ATTR: false,
     ALLOW_UNKNOWN_PROTOCOLS: false,
     KEEP_CONTENT: true,
   });
+  return DOMPurify.sanitize(clean, {
+    ALLOWED_TAGS: ALLOWED,
+    ALLOWED_ATTR: ["href", "src", "alt", "colspan", "rowspan", "width", "height", "title", "style", "data-align"],
+    ALLOW_DATA_ATTR: false,
+  }) as string;
 }

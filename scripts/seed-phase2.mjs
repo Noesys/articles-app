@@ -4,6 +4,7 @@ import crypto from "crypto";
 import mammoth from "mammoth";
 import matter from "gray-matter";
 import XLSX from "xlsx";
+import os from "os";
 import {
   ROOT,
   DB_NAME,
@@ -15,6 +16,10 @@ import {
   d1ExecBatched,
   sqlStr,
   sqlNum,
+  ALLOWED_MIMES,
+  MAX_BYTES,
+  mimeToExt,
+  r2PutRemote,
 } from "./d1-remote.mjs";
 
 // Prefer scripts/Article_folder, fall back to repo-root Article_folder
@@ -258,7 +263,51 @@ const stats = {
   byType: {},
   byStatus: {},
   byMonth: {},
+  imagesUploaded: 0,
+  imagesSkippedType: 0,
+  imagesSkippedSize: 0,
+  imagesFailed: 0,
+  r2Errors: [],
 };
+
+async function decodeAndPrepareImage(imageBuffer, contentType, userId) {
+  const normalizedMime = contentType.toLowerCase().replace("image/x-", "image/");
+  if (!ALLOWED_MIMES.has(normalizedMime)) {
+    stats.imagesSkippedType++;
+    return null;
+  }
+  if (imageBuffer.length > MAX_BYTES) {
+    stats.imagesSkippedSize++;
+    if (VERBOSE) console.warn(`[seed] image ${normalizedMime} ${imageBuffer.length}B exceeds 2MB skip`);
+    return null;
+  }
+  const ext = mimeToExt(normalizedMime);
+  if (!ext) {
+    stats.imagesSkippedType++;
+    return null;
+  }
+  if (DRY) {
+    const id = crypto.randomUUID();
+    return { url: `/api/images/${userId}/${id}.${ext}`, key: `articles/${userId}/${id}.${ext}` };
+  }
+  const id = crypto.randomUUID();
+  const key = `articles/${userId}/${id}.${ext}`;
+  const url = `/api/images/${userId}/${id}.${ext}`;
+  const tmpFile = path.join(os.tmpdir(), `seed-img-${id}.${ext}`);
+  try {
+    fs.writeFileSync(tmpFile, imageBuffer);
+    r2PutRemote(key, tmpFile, normalizedMime);
+    stats.imagesUploaded++;
+    return { url, key };
+  } catch (err) {
+    stats.imagesFailed++;
+    stats.r2Errors.push(err.message.slice(0, 200));
+    if (VERBOSE) console.error(`[seed] R2 upload failed ${key}: ${err.message.slice(0, 300)}`);
+    return null;
+  } finally {
+    try { fs.unlinkSync(tmpFile); } catch {}
+  }
+}
 
 for (const [low, info] of map) {
   const rawPurpose = purposeMap.get(low);
@@ -306,17 +355,38 @@ for (const [low, info] of map) {
         content = stripEmbeddedImages(content);
       } else {
         const buf = fs.readFileSync(fp);
-        // Drop embedded images — base64 img data blows past D1 SQL size limits
         const r = await mammoth.convertToHtml(
           { buffer: buf },
           {
-            convertImage: mammoth.images.imgElement(() => ({
-              src: "",
-              alt: "[image omitted in seed]",
-            })),
+            convertImage: mammoth.images.imgElement(async (image) => {
+              const ct = (image.contentType || "").toLowerCase();
+              let imageBuffer;
+              try {
+                const b64 = await image.read("base64");
+                imageBuffer = Buffer.from(b64, "base64");
+              } catch {
+                try {
+                  const v = await image.read();
+                  imageBuffer = Buffer.isBuffer(v) ? v : Buffer.from(String(v), "base64");
+                } catch {
+                  return { src: "", alt: "[image omitted]" };
+                }
+              }
+              const res = await decodeAndPrepareImage(imageBuffer, ct, byEmail.get(info.email) || info.empId);
+              if (res) return { src: res.url };
+              return { src: "" };
+            }),
           },
         );
-        content = stripEmbeddedImages(r.value.trim() || "(empty)");
+        content = (r.value.trim() || "(empty)");
+        if (content.includes("data:image")) {
+          content = content.replace(/src="data:[^"]*"/gi, 'src=""');
+        }
+        if (new TextEncoder().encode(content).length > 50_000) {
+          console.error(`[seed] content ${fname} exceeds 50KB skip`);
+          skip++;
+          continue;
+        }
       }
     } else {
       content = "(file not found: " + fname + ")";
@@ -385,6 +455,13 @@ console.log("purpose mapping:", {
 console.log("by type (after mapping):", stats.byType);
 console.log("by month:", stats.byMonth);
 console.log("by status:", stats.byStatus);
+console.log("images:", {
+  uploaded: stats.imagesUploaded,
+  skippedType: stats.imagesSkippedType,
+  skippedSize: stats.imagesSkippedSize,
+  failed: stats.imagesFailed,
+});
+if (stats.r2Errors.length) console.log("r2Errors:", stats.r2Errors.slice(0, 5));
 
 if (!DRY) {
   const counts = d1Query(
