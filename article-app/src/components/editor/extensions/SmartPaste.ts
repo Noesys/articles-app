@@ -168,6 +168,7 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
                   for (const file of imageFiles) {
                     try {
                       const src = await fileToDataUrl(file);
+                      if (editor.isDestroyed) return;
                       editor.chain().focus().setImage({ src }).run();
                     } catch {
                       /* ignore unreadable clipboard image */
@@ -184,7 +185,9 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
                     // Re-render just the pasted fragment would need position
                     // bookkeeping; swapping srcs in the whole doc is safe and
                     // idempotent because data: urls are skipped.
+                    if (editor.isDestroyed) return;
                     const full = await inlineRemoteImages(editor.getHTML());
+                    if (editor.isDestroyed) return;
                     if (full !== editor.getHTML())
                       editor.commands.setContent(full, { emitUpdate: true });
                   }
@@ -200,6 +203,7 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
                 for (const file of imageFiles) {
                   try {
                     const src = await fileToDataUrl(file);
+                    if (editor.isDestroyed) return;
                     editor.chain().focus().setImage({ src }).run();
                   } catch {
                     /* ignore */

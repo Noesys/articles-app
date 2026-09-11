@@ -25,14 +25,15 @@ export default function ArticleViewer({ content }: Props) {
     extensions: tiptapExtensions,
     content: sanitizeHtml(resolveContentToHtml(content)),
     editable: false,
+    immediatelyRender: false,
   });
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
     const next = sanitizeHtml(resolveContentToHtml(content));
     if (next !== editor.getHTML()) editor.commands.setContent(next, { emitUpdate: false });
   }, [content, editor]);
 
-  if (!editor) return null;
+  if (!editor || editor.isDestroyed) return null;
 
   return (
     <div className="article-viewer">

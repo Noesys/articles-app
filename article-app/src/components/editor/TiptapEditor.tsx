@@ -1,4 +1,4 @@
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { ResizableImage } from "./extensions/ResizableImage";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -67,6 +67,10 @@ function ToolbarButton({
   );
 }
 
+function isLiveEditor(editor: Editor | null | undefined): editor is Editor {
+  return !!editor && !editor.isDestroyed;
+}
+
 export default function TiptapEditor({
   value,
   onChange,
@@ -75,11 +79,18 @@ export default function TiptapEditor({
   onChange: (v: string) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  // Keep latest onChange without recreating the editor; avoids stale closures
+  // and getHTML after StrictMode / route remount destroy.
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const initialHtml = resolveContentToHtml(value);
 
   const editor = useEditor({
     shouldRerenderOnTransaction: true,
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -96,8 +107,9 @@ export default function TiptapEditor({
       TableCell,
     ],
     content: initialHtml,
-    onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+    onUpdate: ({ editor: ed }) => {
+      if (!isLiveEditor(ed)) return;
+      onChangeRef.current(ed.getHTML());
     },
   });
 
@@ -105,7 +117,8 @@ export default function TiptapEditor({
     async (file: File) => {
       try {
         const b64 = await convertImageToBase64(file);
-        editor?.chain().focus().setImage({ src: b64 }).run();
+        if (!isLiveEditor(editor)) return;
+        editor.chain().focus().setImage({ src: b64 }).run();
       } catch (err: unknown) {
         alert(err instanceof Error ? err.message : String(err));
       }
@@ -114,13 +127,15 @@ export default function TiptapEditor({
   );
 
   useEffect(() => {
-    if (!editor) return;
+    if (!isLiveEditor(editor)) return;
     if (editor.getHTML() === value) return;
     const nextHtml = resolveContentToHtml(value || "");
-    editor.commands.setContent(nextHtml);
-  }, [value]);
+    // emitUpdate: false avoids onUpdate → parent setState → effect loops while
+    // the editor may already be tearing down (tab switch / StrictMode).
+    editor.commands.setContent(nextHtml, { emitUpdate: false });
+  }, [editor, value]);
 
-  if (!editor) return null;
+  if (!isLiveEditor(editor)) return null;
   return (
     <div className="overflow-hidden rounded-sm border border-border bg-white shadow-[var(--shadow-card)] focus-within:border-transparent focus-within:ring-2 focus-within:ring-teal-500/40">
       <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-slate-50 px-2 py-1.5">
