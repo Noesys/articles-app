@@ -36,7 +36,13 @@ export default function ResizableImageNodeView({
   };
 
   const imgStyle: React.CSSProperties = {};
-  if (width) imgStyle.width = width as string;
+  if (width) {
+    const w = String(width);
+    imgStyle.width = /^\d+$/.test(w) ? `${w}px` : w;
+  } else if (node.attrs.style) {
+    const m = String(node.attrs.style).match(/width\s*:\s*([^;]+)/i);
+    if (m) imgStyle.width = m[1].trim();
+  }
   // Use text-align on full-width wrapper to align inner inline-block container.
   // This is more reliable than margin:auto on the wrapper itself.
   let wrapperStyle: React.CSSProperties = { display: "block", width: "100%", maxWidth: "100%" };

@@ -81,9 +81,19 @@ export function sanitizeHtmlServer(html: string): string {
             if (!allowed.has(attrName)) continue;
             let v = rawValue ?? "";
             if (attrName === "style" && tag === "img") {
-              const allowed = v.match(/display\s*:\s*block|margin-(left|right)\s*:\s*auto|margin\s*:[^;]+|width\s*:\s*[^;]+/gi);
-              if (!allowed) continue;
-              v = allowed.join("; ");
+              const m = v.match(/display\s*:\s*block|margin-(left|right)\s*:\s*auto|margin\s*:[^;]+|width\s*:\s*[^;]+|height\s*:\s*[^;]+/gi);
+              if (!m) continue;
+              // Deduplicate width/height/display/margins to avoid bloating but keep alignment
+              const seen = new Set<string>();
+              const filtered: string[] = [];
+              for (const p of m) {
+                const key = p.split(":")[0].trim().toLowerCase();
+                if (key === "width" && seen.has("width")) continue;
+                if (key === "height" && seen.has("height")) continue;
+                seen.add(key);
+                filtered.push(p.trim());
+              }
+              v = filtered.join("; ");
             }
             if (
               (attrName === "href" || attrName === "src") &&
