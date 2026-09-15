@@ -4,9 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { ChevronLeft, Send, Loader2 } from "lucide-react";
 import { api } from "../http-client";
-import TurndownService from "turndown";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminHeader from "@/admin/components/AdminHeader";
+import { serializeArticleContent } from "@/utils/serializeArticleContent";
 
 const TiptapEditor = lazy(() => import("@/components/editor/TiptapEditor"));
 const ArticleViewer = lazy(
@@ -19,224 +19,6 @@ function EditorFallback() {
       <Loader2 size={22} className="animate-spin text-slate-400" />
     </div>
   );
-}
-
-const turndown = new TurndownService({
-  headingStyle: "atx",
-  codeBlockStyle: "fenced",
-  bulletListMarker: "-",
-});
-
-turndown.addRule("table", {
-  filter: "table",
-  replacement: function (content) {
-    return "\n" + content + "\n";
-  },
-});
-
-turndown.addRule("tableHead", {
-  filter: "thead",
-  replacement: function (content) {
-    return content;
-  },
-});
-
-turndown.addRule("tableBody", {
-  filter: "tbody",
-  replacement: function (content) {
-    return content;
-  },
-});
-
-turndown.addRule("tableRow", {
-  filter: "tr",
-  replacement: function (content) {
-    let line = "| " + content.trim() + " |";
-    return line + "\n";
-  },
-});
-
-turndown.addRule("tableCell", {
-  filter: ["th", "td"],
-  replacement: function (content) {
-    return content.trim() + " | ";
-  },
-});
-
-// Add IMAGE support to turndown - converts <img> to markdown ![alt](src),
-// or to a raw <img> tag when the editor recorded a custom size/alignment
-// (plain markdown image syntax has no way to carry those, so falling back
-// to markdown for a resized image would silently reset it to full size).
-turndown.addRule("image", {
-  filter: "img",
-  replacement: function (content, node) {
-    const alt = node.getAttribute("alt") || "";
-    const src = node.getAttribute("src") || "";
-    const width = node.getAttribute("width") || "";
-    const style = node.getAttribute("style") || "";
-    const align = node.getAttribute("data-align") || "";
-
-    if (width || style || align) {
-      const escape = (s: string) => s.replace(/"/g, "&quot;");
-      const attrs = [`src="${escape(src)}"`, `alt="${escape(alt)}"`];
-      if (width) attrs.push(`width="${escape(width)}"`);
-      if (style) attrs.push(`style="${escape(style)}"`);
-      if (align) attrs.push(`data-align="${escape(align)}"`);
-      return `<img ${attrs.join(" ")} />`;
-    }
-
-    return "![" + alt + "](" + src + ")";
-  },
-});
-
-function toMarkdown(content: string): string {
-  if (!content.trim() || content.trim() === "<p></p>") return "";
-
-  const temp = document.createElement("div");
-  temp.innerHTML = content;
-
-  const decode = (s: string) => {
-    const ta = document.createElement("textarea");
-    ta.innerHTML = s;
-    return ta.value;
-  };
-
-  // Detect rich HTML (from .docx paste or Tiptap formatting) vs raw markdown wrapped in <p>
-  const hasRichElements = !!temp.querySelector(
-    "h1,h2,h3,ul,ol,blockquote,pre,table,strong,em,u",
-  );
-  const hasImages = !!temp.querySelector("img");
-  const hasTable = !!temp.querySelector("table");
-
-  // Case 1: Rich HTML (formatted docx / Tiptap tables/bold/headings/images) -> use Turndown
-  if (hasRichElements || hasImages) {
-    try {
-      if (hasTable) {
-        const div = document.createElement("div");
-        div.innerHTML = content;
-
-        // Fix tables that might have empty headers
-        div.querySelectorAll("table").forEach((tbl) => {
-          const headerRow = tbl.querySelector("thead tr");
-          if (!headerRow || !headerRow.querySelector("th")) {
-            const firstBodyRow = tbl.querySelector("tbody tr");
-            if (firstBodyRow) {
-              const thead = document.createElement("thead");
-              const headerTr = document.createElement("tr");
-              firstBodyRow.querySelectorAll("td").forEach((td) => {
-                const th = document.createElement("th");
-                th.innerHTML = td.innerHTML;
-                headerTr.appendChild(th);
-              });
-              thead.appendChild(headerTr);
-              const tbody = tbl.querySelector("tbody");
-              if (tbody) {
-                tbl.insertBefore(thead, tbody);
-                firstBodyRow.remove();
-              }
-            }
-          }
-        });
-
-        content = div.innerHTML;
-      }
-
-      let md = turndown.turndown(content);
-      md = decode(md);
-
-      md = md
-        .split("\n")
-        .map((line) => {
-          if (line.includes("|")) return line;
-          return line.replace(/\\([#*_\-[\]`>])/g, "$1");
-        })
-        .join("\n");
-
-      // Fix GFM table format: ensure delimiter row immediately follows header
-      md = md.replace(/(\|[^\n]*\|)\n\s*\n\s*(\|[\s\-:|]+\|)/g, "$1\n$2");
-
-      // Collapse multiple blank lines inside table blocks
-      md = md.replace(/(\|[^\n]*\|)\n\n(?=\|)/g, "$1\n");
-
-      // Ensure proper spacing between table and other content
-      md = md.replace(/(\|[\s\-:|]+\|)\n(?!\|)/g, "$1\n\n");
-
-      // Clean up multiple consecutive blank lines (except in tables)
-      md = md.replace(/\n\n\n+/g, "\n\n");
-
-      return md.trim();
-    } catch (e) {
-      console.error("Turndown error:", e);
-      /* fallthrough */
-    }
-  }
-
-  // Case 2: raw markdown pasted (wrapped in <p>) + optional images
-  const getTextWithBreaks = (el: HTMLElement): string => {
-    const clone = el.cloneNode(true) as HTMLElement;
-    clone.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
-    return decode((clone.textContent ?? "").trim());
-  };
-
-  const parts: string[] = [];
-  for (const node of Array.from(temp.childNodes) as ChildNode[]) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const tx = decode((node.textContent ?? "").trim());
-      if (tx) parts.push(tx);
-      continue;
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) continue;
-
-    const el = node as HTMLElement;
-
-    if (el.tagName.toLowerCase() === "img") {
-      const src = el.getAttribute("src") ?? "";
-      const alt = el.getAttribute("alt") ?? "";
-      if (src) parts.push("![" + alt + "](" + src + ")");
-      continue;
-    }
-
-    const imgs = Array.from(el.querySelectorAll("img"));
-    if (imgs.length > 0) {
-      const clone = el.cloneNode(true) as HTMLElement;
-      clone.querySelectorAll("img").forEach((n) => n.remove());
-      clone.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
-      const text = decode((clone.textContent ?? "").trim());
-      if (text) parts.push(text);
-      for (const img of imgs) {
-        const src = (img as HTMLImageElement).getAttribute("src") ?? "";
-        const alt = img.getAttribute("alt") ?? "";
-        if (src) parts.push("![" + alt + "](" + src + ")");
-      }
-      continue;
-    }
-
-    const text = getTextWithBreaks(el);
-    if (!text) continue;
-
-    if (text.includes("|") && text.includes("\n")) {
-      parts.push(text);
-    } else {
-      parts.push(text);
-    }
-  }
-
-  if (parts.length > 0) {
-    let out = parts.join("\n\n").trim();
-    // GFM tables must have header and delimiter on consecutive lines
-    out = out.replace(/(\|[^\n]*\|)\n\s*\n(?=\|)/g, "$1\n");
-    return out;
-  }
-
-  // Fallback: images at deeper nesting or Turndown for edge cases
-  if (hasImages) {
-    try {
-      return decode(turndown.turndown(content)).trim();
-    } catch {}
-  }
-
-  const raw = decode((temp as HTMLElement).innerText ?? temp.textContent ?? "");
-  return raw.trim();
 }
 
 type CreateResponse = { id: string; status: string };
@@ -313,7 +95,7 @@ export default function ArticleCreation() {
         body: JSON.stringify({
           article_type_id: values.article_type_id,
           title: values.title.trim(),
-          content: toMarkdown(values.content.trim()),
+          content: serializeArticleContent(values.content.trim()),
         }),
       });
       try {
@@ -383,6 +165,7 @@ export default function ArticleCreation() {
                 }))}
                 placeholder="Select an article type"
                 triggerClassName="w-full border-border bg-white shadow-sm text-slate-900"
+                disabled={loadingTypes}
               />
             </div>
 

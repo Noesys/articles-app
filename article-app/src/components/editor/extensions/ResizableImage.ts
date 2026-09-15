@@ -8,8 +8,10 @@ export const ResizableImage = Image.extend({
       ...this.parent?.(),
       width: {
         default: null,
+        // Prefer CSS width so percent values like "50%" are not lost to a
+        // numeric width="50" attribute (which browsers treat as pixels).
         parseHTML: (el: HTMLElement) =>
-          el.getAttribute("width") || el.style.width || null,
+          el.style.width || el.getAttribute("width") || null,
         renderHTML: (attrs: { width?: string | number | null }) =>
           attrs.width ? { width: attrs.width } : {},
       },
@@ -63,15 +65,14 @@ export const ResizableImage = Image.extend({
     return ReactNodeViewRenderer(ResizableImageNodeView);
   },
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
-    // Preserve % widths, emit numeric width attr for DOMPurify/htmlparser2
+    // Preserve % widths via style only — never emit a numeric width attr for
+    // percent values (width="50" would be interpreted as 50px).
     let widthStyle: string | null = null;
     let widthAttr: string | null = null;
     if (HTMLAttributes.width != null) {
       const raw = String(HTMLAttributes.width).trim();
       if (raw.endsWith("%")) {
         widthStyle = raw;
-        const n = parseInt(raw, 10);
-        if (!isNaN(n)) widthAttr = String(n);
       } else {
         const n = parseInt(raw, 10);
         if (!isNaN(n)) {
@@ -115,7 +116,6 @@ export const ResizableImage = Image.extend({
       style: style || undefined,
     };
     if (widthAttr) outAttrs.width = widthAttr;
-    else if (HTMLAttributes.width) outAttrs.width = HTMLAttributes.width;
     return ["img", outAttrs];
   },
 }).configure({ inline: false, allowBase64: true });

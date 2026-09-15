@@ -513,6 +513,7 @@ export default function AdminArticleDetail() {
                 options={articleTypes.map((t) => ({ value: t.id, label: t.name }))}
                 placeholder="Select type"
                 className="min-w-[240px] max-w-[320px]"
+                disabled={typeBusy || reevalBusy || scoringInFlight}
               />
               <button
                 type="button"

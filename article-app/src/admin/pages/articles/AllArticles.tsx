@@ -68,6 +68,8 @@ const AllArticles = () => {
     value: string,
     defaultValue?: string,
   ) => {
+    // Reset page in the same update path so fetch never races with a stale page.
+    setPage(1);
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
@@ -125,11 +127,6 @@ const AllArticles = () => {
       setLoading(false);
     }
   }, [id, selectedMonthKey, selectedStatus, selectedType, page, pageSize]);
-
-  // Reset to page 1 when filters or pageSize change
-  useEffect(() => {
-    setPage(1);
-  }, [selectedMonthKey, selectedStatus, selectedType, pageSize]);
 
   useEffect(() => {
     fetchArticleTypes();
@@ -286,9 +283,10 @@ const AllArticles = () => {
               <span className="text-muted-foreground">Rows per page</span>
               <FilterSelect
                 value={String(pageSize)}
-                onValueChange={(v) =>
-                  setPageSize(Math.min(100, Math.max(5, parseInt(v, 10) || 10)))
-                }
+                onValueChange={(v) => {
+                  setPageSize(Math.min(100, Math.max(5, parseInt(v, 10) || 10)));
+                  setPage(1);
+                }}
                 options={[...new Set([...ROW_OPTIONS, pageSize])]
                   .sort((a, b) => a - b)
                   .map((n) => ({ value: String(n), label: String(n) }))}

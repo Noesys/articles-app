@@ -1,5 +1,5 @@
 import Header from "../components/Header";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Loader2, FileText } from "lucide-react";
 import dayjs from "dayjs";
@@ -191,15 +191,18 @@ export default function MyArticles() {
     refetch();
   }, [refetch]);
 
+  // Reset page only when pageSize actually changes — not on mount / viewAll toggle.
+  const prevOuterPageSize = useRef(outerPageSize);
   useEffect(() => {
-    if (viewAll) {
-      setSearchParams((current) => {
-        const next = new URLSearchParams(current);
-        next.delete("page");
-        return next;
-      });
-    }
-  }, [outerPageSize, viewAll]);
+    if (prevOuterPageSize.current === outerPageSize) return;
+    prevOuterPageSize.current = outerPageSize;
+    if (!viewAll) return;
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete("page");
+      return next;
+    });
+  }, [outerPageSize, viewAll, setSearchParams]);
 
   const totalPages = pagination.totalPages || 1;
 

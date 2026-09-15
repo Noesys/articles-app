@@ -30,13 +30,24 @@ const ALLOWED = [
 
 /**
  * Sanitize pasted HTML for the editor.
- * Intentionally omits `style` — inline CSS is an XSS vector (expression/url/behavior).
- * Structural tags + href/src/alt are enough; TipTap marks carry formatting.
+ * `style` is allowed on imgs (size/align) and is further allowlisted server-side;
+ * other attrs stay limited to structural/link/media needs.
  */
 export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ALLOWED,
-    ALLOWED_ATTR: ["href", "src", "alt", "colspan", "rowspan", "width", "height", "title", "style", "data-align"],
+    ALLOWED_ATTR: [
+      "href",
+      "src",
+      "alt",
+      "colspan",
+      "rowspan",
+      "width",
+      "height",
+      "title",
+      "style",
+      "data-align",
+    ],
     ALLOW_DATA_ATTR: false,
     ALLOW_UNKNOWN_PROTOCOLS: false,
     KEEP_CONTENT: true,
