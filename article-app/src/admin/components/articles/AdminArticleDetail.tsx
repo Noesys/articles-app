@@ -435,14 +435,14 @@ export default function AdminArticleDetail() {
                   if (e.key === "Escape") cancelEditTitle();
                 }}
                 disabled={titleBusy}
-                className="flex-1 min-w-[220px] text-2xl font-semibold text-slate-900 leading-snug rounded-sm border border-border px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="flex-1 min-w-[220px] text-2xl font-semibold text-slate-900 leading-snug rounded-sm border border-border px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
                 autoFocus
               />
               <button
                 type="button"
                 disabled={titleBusy}
                 onClick={() => void handleSaveTitle()}
-                className="inline-flex items-center gap-1 rounded-sm bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-sm bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
                 {titleBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Save
