@@ -1,13 +1,7 @@
 import Header from "../components/Header";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterSelect } from "@/components/ui/filter-select";
 import { ChevronLeft, Send, Loader2 } from "lucide-react";
 import { api } from "../http-client";
 import TurndownService from "turndown";
@@ -343,23 +337,13 @@ export default function ArticleCreation() {
                 Article Type
               </label>
 
-              <Select
+              <FilterSelect
                 value={values.article_type_id}
                 onValueChange={(value: string) => setValues({ ...values, article_type_id: value })}
-                disabled={loadingTypes}
-              >
-                <SelectTrigger className="w-full border-border bg-white shadow-sm text-slate-900 [&_span[data-placeholder]]:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500">
-                  <SelectValue placeholder="Select an article type" />
-                </SelectTrigger>
-
-                <SelectContent>
-                  {types.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.description ? `${t.name} — ${t.description}` : t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={types.map((t) => ({ value: t.id, label: t.description ? `${t.name} — ${t.description}` : t.name }))}
+                placeholder="Select an article type"
+                triggerClassName="w-full border-border bg-white shadow-sm text-slate-900"
+              />
             </div>
 
             <div>

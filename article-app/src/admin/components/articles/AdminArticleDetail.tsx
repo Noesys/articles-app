@@ -2,13 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Loader2, ChevronDown, ChevronUp, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterSelect } from "@/components/ui/filter-select";
 import dayjs from "dayjs";
 import { api } from "../../../http-client";
 import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
@@ -513,22 +507,13 @@ export default function AdminArticleDetail() {
               Article type
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <Select
-                value={selectedTypeId || undefined}
+              <FilterSelect
+                value={selectedTypeId}
                 onValueChange={setSelectedTypeId}
-                disabled={typeBusy || reevalBusy || scoringInFlight}
-              >
-                <SelectTrigger className="min-w-[240px] bg-white">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {articleTypes.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={articleTypes.map((t) => ({ value: t.id, label: t.name }))}
+                placeholder="Select type"
+                className="min-w-[240px] max-w-[320px]"
+              />
               <button
                 type="button"
                 disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}
