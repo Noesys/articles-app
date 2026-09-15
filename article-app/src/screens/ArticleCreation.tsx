@@ -63,12 +63,28 @@ turndown.addRule("tableCell", {
   },
 });
 
-// Add IMAGE support to turndown - converts <img> to markdown ![alt](src)
+// Add IMAGE support to turndown - converts <img> to markdown ![alt](src),
+// or to a raw <img> tag when the editor recorded a custom size/alignment
+// (plain markdown image syntax has no way to carry those, so falling back
+// to markdown for a resized image would silently reset it to full size).
 turndown.addRule("image", {
   filter: "img",
   replacement: function (content, node) {
     const alt = node.getAttribute("alt") || "";
     const src = node.getAttribute("src") || "";
+    const width = node.getAttribute("width") || "";
+    const style = node.getAttribute("style") || "";
+    const align = node.getAttribute("data-align") || "";
+
+    if (width || style || align) {
+      const escape = (s: string) => s.replace(/"/g, "&quot;");
+      const attrs = [`src="${escape(src)}"`, `alt="${escape(alt)}"`];
+      if (width) attrs.push(`width="${escape(width)}"`);
+      if (style) attrs.push(`style="${escape(style)}"`);
+      if (align) attrs.push(`data-align="${escape(align)}"`);
+      return `<img ${attrs.join(" ")} />`;
+    }
+
     return "![" + alt + "](" + src + ")";
   },
 });
