@@ -1,5 +1,5 @@
 import { Parser } from "htmlparser2";
-
+ 
 const ALLOWED_TAGS = new Set([
   "h1",
   "h2",
@@ -27,9 +27,9 @@ const ALLOWED_TAGS = new Set([
   "strong",
   "em",
 ]);
-
+ 
 const VOID_TAGS = new Set(["br", "hr", "img"]);
-
+ 
 const ALLOWED_ATTRS: Record<string, Set<string>> = {
   a: new Set(["href", "title", "target", "rel"]),
   img: new Set(["src", "alt", "title", "width", "height", "style", "data-align"]),
@@ -38,9 +38,9 @@ const ALLOWED_ATTRS: Record<string, Set<string>> = {
   code: new Set(["class"]),
   pre: new Set(["class"]),
 };
-
+ 
 const SAFE_URL = /^(https?:\/\/|\/|#|mailto:)/i;
-
+ 
 function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
@@ -48,16 +48,16 @@ function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
-
+ 
 function escapeAttr(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
-
+ 
 export function sanitizeHtmlServer(html: string): string {
   let out = "";
   // Stack to track whether we're inside a stripped tag (script/style) so we drop its text
   const skipStack: string[] = [];
-
+ 
   const parser = new Parser(
     {
       onopentag(name, attribs) {
@@ -68,9 +68,9 @@ export function sanitizeHtmlServer(html: string): string {
           return;
         }
         if (skipStack.length > 0) return;
-
+ 
         if (!ALLOWED_TAGS.has(tag)) return;
-
+ 
         let attrs = "";
         const allowed = ALLOWED_ATTRS[tag];
         if (allowed) {
@@ -81,9 +81,14 @@ export function sanitizeHtmlServer(html: string): string {
             if (!allowed.has(attrName)) continue;
             let v = rawValue ?? "";
             if (attrName === "style" && tag === "img") {
-              const allowed = v.match(/display\s*:\s*block|margin-(left|right)\s*:\s*auto|margin\s*:[^;]+|width\s*:\s*[^;]+/gi);
-              if (!allowed) continue;
-              v = allowed.join("; ");
+              const m = v.match(/display\s*:\s*block|margin-(left|right)\s*:\s*auto|margin\s*:[^;]+|width\s*:\s*[^;]+|height\s*:\s*[^;]+/gi);
+              if (!m) continue;
+              const last = new Map<string, string>();
+              for (const p of m) {
+                const key = p.split(":")[0].trim().toLowerCase();
+                last.set(key, p.trim());
+              }
+              v = Array.from(last.values()).join("; ");
             }
             if (
               (attrName === "href" || attrName === "src") &&
@@ -122,8 +127,10 @@ export function sanitizeHtmlServer(html: string): string {
     },
     { decodeEntities: true, lowerCaseTags: true, lowerCaseAttributeNames: true },
   );
-
+ 
   parser.write(html);
   parser.end();
   return out;
 }
+ 
+ 
