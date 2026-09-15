@@ -48,22 +48,28 @@ type ArticleStatus = "accepted" | "rejected" | "scoring";
 
 const STATUS_CONFIG: Record<string, { className: string; label: string }> = {
   accepted: {
-    className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 border-transparent",
+    className:
+      "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 border-transparent",
     label: "Accepted",
   },
   rejected: {
-    className: "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
+    className:
+      "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
     label: "Rejected",
   },
   scoring: {
-    className: "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
+    className:
+      "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
     label: "Scoring...",
   },
 };
 
 const ROW_OPTIONS = [10, 25, 50, 100] as const;
 
-function getDisplayStatus(article: { status: string; ai_score: number | null }): {
+function getDisplayStatus(article: {
+  status: string;
+  ai_score: number | null;
+}): {
   key: ArticleStatus;
   label: string;
   className: string;
@@ -72,7 +78,8 @@ function getDisplayStatus(article: { status: string; ai_score: number | null }):
     return {
       key: "rejected",
       label: "Failed",
-      className: "bg-orange-50 text-orange-700 ring-1 ring-orange-200/80 border-transparent",
+      className:
+        "bg-orange-50 text-orange-700 ring-1 ring-orange-200/80 border-transparent",
     };
   }
 
@@ -129,12 +136,17 @@ export default function MyArticles() {
 
   const currentMonth = dayjs().format("YYYY-MM");
   const monthParam = searchParams.get("month");
-  const month = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonth;
+  const month =
+    monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonth;
   const viewAll = searchParams.get("viewAll") === "true";
   const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
   const typeFilter = searchParams.get("type") || "all";
   const statusFilter = searchParams.get("status") || "all";
-  const setFilterParam = (name: string, value: string, defaultValue?: string) => {
+  const setFilterParam = (
+    name: string,
+    value: string,
+    defaultValue?: string,
+  ) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
@@ -142,23 +154,38 @@ export default function MyArticles() {
       return next;
     });
   };
-  const [articleTypes, setArticleTypes] = useState<{ id: string; name: string }[]>([]);
+  const [articleTypes, setArticleTypes] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [typesError, setTypesError] = useState<string | null>(null);
 
   useEffect(() => {
     api<{ id: string; name: string }[]>("/article-types")
       .then(setArticleTypes)
-      .catch((err) => setTypesError(err instanceof Error ? err.message : "Failed to load types"));
+      .catch((err) =>
+        setTypesError(
+          err instanceof Error ? err.message : "Failed to load types",
+        ),
+      );
   }, []);
 
-  const getViewportPageSizeOuter = () => { if (typeof window === "undefined") return 10; return Math.min(100, Math.max(10, Math.floor((window.innerHeight - 380) / 57))); };
-  const [outerPageSize, setOuterPageSize] = useState(() => getViewportPageSizeOuter());
-  const { articles, loading, error, pagination, isPolling, refetch } = useMyArticles({
-    month: viewAll ? undefined : month,
-    viewAll,
-    page: viewAll ? currentPage : undefined,
-    limit: viewAll ? outerPageSize : 10,
-  });
+  const getViewportPageSizeOuter = () => {
+    if (typeof window === "undefined") return 10;
+    return Math.min(
+      100,
+      Math.max(10, Math.floor((window.innerHeight - 380) / 57)),
+    );
+  };
+  const [outerPageSize, setOuterPageSize] = useState(() =>
+    getViewportPageSizeOuter(),
+  );
+  const { articles, loading, error, pagination, isPolling, refetch } =
+    useMyArticles({
+      month: viewAll ? undefined : month,
+      viewAll,
+      page: viewAll ? currentPage : undefined,
+      limit: viewAll ? outerPageSize : 10,
+    });
 
   useEffect(() => {
     refetch();
@@ -182,7 +209,8 @@ export default function MyArticles() {
     if (typeFilter !== "all") {
       out = out.filter(
         (a) =>
-          a.type === typeFilter || articleTypes.find((t) => t.id === typeFilter)?.name === a.type,
+          a.type === typeFilter ||
+          articleTypes.find((t) => t.id === typeFilter)?.name === a.type,
       );
     }
 
@@ -233,7 +261,11 @@ export default function MyArticles() {
               : undefined
           }
           actions={
-            <Button type="button" size="lg" onClick={() => navigate("/articles/new")}>
+            <Button
+              type="button"
+              size="lg"
+              onClick={() => navigate("/articles/new")}
+            >
               <Plus size={16} />
               New article
             </Button>
@@ -295,7 +327,8 @@ export default function MyArticles() {
         {toast && (
           <InlineAlert
             variant={
-              toast.toLowerCase().includes("timed out") || toast.toLowerCase().includes("failed")
+              toast.toLowerCase().includes("timed out") ||
+              toast.toLowerCase().includes("failed")
                 ? "error"
                 : "success"
             }
@@ -325,14 +358,17 @@ export default function MyArticles() {
           />
         )}
 
-        {viewAll && totalPages > 1 && (
+        {viewAll && (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Rows per page</span>
               <FilterSelect
                 value={String(outerPageSize)}
                 onValueChange={(v) => {
-                  const next = Math.min(100, Math.max(5, parseInt(v, 10) || 10));
+                  const next = Math.min(
+                    100,
+                    Math.max(5, parseInt(v, 10) || 10),
+                  );
                   setOuterPageSize(next);
                   setSearchParams((current) => {
                     const n = new URLSearchParams(current);
@@ -340,14 +376,23 @@ export default function MyArticles() {
                     return n;
                   });
                 }}
-                options={[...new Set([...ROW_OPTIONS, outerPageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))}
+                options={[...new Set([...ROW_OPTIONS, outerPageSize])]
+                  .sort((a, b) => a - b)
+                  .map((n) => ({ value: String(n), label: String(n) }))}
                 searchable={false}
                 className="w-[90px]"
                 triggerClassName="h-8"
                 aria-label="Rows per page"
               />
             </div>
-            <SimplePagination page={currentPage} total={pagination.total ?? 0} pageSize={outerPageSize} onChange={(p) => setFilterParam("page", String(p), "1")} />
+            {totalPages > 1 && (
+              <SimplePagination
+                page={currentPage}
+                total={pagination.total ?? 0}
+                pageSize={outerPageSize}
+                onChange={(p) => setFilterParam("page", String(p), "1")}
+              />
+            )}
           </div>
         )}
       </PageShell>
@@ -370,13 +415,18 @@ function MyArticlesTable({
 }) {
   const getViewportPageSize = () => {
     if (typeof window === "undefined") return 10;
-    return Math.min(100, Math.max(10, Math.floor((window.innerHeight - 380) / 57)));
+    return Math.min(
+      100,
+      Math.max(10, Math.floor((window.innerHeight - 380) / 57)),
+    );
   };
   const [pagination, setPagination] = useState<PaginationState>(() => ({
     pageIndex: 0,
     pageSize: getViewportPageSize(),
   }));
-  const [sorting, setSorting] = useState<SortingState>([{ id: "created", desc: true }]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "created", desc: true },
+  ]);
 
   const columns = useMemo<ColumnDef<DataGridFeatures, ArticleListItem>[]>(
     () => [
@@ -418,7 +468,9 @@ function MyArticlesTable({
         header: "Version",
         size: 85,
         cell: ({ getValue }) => (
-          <span className="text-[13px] text-slate-700">v{getValue() as number}</span>
+          <span className="text-[13px] text-slate-700">
+            v{getValue() as number}
+          </span>
         ),
       },
       {
@@ -427,7 +479,8 @@ function MyArticlesTable({
         size: 130,
         cell: ({ row }) => {
           const score = row.original.ai_score;
-          if (score === null) return <span className="text-[13px] text-slate-700">—</span>;
+          if (score === null)
+            return <span className="text-[13px] text-slate-700">—</span>;
           const classes = getAiScoreClasses(row.original.status);
           return (
             <span className="inline-flex items-center gap-2">
@@ -435,7 +488,12 @@ function MyArticlesTable({
                 value={Math.min(Math.max(score, 0), 10) * 10}
                 className={cn("h-1.5 w-14", classes.bar)}
               />
-              <span className={cn("text-[13px] font-semibold tabular-nums", classes.text)}>
+              <span
+                className={cn(
+                  "text-[13px] font-semibold tabular-nums",
+                  classes.text,
+                )}
+              >
                 {score}
               </span>
             </span>
@@ -450,7 +508,10 @@ function MyArticlesTable({
         cell: ({ row }) => {
           const cfg = getDisplayStatus(row.original);
           return (
-            <Badge variant="outline" className={cn("font-medium", cfg.className)}>
+            <Badge
+              variant="outline"
+              className={cn("font-medium", cfg.className)}
+            >
               {cfg.label}
             </Badge>
           );
@@ -474,9 +535,16 @@ function MyArticlesTable({
     features: dataGridFeatures,
     columns,
     data: articles,
-    pageCount: Math.ceil((articles.length || 0) / pagination.pageSize) || 1,
+    pageCount: viewAll
+      ? 1
+      : Math.ceil((articles.length || 0) / pagination.pageSize) || 1,
     getRowId: (row) => row.id,
-    state: { pagination, sorting },
+    state: {
+      pagination: viewAll
+        ? { pageIndex: 0, pageSize: articles.length || 1 }
+        : pagination,
+      sorting,
+    },
     onPaginationChange: setPagination,
     onSortingChange: setSorting,
   });
@@ -485,7 +553,11 @@ function MyArticlesTable({
     return (
       <EmptyState
         icon={<FileText size={20} />}
-        title={viewAll ? "No articles yet" : `No articles for ${dayjs(month).format("MMMM YYYY")}`}
+        title={
+          viewAll
+            ? "No articles yet"
+            : `No articles for ${dayjs(month).format("MMMM YYYY")}`
+        }
         description="Write an article to get started."
         action={
           <Button type="button" onClick={onCreate}>
@@ -503,7 +575,9 @@ function MyArticlesTable({
       recordCount={articles.length}
       onRowClick={(row) => onRowClick(row.id)}
       emptyMessage={
-        viewAll ? "No articles found." : `No articles for ${dayjs(month).format("MMMM YYYY")}.`
+        viewAll
+          ? "No articles found."
+          : `No articles for ${dayjs(month).format("MMMM YYYY")}.`
       }
       tableLayout={contiqTableLayout}
       tableClassNames={contiqTableClassNames}
@@ -514,13 +588,38 @@ function MyArticlesTable({
             <DataGridTable />
           </DataGridScrollArea>
         </DataGridContainer>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Rows per page</span>
-            <FilterSelect value={String(pagination.pageSize)} onValueChange={(v) => setPagination((p) => ({ ...p, pageIndex: 0, pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)) }))} options={[...new Set([...ROW_OPTIONS, pagination.pageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))} searchable={false} className="w-[90px]" triggerClassName="h-8" aria-label="Rows per page" />
+        {!viewAll && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Rows per page</span>
+              <FilterSelect
+                value={String(pagination.pageSize)}
+                onValueChange={(v) =>
+                  setPagination((p) => ({
+                    ...p,
+                    pageIndex: 0,
+                    pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)),
+                  }))
+                }
+                options={[...new Set([...ROW_OPTIONS, pagination.pageSize])]
+                  .sort((a, b) => a - b)
+                  .map((n) => ({ value: String(n), label: String(n) }))}
+                searchable={false}
+                className="w-[90px]"
+                triggerClassName="h-8"
+                aria-label="Rows per page"
+              />
+            </div>
+            <SimplePagination
+              page={pagination.pageIndex + 1}
+              total={articles.length}
+              pageSize={pagination.pageSize}
+              onChange={(p) =>
+                setPagination((prev) => ({ ...prev, pageIndex: p - 1 }))
+              }
+            />
           </div>
-          <SimplePagination page={pagination.pageIndex + 1} total={articles.length} pageSize={pagination.pageSize} onChange={(p) => setPagination((prev) => ({ ...prev, pageIndex: p - 1 }))} />
-        </div>
+        )}
       </div>
     </DataGrid>
   );

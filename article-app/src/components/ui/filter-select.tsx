@@ -59,7 +59,8 @@ export function FilterSelect({
         align="start"
         side="bottom"
         sideOffset={4}
-        avoidCollisions={false}
+        avoidCollisions={true}
+        collisionPadding={8}  
         className="w-[--radix-popover-trigger-width] p-0 overflow-hidden bg-white"
       >
         {searchable && (
