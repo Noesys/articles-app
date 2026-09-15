@@ -203,7 +203,6 @@ const AllArticles = () => {
       )}
       <PageHeader
         title={id ? `${userName || "User"}'s articles` : "All articles"}
-        subtitle={!loading && !error ? `${total} total` : undefined}
       />
 
       <FilterToolbar
