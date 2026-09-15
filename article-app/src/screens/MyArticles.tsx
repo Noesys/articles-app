@@ -454,14 +454,24 @@ function MyArticlesTable({
         accessorKey: "type",
         header: "Type",
         size: 130,
-        cell: ({ getValue }) => (
-          <Badge
-            variant="outline"
-            className="border-transparent bg-slate-50 font-medium text-slate-700 ring-1 ring-slate-200/80"
-          >
-            {getValue() as string}
-          </Badge>
-        ),
+        cell: ({ getValue }) => {
+          const typeName = getValue() as string;
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="max-w-full border-transparent bg-slate-50 font-medium text-slate-700 ring-1 ring-slate-200/80"
+                  >
+                    <span className="min-w-0 truncate">{typeName}</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>{typeName}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        },
       },
       {
         accessorKey: "version",

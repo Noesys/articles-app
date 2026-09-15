@@ -194,14 +194,24 @@ export default function ArticlesTableContent({
         accessorKey: "article_type_name",
         header: "Type",
         size: 130,
-        cell: ({ getValue }) => (
-          <Badge
-            variant="outline"
-            className="bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
-          >
-            {getValue() as string}
-          </Badge>
-        ),
+        cell: ({ getValue }) => {
+          const typeName = getValue() as string;
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="max-w-full bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
+                  >
+                    <span className="min-w-0 truncate">{typeName}</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>{typeName}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        },
       },
       {
         accessorKey: "status",
