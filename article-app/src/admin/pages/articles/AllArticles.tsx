@@ -255,8 +255,8 @@ const AllArticles = () => {
               <span className="text-muted-foreground">Rows per page</span>
               <FilterSelect
                 value={String(pageSize)}
-                onValueChange={(v) => setPageSize(Math.min(100, Math.max(1, parseInt(v, 10) || 10)))}
-                options={[...new Set([...ROW_OPTIONS, pageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))}
+                 onValueChange={(v) => setPageSize(Math.min(100, Math.max(5, parseInt(v, 10) || 10)))}
+                 options={[...new Set([...ROW_OPTIONS, pageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))}
                 searchable={false}
                 className="w-[90px]"
                 triggerClassName="h-8"

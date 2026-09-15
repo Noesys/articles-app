@@ -42,6 +42,8 @@ import {
 import { cn } from "@/lib/utils";
 import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
 
+const ROW_OPTIONS = [10, 25, 50, 100] as const;
+
 const ROLE_LABELS: Record<AuthRole, string> = {
   super_admin: "Super Admin",
   admin: "Admin",
@@ -326,7 +328,7 @@ export default function UsersTable({
               <FilterSelect
                 value={String(pagination.pageSize)}
                 onValueChange={(v) => setPagination((p) => ({ ...p, pageIndex: 0, pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)) }))}
-                options={[10,25,50,100].includes(pagination.pageSize) ? [10,25,50,100].map((n)=>({value:String(n),label:String(n)})) : [...new Set([10,25,50,100,pagination.pageSize])].sort((a,b)=>a-b).map((n)=>({value:String(n),label:String(n)}))}
+                options={[...new Set([...ROW_OPTIONS, pagination.pageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))}
                 searchable={false}
                 className="w-[90px]"
                 triggerClassName="h-8"

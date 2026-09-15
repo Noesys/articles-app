@@ -61,6 +61,8 @@ const STATUS_CONFIG: Record<string, { className: string; label: string }> = {
   },
 };
 
+const ROW_OPTIONS = [10, 25, 50, 100] as const;
+
 function getDisplayStatus(article: { status: string; ai_score: number | null }): {
   key: ArticleStatus;
   label: string;
@@ -150,7 +152,7 @@ export default function MyArticles() {
   }, []);
 
   const getViewportPageSizeOuter = () => { if (typeof window === "undefined") return 10; return Math.min(100, Math.max(10, Math.floor((window.innerHeight - 380) / 57))); };
-  const [outerPageSize] = useState(() => getViewportPageSizeOuter());
+  const [outerPageSize, setOuterPageSize] = useState(() => getViewportPageSizeOuter());
   const { articles, loading, error, pagination, isPolling, refetch } = useMyArticles({
     month: viewAll ? undefined : month,
     viewAll,
@@ -161,6 +163,16 @@ export default function MyArticles() {
   useEffect(() => {
     refetch();
   }, [refetch]);
+
+  useEffect(() => {
+    if (viewAll) {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.delete("page");
+        return next;
+      });
+    }
+  }, [outerPageSize, viewAll]);
 
   const totalPages = pagination.totalPages || 1;
 
@@ -314,8 +326,28 @@ export default function MyArticles() {
         )}
 
         {viewAll && totalPages > 1 && (
-          <div className="mt-4 flex justify-end">
-            <SimplePagination page={currentPage} total={(pagination.total ?? totalPages * outerPageSize)} pageSize={outerPageSize} onChange={(p) => setFilterParam("page", String(p), "1")} />
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Rows per page</span>
+              <FilterSelect
+                value={String(outerPageSize)}
+                onValueChange={(v) => {
+                  const next = Math.min(100, Math.max(5, parseInt(v, 10) || 10));
+                  setOuterPageSize(next);
+                  setSearchParams((current) => {
+                    const n = new URLSearchParams(current);
+                    n.delete("page");
+                    return n;
+                  });
+                }}
+                options={[...new Set([...ROW_OPTIONS, outerPageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))}
+                searchable={false}
+                className="w-[90px]"
+                triggerClassName="h-8"
+                aria-label="Rows per page"
+              />
+            </div>
+            <SimplePagination page={currentPage} total={pagination.total ?? 0} pageSize={outerPageSize} onChange={(p) => setFilterParam("page", String(p), "1")} />
           </div>
         )}
       </PageShell>
@@ -485,7 +517,7 @@ function MyArticlesTable({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm">
             <span className="text-muted-foreground">Rows per page</span>
-            <FilterSelect value={String(pagination.pageSize)} onValueChange={(v) => setPagination((p) => ({ ...p, pageIndex: 0, pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)) }))} options={[10,25,50,100].includes(pagination.pageSize) ? [10,25,50,100].map((n)=>({value:String(n),label:String(n)})) : [...new Set([10,25,50,100,pagination.pageSize])].sort((a,b)=>a-b).map((n)=>({value:String(n),label:String(n)}))} searchable={false} className="w-[90px]" triggerClassName="h-8" aria-label="Rows per page" />
+            <FilterSelect value={String(pagination.pageSize)} onValueChange={(v) => setPagination((p) => ({ ...p, pageIndex: 0, pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)) }))} options={[...new Set([...ROW_OPTIONS, pagination.pageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))} searchable={false} className="w-[90px]" triggerClassName="h-8" aria-label="Rows per page" />
           </div>
           <SimplePagination page={pagination.pageIndex + 1} total={articles.length} pageSize={pagination.pageSize} onChange={(p) => setPagination((prev) => ({ ...prev, pageIndex: p - 1 }))} />
         </div>
