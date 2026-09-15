@@ -17,20 +17,34 @@ export const markdownComponents: Components = {
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 className="text-base font-semibold text-slate-800 mt-4 mb-2">{children}</h3>
+    <h3 className="text-base font-semibold text-slate-800 mt-4 mb-2">
+      {children}
+    </h3>
   ),
   h4: ({ children }) => (
-    <h4 className="text-sm font-semibold text-slate-800 mt-3 mb-1.5">{children}</h4>
+    <h4 className="text-sm font-semibold text-slate-800 mt-3 mb-1.5">
+      {children}
+    </h4>
   ),
-  p: ({ children }) => <p className="text-sm text-slate-700 leading-relaxed mb-3">{children}</p>,
+  p: ({ children }) => (
+    <p className="text-sm text-slate-700 leading-relaxed mb-3">{children}</p>
+  ),
   ul: ({ children }) => (
-    <ul className="list-disc pl-5 mb-3 space-y-1.5 text-sm text-slate-700">{children}</ul>
+    <ul className="list-disc pl-5 mb-3 space-y-1.5 text-sm text-slate-700">
+      {children}
+    </ul>
   ),
   ol: ({ children }) => (
-    <ol className="list-decimal pl-5 mb-3 space-y-1.5 text-sm text-slate-700">{children}</ol>
+    <ol className="list-decimal pl-5 mb-3 space-y-1.5 text-sm text-slate-700">
+      {children}
+    </ol>
   ),
-  li: ({ children }) => <li className="leading-relaxed [&>p]:mb-0 [&>p]:inline">{children}</li>,
-  strong: ({ children }) => <strong className="font-semibold text-slate-900">{children}</strong>,
+  li: ({ children }) => (
+    <li className="leading-relaxed [&>p]:mb-0 [&>p]:inline">{children}</li>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold text-slate-900">{children}</strong>
+  ),
   em: ({ children }) => <em className="italic text-slate-700">{children}</em>,
   a: ({ href, children }) => (
     <a
@@ -51,7 +65,11 @@ export const markdownComponents: Components = {
   code: ({ className, children }) => {
     const isBlock = Boolean(className?.includes("language-"));
     if (isBlock) {
-      return <code className={`${className ?? ""} text-[13px] leading-relaxed`}>{children}</code>;
+      return (
+        <code className={`${className ?? ""} text-[13px] leading-relaxed`}>
+          {children}
+        </code>
+      );
     }
     return (
       <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[13px] font-mono text-slate-800">
@@ -66,12 +84,16 @@ export const markdownComponents: Components = {
   ),
   table: ({ children }) => (
     <div className="my-4 w-full overflow-x-auto rounded-md border border-slate-200">
-      <table className="w-full min-w-[28rem] border-collapse text-left text-sm">{children}</table>
+      <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
+        {children}
+      </table>
     </div>
   ),
   thead: ({ children }) => <thead className="bg-slate-50">{children}</thead>,
   tbody: ({ children }) => <tbody className="bg-white">{children}</tbody>,
-  tr: ({ children }) => <tr className="border-b border-slate-200 last:border-b-0">{children}</tr>,
+  tr: ({ children }) => (
+    <tr className="border-b border-slate-200 last:border-b-0">{children}</tr>
+  ),
   th: ({ children }) => (
     <th className="border-b border-slate-200 px-3 py-2.5 align-top font-semibold text-slate-800 whitespace-nowrap">
       {children}
@@ -82,4 +104,54 @@ export const markdownComponents: Components = {
       {children}
     </td>
   ),
+  img: ({ src, alt, width, height, style, node }: any) => {
+    const w = width || (style?.width as string | undefined);
+    const dataAlign = (node?.properties as any)?.["data-align"] as string | undefined;
+    // Also detect wrapper <div style="text-align:..."> produced by DownloadMarkdown for external previews
+    const parentAlign = (node as any)?.parent?.properties?.style as string | undefined;
+    const styleStr = typeof style === "string" ? style : "";
+    let align: string | undefined = dataAlign?.toLowerCase();
+    if (!align && parentAlign) {
+      const m = String(parentAlign).match(/text-align\s*:\s*(left|center|right)/i);
+      if (m) align = m[1].toLowerCase();
+    }
+    if (!align) {
+      if (style && typeof style === "object") {
+        if (style.textAlign) align = String(style.textAlign).toLowerCase();
+        else if (style.marginLeft === "auto" && style.marginRight === "auto") align = "center";
+        else if (style.marginLeft === "auto") align = "right";
+        else if (style.marginRight === "auto" && style.marginLeft === "0") align = "left";
+      }
+      if (!align && styleStr) {
+        const s = styleStr.toLowerCase();
+        if (s.includes("margin-left:auto") || s.includes("margin-left: auto")) {
+          align = s.includes("margin-right:auto") || s.includes("margin-right: auto") ? "center" : "right";
+        } else if (s.includes("margin-right:auto")) {
+          align = "left";
+        }
+      }
+    }
+    const wrapper: React.CSSProperties =
+      align === "center" ? { textAlign: "center" } : align === "right" ? { textAlign: "right" } : { textAlign: "left" };
+    // For markdown `<img width="433" style="width:433px">` the preview must retain sizing/alignment
+    const imgStyle: React.CSSProperties = {};
+    if (w)
+      imgStyle.width =
+        typeof w === "number"
+          ? `${w}px`
+          : String(w).endsWith("px") || String(w).endsWith("%")
+            ? String(w)
+            : `${w}px`;
+    if (height) imgStyle.height = String(height);
+    if ((style as any)?.height) imgStyle.height = (style as any).height;
+    return (
+      <span style={{ display: "block", width: "100%", ...wrapper }}>
+        <img
+          src={src}
+          alt={alt || ""}
+          style={{ maxWidth: "100%", height: "auto", ...imgStyle }}
+        />
+      </span>
+    );
+  },
 };
