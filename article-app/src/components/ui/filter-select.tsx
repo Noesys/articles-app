@@ -12,6 +12,7 @@ type FilterSelectProps = {
   placeholder?: string;
   className?: string;
   triggerClassName?: string;
+  searchable?: boolean;
   "aria-label"?: string;
 };
 
@@ -22,6 +23,7 @@ export function FilterSelect({
   placeholder,
   className,
   triggerClassName,
+  searchable = true,
   "aria-label": ariaLabel,
 }: FilterSelectProps) {
   const [open, setOpen] = useState(false);
@@ -60,16 +62,18 @@ export function FilterSelect({
         avoidCollisions={false}
         className="w-[--radix-popover-trigger-width] p-0 overflow-hidden bg-white"
       >
-        <div className="flex items-center gap-2 border-b px-2">
-          <Search className="size-4 shrink-0 text-muted-foreground" />
-          <input
-            autoFocus
-            placeholder="Search..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-        </div>
+        {searchable && (
+          <div className="flex items-center gap-2 border-b px-2">
+            <Search className="size-4 shrink-0 text-muted-foreground" />
+            <input
+              autoFocus
+              placeholder="Search..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+        )}
         <div className="max-h-[200px] overflow-y-auto p-1">
           {filtered.length === 0 ? (
             <p className="px-2 py-3 text-center text-sm text-muted-foreground">No results</p>

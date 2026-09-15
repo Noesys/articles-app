@@ -1,7 +1,7 @@
 import Header from "../components/Header";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, ChevronLeft, ChevronRight, Loader2, FileText } from "lucide-react";
+import { Plus, Loader2, FileText } from "lucide-react";
 import dayjs from "dayjs";
 import { useMyArticles } from "../hooks/useMyArticles";
 import { useAuth } from "../contexts/AuthContext";
@@ -21,7 +21,7 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
+import { SimplePagination } from "@/components/ui/simple-pagination";
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import {
@@ -149,11 +149,13 @@ export default function MyArticles() {
       .catch((err) => setTypesError(err instanceof Error ? err.message : "Failed to load types"));
   }, []);
 
+  const getViewportPageSizeOuter = () => { if (typeof window === "undefined") return 10; return Math.min(100, Math.max(10, Math.floor((window.innerHeight - 380) / 57))); };
+  const [outerPageSize] = useState(() => getViewportPageSizeOuter());
   const { articles, loading, error, pagination, isPolling, refetch } = useMyArticles({
     month: viewAll ? undefined : month,
     viewAll,
     page: viewAll ? currentPage : undefined,
-    limit: 10,
+    limit: viewAll ? outerPageSize : 10,
   });
 
   useEffect(() => {
@@ -312,36 +314,8 @@ export default function MyArticles() {
         )}
 
         {viewAll && totalPages > 1 && (
-          <div className="mt-4 flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-700">
-              Page {currentPage} of {totalPages}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label="Previous page"
-                onClick={() => setFilterParam("page", String(Math.max(1, currentPage - 1)), "1")}
-                disabled={currentPage === 1}
-                className="border-border"
-              >
-                <ChevronLeft size={16} />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label="Next page"
-                onClick={() =>
-                  setFilterParam("page", String(Math.min(totalPages, currentPage + 1)), "1")
-                }
-                disabled={currentPage === totalPages}
-                className="border-border"
-              >
-                <ChevronRight size={16} />
-              </Button>
-            </div>
+          <div className="mt-4 flex justify-end">
+            <SimplePagination page={currentPage} total={(pagination.total ?? totalPages * outerPageSize)} pageSize={outerPageSize} onChange={(p) => setFilterParam("page", String(p), "1")} />
           </div>
         )}
       </PageShell>
@@ -362,10 +336,14 @@ function MyArticlesTable({
   viewAll: boolean;
   onCreate: () => void;
 }) {
-  const [pagination, setPagination] = useState<PaginationState>({
+  const getViewportPageSize = () => {
+    if (typeof window === "undefined") return 10;
+    return Math.min(100, Math.max(10, Math.floor((window.innerHeight - 380) / 57)));
+  };
+  const [pagination, setPagination] = useState<PaginationState>(() => ({
     pageIndex: 0,
-    pageSize: 10,
-  });
+    pageSize: getViewportPageSize(),
+  }));
   const [sorting, setSorting] = useState<SortingState>([{ id: "created", desc: true }]);
 
   const columns = useMemo<ColumnDef<DataGridFeatures, ArticleListItem>[]>(
@@ -504,7 +482,13 @@ function MyArticlesTable({
             <DataGridTable />
           </DataGridScrollArea>
         </DataGridContainer>
-        {articles.length > pagination.pageSize && <DataGridPagination />}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Rows per page</span>
+            <FilterSelect value={String(pagination.pageSize)} onValueChange={(v) => setPagination((p) => ({ ...p, pageIndex: 0, pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)) }))} options={[10,25,50,100].includes(pagination.pageSize) ? [10,25,50,100].map((n)=>({value:String(n),label:String(n)})) : [...new Set([10,25,50,100,pagination.pageSize])].sort((a,b)=>a-b).map((n)=>({value:String(n),label:String(n)}))} searchable={false} className="w-[90px]" triggerClassName="h-8" aria-label="Rows per page" />
+          </div>
+          <SimplePagination page={pagination.pageIndex + 1} total={articles.length} pageSize={pagination.pageSize} onChange={(p) => setPagination((prev) => ({ ...prev, pageIndex: p - 1 }))} />
+        </div>
       </div>
     </DataGrid>
   );

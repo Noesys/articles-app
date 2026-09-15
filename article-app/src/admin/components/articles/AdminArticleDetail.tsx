@@ -435,14 +435,14 @@ export default function AdminArticleDetail() {
                   if (e.key === "Escape") cancelEditTitle();
                 }}
                 disabled={titleBusy}
-                className="flex-1 min-w-[220px] text-2xl font-semibold text-slate-900 leading-snug rounded-md border border-border px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+                className="flex-1 min-w-[220px] text-2xl font-semibold text-slate-900 leading-snug rounded-sm border border-border px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
                 autoFocus
               />
               <button
                 type="button"
                 disabled={titleBusy}
                 onClick={() => void handleSaveTitle()}
-                className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-sm bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
                 {titleBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 Save
@@ -451,7 +451,7 @@ export default function AdminArticleDetail() {
                 type="button"
                 disabled={titleBusy}
                 onClick={cancelEditTitle}
-                className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
               >
                 <X size={14} />
                 Cancel
@@ -465,7 +465,7 @@ export default function AdminArticleDetail() {
                   type="button"
                   onClick={startEditTitle}
                   disabled={titleBusy || applyBusy || scoringInFlight}
-                  className="mt-1 inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  className="mt-1 inline-flex items-center gap-1 rounded-sm border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
                   title="Edit title"
                 >
                   <Pencil size={12} />
@@ -492,7 +492,7 @@ export default function AdminArticleDetail() {
                     scoringInFlight
                   }
                   onClick={() => void handleApplySuggestedTitle()}
-                  className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-40"
+                  className="rounded-sm border border-border px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-40"
                 >
                   {applyBusy ? "Applying…" : suggestionMatchesTitle ? "Applied" : "Apply"}
                 </button>
@@ -518,7 +518,7 @@ export default function AdminArticleDetail() {
                 type="button"
                 disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}
                 onClick={() => handleChangeType(true)}
-                className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+                className="rounded-sm bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
                 {typeBusy ? "Saving…" : "Change type & re-evaluate"}
               </button>
@@ -526,7 +526,7 @@ export default function AdminArticleDetail() {
                 type="button"
                 disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}
                 onClick={() => handleChangeType(false)}
-                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+                className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
               >
                 Change type only
               </button>
@@ -534,7 +534,7 @@ export default function AdminArticleDetail() {
                 type="button"
                 disabled={typeBusy || reevalBusy || scoringInFlight || !!typeChanged}
                 onClick={handleReevaluate}
-                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+                className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
               >
                 {reevalBusy ? "Starting…" : scoringInFlight ? "Scoring…" : "Re-evaluate"}
               </button>

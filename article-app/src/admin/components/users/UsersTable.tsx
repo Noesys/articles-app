@@ -18,7 +18,8 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
+import { FilterSelect } from "@/components/ui/filter-select";
+import { SimplePagination } from "@/components/ui/simple-pagination";
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { Badge } from "@/components/ui/badge";
@@ -75,10 +76,16 @@ export default function UsersTable({
   onUserClick,
 }: UsersTableProps) {
   const { user: currentUser } = useAuth();
-  const [pagination, setPagination] = useState<PaginationState>({
+  const getViewportPageSize = () => {
+    if (typeof window === "undefined") return 10;
+    const rowH = 57, chrome = 380;
+    const avail = window.innerHeight - chrome;
+    return Math.min(100, Math.max(10, Math.floor(avail / rowH)));
+  };
+  const [pagination, setPagination] = useState<PaginationState>(() => ({
     pageIndex: 0,
-    pageSize: 20,
-  });
+    pageSize: getViewportPageSize(),
+  }));
   const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
   const [pending, setPending] = useState<PendingAction>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -313,7 +320,21 @@ export default function UsersTable({
               <DataGridTable />
             </DataGridScrollArea>
           </DataGridContainer>
-          <DataGridPagination />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Rows per page</span>
+              <FilterSelect
+                value={String(pagination.pageSize)}
+                onValueChange={(v) => setPagination((p) => ({ ...p, pageIndex: 0, pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)) }))}
+                options={[10,25,50,100].includes(pagination.pageSize) ? [10,25,50,100].map((n)=>({value:String(n),label:String(n)})) : [...new Set([10,25,50,100,pagination.pageSize])].sort((a,b)=>a-b).map((n)=>({value:String(n),label:String(n)}))}
+                searchable={false}
+                className="w-[90px]"
+                triggerClassName="h-8"
+                aria-label="Rows per page"
+              />
+            </div>
+            <SimplePagination page={pagination.pageIndex + 1} total={users.length} pageSize={pagination.pageSize} onChange={(p) => setPagination((prev) => ({ ...prev, pageIndex: p - 1 }))} />
+          </div>
         </div>
       </DataGrid>
 

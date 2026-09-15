@@ -16,15 +16,9 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { DataGridPagination } from "@/components/reui/data-grid/data-grid-pagination";
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
-import {
-  ColumnDef,
-  PaginationState,
-  SortingState,
-  useTable,
-} from "@tanstack/react-table";
+import { ColumnDef, useTable } from "@tanstack/react-table";
 import {
   contiqTableContainerClassName,
   contiqTableClassNames,
@@ -99,11 +93,6 @@ function getNameInitials(name: string) {
 
 export default function ArticlesTableContent({ articles, onRowClick, totalCount }: ArticlesTableProps) {
   const [titleFilter, setTitleFilter] = useState("");
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-  });
-  const [sorting, setSorting] = useState<SortingState>([{ id: "submitted_at", desc: true }]);
 
   const locallyFilteredArticles = useMemo(() => {
     const normalizedTitle = titleFilter.trim().toLowerCase();
@@ -236,16 +225,10 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
     features: dataGridFeatures,
     columns,
     data: locallyFilteredArticles,
-    pageCount: Math.ceil((locallyFilteredArticles.length || 0) / pagination.pageSize) || 1,
+    pageCount: 1,
     getRowId: (row) => row.id,
-    state: { pagination, sorting },
-    onPaginationChange: setPagination,
-    onSortingChange: setSorting,
+    state: { pagination: { pageIndex: 0, pageSize: locallyFilteredArticles.length || 1 } },
   });
-
-  useEffect(() => {
-    setPagination((p) => ({ ...p, pageIndex: 0 }));
-  }, [titleFilter]);
 
   return (
     <div className="space-y-4">
@@ -301,7 +284,7 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
               <DataGridTable />
             </DataGridScrollArea>
           </DataGridContainer>
-          {locallyFilteredArticles.length > pagination.pageSize && <DataGridPagination />}
+
         </div>
       </DataGrid>
     </div>
