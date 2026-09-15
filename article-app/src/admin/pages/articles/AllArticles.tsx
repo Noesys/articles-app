@@ -48,9 +48,17 @@ const AllArticles = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const ROW_OPTIONS = [10, 25, 50, 100] as const;
+  const getViewportPageSize = () => {
+    if (typeof window === "undefined") return 10;
+    const rowH = 57, chrome = 380;
+    const avail = window.innerHeight - chrome;
+    const fit = Math.floor(avail / rowH);
+    return Math.min(100, Math.max(10, fit));
+  };
+  const [pageSize, setPageSize] = useState<number>(() => getViewportPageSize());
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 10;
 
   const setFilterParam = (name: string, value: string, defaultValue?: string) => {
     setSearchParams((current) => {
@@ -78,7 +86,7 @@ const AllArticles = () => {
       const params = new URLSearchParams();
       params.set("month", selectedMonthKey);
       params.set("page", String(page));
-      params.set("limit", String(limit));
+      params.set("limit", String(pageSize));
 
       if (selectedStatus !== "all") params.set("status", selectedStatus);
       if (selectedType !== "all") params.set("type", selectedType);
@@ -105,7 +113,10 @@ const AllArticles = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, selectedMonthKey, selectedStatus, selectedType, page]);
+  }, [id, selectedMonthKey, selectedStatus, selectedType, page, pageSize]);
+
+  // Reset to page 1 when filters or pageSize change
+  useEffect(() => { setPage(1); }, [selectedMonthKey, selectedStatus, selectedType, pageSize]);
 
   useEffect(() => {
     fetchArticleTypes();
@@ -239,11 +250,22 @@ const AllArticles = () => {
             articles={displayedArticles}
             onRowClick={(articleId: string) => navigate(`/admin/articles/${articleId}`)}
           />
-          {total > limit && (
-            <div className="mt-4 flex justify-end">
-              <SimplePagination page={page} total={total} pageSize={limit} onChange={setPage} />
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Rows per page</span>
+              <FilterSelect
+                value={String(pageSize)}
+                onValueChange={(v) => setPageSize(Math.min(100, Math.max(1, parseInt(v, 10) || 10)))}
+                options={[...new Set([...ROW_OPTIONS, pageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))}
+                className="w-[90px]"
+                triggerClassName="h-8"
+                aria-label="Rows per page"
+              />
             </div>
-          )}
+            {total > pageSize && (
+              <SimplePagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
+            )}
+          </div>
         </>
       )}
     </PageShell>
