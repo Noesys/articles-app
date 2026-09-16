@@ -454,7 +454,7 @@ export default function ArticlesTableContent({
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
             <DataGridVirtualScrollArea
-              height="57vh"
+              height="49.7vh"
               onFetchMore={onFetchMore}
               isFetchingMore={isFetchingMore}
               hasMore={hasMore}

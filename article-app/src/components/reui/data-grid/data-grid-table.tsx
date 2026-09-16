@@ -1432,10 +1432,12 @@ function DataGridTableFootRowCell({
   children,
   colSpan,
   className,
+  style,
 }: {
   children?: ReactNode
   colSpan?: number
   className?: string
+  style?: CSSProperties
 }) {
   const { props } = useDataGrid()
   const spacing = footerCellSpacingVariants({
@@ -1444,6 +1446,7 @@ function DataGridTableFootRowCell({
   return (
     <td
       colSpan={colSpan}
+      style={style}
       className={cn(
         "text-secondary-foreground/80 align-middle font-medium",
         spacing,

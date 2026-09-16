@@ -10,7 +10,9 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle2,
+  Pencil,
 } from "lucide-react";
+import { toast } from "sonner";
 import dayjs from "dayjs";
 import { useArticle } from "../hooks/useArticle";
 import { api } from "../http-client";
@@ -26,6 +28,7 @@ import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
 import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
 import { serializeArticleContent } from "@/utils/serializeArticleContent";
 import { countWords } from "@/utils/countWords";
+import { FilterSelect } from "@/components/ui/filter-select";
 
 const TiptapEditor = lazy(() => import("@/components/editor/TiptapEditor"));
 const ArticleViewer = lazy(
@@ -91,6 +94,7 @@ export default function ArticleDetail() {
     setParameterResults,
     setHistory,
   } = useArticle(id ?? "");
+  const isAdmin = user?.auth_role === "admin";
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -98,10 +102,24 @@ export default function ArticleDetail() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [contentCollapsed, setContentCollapsed] = useState(true);
 
+  // Admin-only: quick title edit (PATCH, no version bump — distinct from Rewrite)
+  // and article-type change / manual re-evaluate, mirroring AdminArticleDetail.
+  const [articleTypes, setArticleTypes] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTypeId, setSelectedTypeId] = useState("");
+  const [typeBusy, setTypeBusy] = useState(false);
+  const [reevalBusy, setReevalBusy] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [titleBusy, setTitleBusy] = useState(false);
+  const [applyBusy, setApplyBusy] = useState(false);
+  /** True once an admin explicitly (re)starts scoring — distinct from a merely-pending, not-yet-scored article. */
+  const [awaitingReeval, setAwaitingReeval] = useState(false);
+
   useEffect(() => {
     if (article) {
       setTitle(article.title);
       setContent(article.content);
+      setSelectedTypeId(article.article_type_id);
     }
   }, [article]);
 
@@ -137,7 +155,10 @@ export default function ArticleDetail() {
       effectiveSnapshot ||
       !article ||
       currentScore !== null ||
-      TERMINAL_STATUSES.includes(article.status)
+      TERMINAL_STATUSES.includes(article.status) ||
+      // Admin's "change type only" leaves the article pending+unscored
+      // without starting a background job — don't poll for that.
+      (isAdmin && !awaitingReeval)
     )
       return;
     let stopped = false;
@@ -148,6 +169,7 @@ export default function ArticleDetail() {
       if (stopped || document.visibilityState === "hidden") return;
       if (isTimedOut()) {
         if (timer) clearInterval(timer);
+        setAwaitingReeval(false);
         try {
           sessionStorage.setItem("toastError", "Scoring timed out");
         } catch {}
@@ -163,6 +185,7 @@ export default function ArticleDetail() {
         setCurrentFeedback(result.current_feedback ?? "");
         setParameterResults(result.parameter_results ?? []);
         if (result.current_score !== null) {
+          setAwaitingReeval(false);
           try {
             sessionStorage.removeItem("toastError");
           } catch {}
@@ -176,6 +199,7 @@ export default function ArticleDetail() {
     timer = window.setInterval(() => {
       if (isTimedOut()) {
         if (timer) clearInterval(timer);
+        setAwaitingReeval(false);
         try {
           sessionStorage.setItem("toastError", "Scoring timed out");
         } catch {}
@@ -192,9 +216,19 @@ export default function ArticleDetail() {
       if (timer) clearInterval(timer);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [article?.id, currentScore, effectiveSnapshot]);
+  }, [article?.id, currentScore, effectiveSnapshot, isAdmin, awaitingReeval]);
 
-  const isPending = currentScore === null && article?.status === "pending";
+  // "Not scored yet" (admin's type-only change, no reeval running) is
+  // distinct from "actively scoring" — everyone else's "pending" always
+  // means the latter, since only the admin type-change flow can produce it.
+  const isPendingUnscored =
+    isAdmin &&
+    !effectiveSnapshot &&
+    !awaitingReeval &&
+    displayStatus === "pending" &&
+    displayScore === null;
+  const isPending =
+    currentScore === null && article?.status === "pending" && !isPendingUnscored;
 
   const wordCount = countWords(content);
   const isWordCountValid = wordCount >= 1000;
@@ -203,12 +237,22 @@ export default function ArticleDetail() {
   const [passThreshold, setPassThreshold] = useState<number | null>(null);
   useEffect(() => {
     if (!article?.article_type_id) return;
-    api<any>(`/article-types`).then((types: any) => {
+    // Admins get /admin/article-types (superset — includes non-evaluatable
+    // types like "Not suitable", needed for the type-change dropdown below).
+    const path = isAdmin ? "/admin/article-types" : "/article-types";
+    api<any>(path).then((types: any) => {
       const list = Array.isArray(types) ? types : types?.data ?? [];
       const t = list.find((x: any) => x.id === article.article_type_id);
       if (t?.pass_threshold != null) setPassThreshold(t.pass_threshold);
+      if (isAdmin) {
+        setArticleTypes(
+          list
+            .map((x: any) => ({ id: x.id, name: x.name }))
+            .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)),
+        );
+      }
     }).catch(() => {});
-  }, [article?.article_type_id]);
+  }, [article?.article_type_id, isAdmin]);
 
   async function handleSubmitRewrite() {
     if (!article) return;
@@ -254,6 +298,106 @@ export default function ArticleDetail() {
     }
   }
 
+  async function saveTitle(nextTitle: string) {
+    if (!id) return;
+    const trimmed = nextTitle.replace(/\s+/g, " ").trim();
+    if (!trimmed) {
+      toast.error("Title is required");
+      return;
+    }
+    if (trimmed === article?.title) {
+      setEditingTitle(false);
+      return;
+    }
+    setTitleBusy(true);
+    try {
+      const res: any = await api(`/admin/articles/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title: trimmed }),
+      });
+      const updatedTitle = (res?.article?.title as string | undefined) ?? trimmed;
+      setArticle((prev) => (prev ? { ...prev, title: updatedTitle } : prev));
+      setTitle(updatedTitle);
+      setEditingTitle(false);
+      toast.success("Title updated");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setTitleBusy(false);
+    }
+  }
+
+  async function handleSaveTitle() {
+    await saveTitle(titleDraft);
+  }
+
+  async function handleApplySuggestedTitle() {
+    if (!article?.suggested_title) return;
+    setApplyBusy(true);
+    try {
+      await saveTitle(article.suggested_title);
+    } finally {
+      setApplyBusy(false);
+    }
+  }
+
+  function startEditTitle() {
+    setTitleDraft(article?.title ?? "");
+    setEditingTitle(true);
+  }
+
+  function cancelEditTitle() {
+    setEditingTitle(false);
+    setTitleDraft(article?.title ?? "");
+  }
+
+  /** Refresh from the user-scoped endpoint (not useArticle's own refetch — that flips the page-level loading flag and flashes a full-screen spinner). */
+  async function refreshArticleQuietly() {
+    if (!id) return;
+    const result = await api<ArticleDetailResponse>(`/articles/mine/${id}`);
+    setArticle(result.article);
+    setHistory(result.history ?? []);
+    setParameterResults(result.parameter_results ?? []);
+    return result;
+  }
+
+  async function handleChangeType(reevaluate: boolean) {
+    if (!id || !selectedTypeId) return;
+    setTypeBusy(true);
+    try {
+      const res: any = await api(`/admin/articles/${id}/type`, {
+        method: "PATCH",
+        body: JSON.stringify({ article_type_id: selectedTypeId, reevaluate }),
+      });
+      const started = Boolean(res?.reevaluate);
+      toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
+      await refreshArticleQuietly();
+      setCurrentScore(null);
+      setCurrentFeedback("");
+      setAwaitingReeval(started);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setTypeBusy(false);
+    }
+  }
+
+  async function handleReevaluate() {
+    if (!id) return;
+    setReevalBusy(true);
+    try {
+      await api(`/admin/articles/${id}/reevaluate`, { method: "POST" });
+      toast.success("Re-evaluation started");
+      setCurrentScore(null);
+      setCurrentFeedback("");
+      setAwaitingReeval(true);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReevalBusy(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -280,6 +424,9 @@ export default function ArticleDetail() {
   }
 
   const hasScore = displayScore !== null;
+  const typeChanged = Boolean(selectedTypeId && selectedTypeId !== article?.article_type_id);
+  const suggestionMatchesTitle =
+    !!article?.suggested_title && article.suggested_title.trim() === (article?.title ?? "").trim();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -312,70 +459,190 @@ export default function ArticleDetail() {
             submission — scoring in background...
           </div>
         )}
-        <div className="flex items-start justify-between gap-4 mb-6">
-          {editing ? (
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Article title"
-              className="flex-1 bg-white text-sm font-medium rounded-sm border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
-            />
-          ) : (
-            <h1 className="text-2xl font-semibold text-slate-900 leading-snug">
-              {displayTitle}
-            </h1>
-          )}
+        <div className="mb-6">
+          <div className="flex items-start justify-between gap-4">
+            {editing ? (
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Article title"
+                className="flex-1 bg-white text-sm font-medium rounded-sm border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            ) : editingTitle ? (
+              <input
+                type="text"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void handleSaveTitle();
+                  }
+                  if (e.key === "Escape") cancelEditTitle();
+                }}
+                disabled={titleBusy}
+                className="flex-1 min-w-[220px] text-2xl font-semibold text-slate-900 leading-snug rounded-sm border border-border px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
+                autoFocus
+              />
+            ) : (
+              <div className="flex items-start gap-2">
+                <h1 className="text-2xl font-semibold text-slate-900 leading-snug">
+                  {displayTitle}
+                </h1>
+                {isAdmin && !effectiveSnapshot && !editing && (
+                  <button
+                    type="button"
+                    onClick={startEditTitle}
+                    disabled={titleBusy || applyBusy || isPending}
+                    className="mt-1 inline-flex items-center gap-1 rounded-sm border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                    title="Edit title"
+                  >
+                    <Pencil size={12} />
+                    Edit
+                  </button>
+                )}
+              </div>
+            )}
 
-          {effectiveSnapshot ? null : isPending ? (
-            <span className="text-xs px-3 py-2 rounded-sm bg-amber-100 text-amber-700 font-medium">
-              Scoring — edits disabled
-            </span>
-          ) : editing ? (
-            <div className="flex items-center gap-2 shrink-0">
+            {effectiveSnapshot ? null : editingTitle ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={titleBusy}
+                  onClick={() => void handleSaveTitle()}
+                  className="inline-flex items-center gap-1 rounded-sm bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+                >
+                  {titleBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  Save
+                </button>
+                <button
+                  type="button"
+                  disabled={titleBusy}
+                  onClick={cancelEditTitle}
+                  className="inline-flex items-center gap-1 rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+                >
+                  <X size={14} />
+                  Cancel
+                </button>
+              </div>
+            ) : isPending ? (
+              <span className="text-xs px-3 py-2 rounded-sm bg-amber-100 text-amber-700 font-medium">
+                Scoring — edits disabled
+              </span>
+            ) : editing ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    setEditing(false);
+
+                    if (article) {
+                      setTitle(article.title);
+                      setContent(article.content);
+                    }
+
+                    setSubmitError(null);
+                  }}
+                  className="flex items-center gap-1.5 text-sm font-medium bg-white text-slate-700 border border-slate-200 rounded-sm px-3 py-2 transition-colors"
+                >
+                  <X size={14} />
+                  Cancel
+                </button>
+
+                <button
+                  onClick={handleSubmitRewrite}
+                  disabled={submitting}
+                  className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-sm px-3 py-2 transition-colors"
+                >
+                  {submitting ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Check size={14} />
+                  )}
+                  Submit Rewrite
+                </button>
+              </div>
+            ) : (
               <button
                 onClick={() => {
-                  setEditing(false);
-
-                  if (article) {
-                    setTitle(article.title);
-                    setContent(article.content);
-                  }
-
-                  setSubmitError(null);
+                  setEditing(true);
+                  setContentCollapsed(false);
                 }}
-                className="flex items-center gap-1.5 text-sm font-medium bg-white text-slate-700 border border-slate-200 rounded-sm px-3 py-2 transition-colors"
+                disabled={isPendingUnscored}
+                className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white rounded-sm px-3 py-2 transition-colors shrink-0"
               >
-                <X size={14} />
-                Cancel
+                <Edit3 size={14} />
+                Rewrite Article
               </button>
+            )}
+          </div>
 
-              <button
-                onClick={handleSubmitRewrite}
-                disabled={submitting}
-                className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-sm px-3 py-2 transition-colors"
-              >
-                {submitting ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Check size={14} />
-                )}
-                Submit Rewrite
-              </button>
+          {isAdmin && !effectiveSnapshot && article?.suggested_title && (
+            <div className="mt-3 rounded-sm border border-slate-200 bg-white px-3 py-2.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                AI suggested title
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm text-slate-800 flex-1 min-w-0">{article.suggested_title}</p>
+                <button
+                  type="button"
+                  disabled={
+                    applyBusy || titleBusy || suggestionMatchesTitle || editingTitle || editing
+                  }
+                  onClick={() => void handleApplySuggestedTitle()}
+                  className="rounded-sm border border-border px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-40"
+                >
+                  {applyBusy ? "Applying…" : suggestionMatchesTitle ? "Applied" : "Apply"}
+                </button>
+              </div>
             </div>
-          ) : (
-            <button
-              onClick={() => {
-                setEditing(true);
-                setContentCollapsed(false);
-              }}
-              className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 text-white rounded-sm px-3 py-2 transition-colors shrink-0"
-            >
-              <Edit3 size={14} />
-              Rewrite Article
-            </button>
           )}
         </div>
+
+        {isAdmin && !effectiveSnapshot && (
+          <div className="rounded-sm border border-slate-200 bg-white p-4 shadow-sm mb-6">
+            <p className="text-md font-semibold uppercase tracking-wide text-slate-600 mb-3">
+              Article type
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <FilterSelect
+                value={selectedTypeId}
+                onValueChange={setSelectedTypeId}
+                options={articleTypes.map((t) => ({ value: t.id, label: t.name }))}
+                placeholder="Select type"
+                className="min-w-[240px] max-w-[320px]"
+                disabled={typeBusy || reevalBusy || isPending || editing}
+              />
+              <button
+                type="button"
+                disabled={!typeChanged || typeBusy || reevalBusy || isPending || editing}
+                onClick={() => handleChangeType(true)}
+                className="rounded-sm bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
+              >
+                {typeBusy ? "Saving…" : "Change type & re-evaluate"}
+              </button>
+              <button
+                type="button"
+                disabled={!typeChanged || typeBusy || reevalBusy || isPending || editing}
+                onClick={() => handleChangeType(false)}
+                className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+              >
+                Change type only
+              </button>
+              <button
+                type="button"
+                disabled={typeBusy || reevalBusy || isPending || editing || !!typeChanged}
+                onClick={handleReevaluate}
+                className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
+              >
+                {reevalBusy ? "Starting…" : isPending ? "Scoring…" : "Re-evaluate"}
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Changing type snapshots the prior score (if any). Not suitable skips AI scoring.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Current Score */}
@@ -395,6 +662,10 @@ export default function ArticleDetail() {
                       We couldn't evaluate this article. Please submit it again.
                     </p>
                   </div>
+                ) : isPendingUnscored ? (
+                  <p className="text-sm text-slate-500 py-1">
+                    Not scored yet — use Re-evaluate to run scoring.
+                  </p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
                     <Loader2
@@ -440,6 +711,8 @@ export default function ArticleDetail() {
               <div className="px-4 pb-4">
                 {isFailed ? (
                   <p className="text-sm text-red-600">Evaluation failed. Please submit it again.</p>
+                ) : isPendingUnscored ? (
+                  <p className="text-sm text-slate-500">No feedback yet.</p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-sm border border-slate-200 shadow-sm">
                     <Loader2 size={16} className="animate-spin text-slate-400" />

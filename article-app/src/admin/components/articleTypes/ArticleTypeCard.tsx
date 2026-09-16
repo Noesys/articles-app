@@ -151,6 +151,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                     type.parameters as unknown as {
                       id: string;
                       name: string;
+                      description?: string | null;
                       prompt?: string | null;
                       scopeType: string;
                       options?: ParameterOptionDraft[] | null;
@@ -163,8 +164,22 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                         <div className="min-w-0 flex-1">
                           <h4 className="font-medium text-slate-900">{param.name}</h4>
 
+                          {param.description ? (
+                            <div className="mt-2">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                                Description
+                              </p>
+                              <p className="mt-0.5 text-sm text-slate-600">{param.description}</p>
+                            </div>
+                          ) : null}
+
                           {param.prompt ? (
-                            <MarkdownContent className="mt-1">{param.prompt}</MarkdownContent>
+                            <div className="mt-2">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                                Scoring Prompt
+                              </p>
+                              <MarkdownContent className="mt-0.5">{param.prompt}</MarkdownContent>
+                            </div>
                           ) : null}
                         </div>
 

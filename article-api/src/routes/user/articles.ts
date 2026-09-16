@@ -215,6 +215,7 @@ articleRoutes.get("/mine/:id", async (c) => {
         version: article.version,
         ai_score: article.ai_score,
         ai_feedback: article.ai_feedback || null,
+        suggested_title: article.suggested_title || null,
       },
       current_feedback: currentFeedback,
       current_score: article.ai_score,

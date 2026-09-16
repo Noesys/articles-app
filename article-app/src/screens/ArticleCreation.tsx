@@ -3,7 +3,7 @@ import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { ChevronLeft, Send, Loader2, CheckCircle2 } from "lucide-react";
-import GeneralInstructionsDialog from "@/components/GeneralInstructionsDialog";
+import MarkdownContent from "@/components/markdown/MarkdownContent";
 import { api } from "../http-client";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminHeader from "@/admin/components/AdminHeader";
@@ -44,8 +44,9 @@ export default function ArticleCreation() {
     title: "",
     content: "",
   });
-  const [editorView, setEditorView] = useState<"editor" | "preview">("editor");
-  const [instructionsOpen, setInstructionsOpen] = useState(false);
+  const [editorView, setEditorView] = useState<
+    "editor" | "preview" | "instructions"
+  >("editor");
   const [instructionsText, setInstructionsText] = useState<string | null>(null);
   const { user } = useAuth();
   const wordCount = countWords(values.content);
@@ -181,11 +182,9 @@ export default function ArticleCreation() {
                   const instr = (t as any)?.general_instructions?.trim() as
                     | string
                     | undefined;
-                  if (instr) {
-                    setInstructionsText(instr);
-                    setInstructionsOpen(true);
-                  } else {
-                    setInstructionsOpen(false);
+                  setInstructionsText(instr || null);
+                  if (!instr && editorView === "instructions") {
+                    setEditorView("editor");
                   }
                 }}
                 options={types.map((t) => ({
@@ -199,13 +198,6 @@ export default function ArticleCreation() {
                 disabled={loadingTypes}
               />
             </div>
-            {instructionsText && (
-              <GeneralInstructionsDialog
-                text={instructionsText}
-                open={instructionsOpen}
-                onClose={() => setInstructionsOpen(false)}
-              />
-            )}
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -253,6 +245,19 @@ export default function ArticleCreation() {
                     >
                       Preview
                     </button>
+                    {instructionsText && (
+                      <button
+                        type="button"
+                        onClick={() => setEditorView("instructions")}
+                        className={`px-3 py-1 text-xs font-medium rounded-md ${
+                          editorView === "instructions"
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        Instructions
+                      </button>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1.5 text-xs">
@@ -281,6 +286,11 @@ export default function ArticleCreation() {
                   {editorView === "preview" && (
                     <ArticleViewer content={values.content} />
                   )}
+                  {editorView === "instructions" && instructionsText && (
+                    <div className="min-h-[240px] rounded-sm border border-slate-200 bg-white p-4 shadow-sm">
+                      <MarkdownContent>{instructionsText}</MarkdownContent>
+                    </div>
+                  )}
                 </Suspense>
               </div>
             </div>
@@ -291,7 +301,7 @@ export default function ArticleCreation() {
               <button
                 type="submit"
                 disabled={submitting || !isWordCountValid}
-                className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white text-xs font-medium rounded-sm px-4 py-1.5 transition-colors"
+                className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white text-xs font-medium rounded-sm px-4 py-3 transition-colors"
               >
                 {submitting ? (
                   <Loader2 size={12} className="animate-spin" />

@@ -29,6 +29,7 @@ export async function getArticleTypes(db: D1Database): Promise<ArticleTypeListIt
         WHEN p.id IS NOT NULL THEN json_object(
           'id', p.id,
           'name', p.name,
+          'description', p.description,
           'prompt', p.prompt,
           'scopeType', p.scope_type,
           'minValue', p.min_value,

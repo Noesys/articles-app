@@ -358,17 +358,11 @@ const AllArticles = () => {
       <FilterToolbar
         className={
           isUserView
-            ? "grid grid-cols-2 gap-3 sm:grid-cols-4"
+            ? "grid grid-cols-2 gap-3 sm:grid-cols-5"
             : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
         }
       >
-        <MonthYearPicker
-          label="Month"
-          value={selectedMonthKey}
-          onChange={(ym) => setFilterParam("month", ym)}
-          triggerClassName="w-full"
-          disabled={viewAll}
-        />
+
         <Button
           type="button"
           variant="outline"
@@ -379,6 +373,14 @@ const AllArticles = () => {
         >
           {viewAll ? "Current month" : "View all"}
         </Button>
+        <MonthYearPicker
+          label="Month"
+          value={selectedMonthKey}
+          onChange={(ym) => setFilterParam("month", ym)}
+          triggerClassName="w-full"
+          disabled={viewAll}
+        />
+        
         <FilterSelect
           value={selectedType}
           onValueChange={(value) => setFilterParam("type", value, "all")}
@@ -445,7 +447,10 @@ const AllArticles = () => {
       ) : (
         <>
           <ArticlesTable
-            totalCount={total}
+            // The server total ignores the author filter (client-side only) —
+            // once one's selected, fall back to the filtered count instead of
+            // showing a stale, filter-blind number.
+            totalCount={selectedAuthor === "all" ? total : undefined}
             articles={displayedArticles}
             onRowClick={(articleId: string) => {
               // AdminArticleDetail has no rewrite flow — an admin viewing

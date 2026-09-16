@@ -10,6 +10,7 @@ import {
   DataGridTable,
   DataGridTableFootRow,
   DataGridTableFootRowCell,
+  getPinningStyles,
 } from "@/components/reui/data-grid/data-grid-table";
 import { ColumnDef, useTable } from "@tanstack/react-table";
 import { EmployeeSubmissionRow, EmployeeSubmissionsResult } from "@/admin/utils/types";
@@ -121,6 +122,9 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
     },
   });
 
+  const nameColumn = table.getColumn("name");
+  const totalColumn = table.getColumn("total");
+
   if (loading) return <DataGridSkeleton rows={10} cols={6} />;
   if (error) return <InlineAlert>{error}</InlineAlert>;
   if (!data) return null;
@@ -151,12 +155,16 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
           <DataGridTable
             footerContent={
               <DataGridTableFootRow>
-                <DataGridTableFootRowCell colSpan={2} className="bg-muted">
+                <DataGridTableFootRowCell
+                  className="bg-muted"
+                  style={nameColumn ? getPinningStyles(nameColumn) : undefined}
+                >
                   <span className="text-muted-foreground">Total: </span>
                   <span className="font-semibold tabular-nums text-foreground">
                     {data.rows.length}
                   </span>
                 </DataGridTableFootRowCell>
+                <DataGridTableFootRowCell className="bg-muted" />
                 {data.months.map((m) => (
                   <DataGridTableFootRowCell key={m} className="bg-muted text-center">
                     <span className="font-semibold tabular-nums text-foreground">
@@ -164,7 +172,10 @@ export function EmployeeSubmissionsTable({ start, end }: { start: string; end: s
                     </span>
                   </DataGridTableFootRowCell>
                 ))}
-                <DataGridTableFootRowCell className="bg-muted text-center">
+                <DataGridTableFootRowCell
+                  className="bg-muted text-center"
+                  style={totalColumn ? getPinningStyles(totalColumn) : undefined}
+                >
                   <span className="font-semibold tabular-nums text-foreground">
                     {data.grandTotal}
                   </span>

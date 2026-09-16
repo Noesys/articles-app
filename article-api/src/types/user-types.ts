@@ -48,6 +48,7 @@ export type Article = {
   month_year: string;
   retry_count: number;
   ai_feedback: string | null;
+  suggested_title: string | null;
 };
 
 export type ArticlePagination = {

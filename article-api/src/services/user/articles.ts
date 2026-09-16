@@ -14,7 +14,8 @@ const ARTICLE_COLUMNS = `
   a.scored_at,
   a.month_year,
   a.retry_count,
-  a.ai_feedback
+  a.ai_feedback,
+  a.suggested_title
 `;
 
 export async function getArticlesByUser(
