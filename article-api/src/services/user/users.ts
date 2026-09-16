@@ -37,7 +37,7 @@ export async function createUser(
 ): Promise<void> {
   // Defensive: auth_role is caller-supplied; enforce an allowlist so a future
   // code-path that accidentally passes a privileged role has no effect.
-  const ALLOWED_ROLES = new Set(["user", "admin", "super_admin"]);
+  const ALLOWED_ROLES = new Set(["user", "admin"]);
   if (!ALLOWED_ROLES.has(user.auth_role)) {
     throw new Error(`Invalid auth_role: ${user.auth_role}`);
   }

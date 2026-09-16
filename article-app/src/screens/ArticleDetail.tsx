@@ -193,7 +193,7 @@ export default function ArticleDetail() {
         sessionStorage.setItem("toast", "Article rewrite submitted! Scoring in progress...");
       } catch {}
       navigate(
-        user?.auth_role === "admin" || user?.auth_role === "super_admin"
+        user?.auth_role === "admin"
           ? "/admin/my-article"
           : "/",
       );
@@ -403,7 +403,7 @@ export default function ArticleDetail() {
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-sm px-2.5 py-1">
                       {article.article_type_name}
                     </span>
-                    <ArticleCopyButton title={title} text={content} />
+                      <ArticleCopyButton title={title} text={content} />
                     <DownloadMarkdownButton
                       title={title}
                       content={content}

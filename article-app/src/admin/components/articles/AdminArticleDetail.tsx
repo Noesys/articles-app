@@ -643,7 +643,7 @@ export default function AdminArticleDetail() {
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-sm px-2.5 py-1">
                       {article.article_type_name}
                     </span>
-                    <ArticleCopyButton title={`# ${displayTitle}`} text={displayContent} />
+                    <ArticleCopyButton title={displayTitle} text={displayContent} />
                     <DownloadMarkdownButton
                       title={displayTitle}
                       content={displayContent}

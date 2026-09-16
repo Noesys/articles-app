@@ -4,7 +4,7 @@ import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 
 const insightsRoute = new Hono<AppEnv>();
-insightsRoute.use("*", requireRole("admin", "super_admin"));
+insightsRoute.use("*", requireRole("admin"));
 
 insightsRoute.get("/summary", async (c) => {
   const start = c.req.query("start");

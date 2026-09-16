@@ -18,7 +18,7 @@ Table users {
   id text [pk]
   email text [unique, not null]
   name text [not null]
-  auth_role text [not null, note: 'super_admin | admin | user']
+  auth_role text [not null,  'admin | user']
   job_role text [not null]
   created_at text [not null]
   created_by text [ref: > users.id]
@@ -1084,4 +1084,4 @@ All endpoints require:
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-Only users with `admin` or `super_admin` roles can access Admin APIs.
+Only users with `admin`  roles can access Admin APIs.

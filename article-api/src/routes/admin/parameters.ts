@@ -11,7 +11,7 @@ import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 
 const parametersRoute = new Hono<AppEnv>();
-parametersRoute.use("*", requireRole("admin", "super_admin"));
+parametersRoute.use("*", requireRole("admin"));
 
 function parseParameterBody(body: unknown): ParameterInput | { error: string } {
   const b = body as Record<string, unknown>;

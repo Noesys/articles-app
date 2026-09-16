@@ -19,7 +19,7 @@ import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
 
 const articlesRoute = new Hono<AppEnv>();
-articlesRoute.use("*", requireRole("admin", "super_admin"));
+articlesRoute.use("*", requireRole("admin"));
 
 async function backgroundEvaluateArticle(
   db: D1Database,

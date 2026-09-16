@@ -145,6 +145,9 @@ export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResu
     return { ok: false, status: 403, message: "Forbidden: Account inactive" };
   }
 
+  if (user.auth_role !== "admin" && user.auth_role !== "user") {
+    return { ok: false, status: 403, message: "Forbidden: Invalid role" };
+  }
   return { ok: true, user };
 }
 

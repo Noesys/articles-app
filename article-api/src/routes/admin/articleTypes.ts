@@ -11,7 +11,7 @@ import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 
 const articleTypesRoute = new Hono<AppEnv>();
-articleTypesRoute.use("*", requireRole("admin", "super_admin"));
+articleTypesRoute.use("*", requireRole("admin"));
 
 function parseArticleTypeBody(
   body: unknown,

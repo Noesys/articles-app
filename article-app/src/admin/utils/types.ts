@@ -110,7 +110,7 @@ export type ParameterResponse = {
 };
 
 // users
-export type AuthRole = "super_admin" | "admin" | "user";
+export type AuthRole = "admin" | "user";
 
 export type User = {
   id: string;

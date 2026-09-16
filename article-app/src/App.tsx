@@ -69,7 +69,7 @@ function RootRouteRedirect() {
       </div>
     );
   if (!user) return <UnauthorizedPage />;
-  if (user.auth_role === "admin" || user.auth_role === "super_admin")
+  if (user.auth_role === "admin")
     return <Navigate to="/admin/articles" replace />;
   return (
     <Suspense fallback={<PageFallback />}>
@@ -119,7 +119,7 @@ export default function App() {
       <Route
         path="/admin/my-article"
         element={
-          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin"]}>
             <AdminLayout>
               <MyArticles />
             </AdminLayout>
@@ -130,7 +130,7 @@ export default function App() {
       <Route
         path="/admin/articles"
         element={
-          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin"]}>
             <AdminLayout>
               <AllArticles />
             </AdminLayout>
@@ -141,7 +141,7 @@ export default function App() {
       <Route
         path="/admin/:id/articles"
         element={
-          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin"]}>
             <AdminLayout>
               <AllArticles />
             </AdminLayout>
@@ -152,7 +152,7 @@ export default function App() {
       <Route
         path="/admin/articles/:id"
         element={
-          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin"]}>
             <AdminLayout>
               <AdminArticleDetail />
             </AdminLayout>
@@ -162,7 +162,7 @@ export default function App() {
       <Route
         path="/admin/users"
         element={
-          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin"]}>
             <AdminLayout>
               <UsersPage />
             </AdminLayout>
@@ -172,7 +172,7 @@ export default function App() {
       <Route
         path="/admin/article-types"
         element={
-          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin"]}>
             <AdminLayout>
               <ArticleTypesPage />
             </AdminLayout>
@@ -183,7 +183,7 @@ export default function App() {
       <Route
         path="/admin/article-types/new"
         element={
-          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin"]}>
             <AdminLayout>
               <ArticleTypesForm />
             </AdminLayout>
@@ -194,7 +194,7 @@ export default function App() {
       <Route
         path="/admin/article-types/:id/edit"
         element={
-          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin"]}>
             <AdminLayout>
               <ArticleTypesForm />
             </AdminLayout>
@@ -205,7 +205,7 @@ export default function App() {
       <Route
         path="/admin/insights"
         element={
-          <RoleBasedRoute allowedRoles={["admin", "super_admin"]}>
+          <RoleBasedRoute allowedRoles={["admin"]}>
             <AdminLayout>
               <InsightsPage />
             </AdminLayout>

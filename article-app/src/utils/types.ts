@@ -114,7 +114,7 @@ export type AuthUser = {
   name: string;
   email: string;
   job_role: string;
-  auth_role: "super_admin" | "admin" | "user";
+  auth_role: "admin" | "user";
 };
 
 export type MeResponse = AuthUser & { is_active: boolean };

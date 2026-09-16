@@ -2,7 +2,7 @@ import type { Context, Next } from "hono";
 import type { AppEnv } from "../types/shared-types";
 import { resolveAccessUser } from "./accessAuth";
 
-export function requireRole(...allowedRoles: ("admin" | "super_admin")[]) {
+export function requireRole(...allowedRoles: ("admin")[]) {
   return async (c: Context<AppEnv>, next: Next) => {
     const result = await resolveAccessUser(c);
     if (!result.ok) {
