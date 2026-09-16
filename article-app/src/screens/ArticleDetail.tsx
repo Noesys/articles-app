@@ -15,6 +15,7 @@ import CopyButton from "@/admin/utils/CopyButton";
 import { ArticleDetailResponse } from "@/utils/types";
 import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
 import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
+import { serializeArticleContent } from "@/utils/serializeArticleContent";
 
 const TiptapEditor = lazy(() => import("@/components/editor/TiptapEditor"));
 const ArticleViewer = lazy(() => import("@/components/shadcnEditor/ArticleViewer"));
@@ -185,7 +186,7 @@ export default function ArticleDetail() {
           id: article.id,
           article_type_id: article.article_type_id,
           title: title.trim(),
-          content: content.trim(),
+          content: serializeArticleContent(content.trim()),
         }),
       });
       try {

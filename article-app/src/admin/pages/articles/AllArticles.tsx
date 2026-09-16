@@ -37,7 +37,9 @@ const AllArticles = () => {
 
   const monthParam = searchParams.get("month");
   const selectedMonthKey =
-    monthParam && /^\d{4}-\d{2}$/.test(monthParam) && dayjs(`${monthParam}-01`).isValid()
+    monthParam &&
+    /^\d{4}-\d{2}$/.test(monthParam) &&
+    dayjs(`${monthParam}-01`).isValid()
       ? monthParam
       : dayjs().format("YYYY-MM");
   const selectedStatus = searchParams.get("status") || "all";
@@ -51,7 +53,8 @@ const AllArticles = () => {
   const ROW_OPTIONS = [10, 25, 50, 100] as const;
   const getViewportPageSize = () => {
     if (typeof window === "undefined") return 10;
-    const rowH = 57, chrome = 380;
+    const rowH = 57,
+      chrome = 380;
     const avail = window.innerHeight - chrome;
     const fit = Math.floor(avail / rowH);
     return Math.min(100, Math.max(10, fit));
@@ -60,7 +63,13 @@ const AllArticles = () => {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const setFilterParam = (name: string, value: string, defaultValue?: string) => {
+  const setFilterParam = (
+    name: string,
+    value: string,
+    defaultValue?: string,
+  ) => {
+    // Reset page in the same update path so fetch never races with a stale page.
+    setPage(1);
     setSearchParams((current) => {
       const next = new URLSearchParams(current);
       if (!value || value === defaultValue) next.delete(name);
@@ -71,8 +80,12 @@ const AllArticles = () => {
 
   const fetchArticleTypes = useCallback(async () => {
     try {
-      const response = await api<Array<{ id: string; name: string }>>("/admin/article-types");
-      setArticleTypes(response.map((type) => ({ id: type.id, name: type.name })));
+      const response = await api<Array<{ id: string; name: string }>>(
+        "/admin/article-types",
+      );
+      setArticleTypes(
+        response.map((type) => ({ id: type.id, name: type.name })),
+      );
     } catch (err) {
       console.error("Failed to load article types:", err);
     }
@@ -115,15 +128,14 @@ const AllArticles = () => {
     }
   }, [id, selectedMonthKey, selectedStatus, selectedType, page, pageSize]);
 
-  // Reset to page 1 when filters or pageSize change
-  useEffect(() => { setPage(1); }, [selectedMonthKey, selectedStatus, selectedType, pageSize]);
-
   useEffect(() => {
     fetchArticleTypes();
   }, [fetchArticleTypes]);
 
   useEffect(() => {
-    const names = Array.from(new Set(articles.map((a) => a.author_name).filter(Boolean)));
+    const names = Array.from(
+      new Set(articles.map((a) => a.author_name).filter(Boolean)),
+    );
     setAuthors(names.sort((a, b) => a.localeCompare(b)));
   }, [articles]);
 
@@ -154,13 +166,17 @@ const AllArticles = () => {
         break;
       case "created_asc":
         sorted.sort(
-          (a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime(),
+          (a, b) =>
+            new Date(a.submitted_at).getTime() -
+            new Date(b.submitted_at).getTime(),
         );
         break;
       case "created_desc":
       default:
         sorted.sort(
-          (a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime(),
+          (a, b) =>
+            new Date(b.submitted_at).getTime() -
+            new Date(a.submitted_at).getTime(),
         );
         break;
     }
@@ -172,22 +188,27 @@ const AllArticles = () => {
   return (
     <PageShell>
       {isUserView && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/admin/users"))}
-          className="mb-3 -ml-2 text-slate-500 hover:text-slate-700"
+        <button
+          onClick={() =>
+            window.history.length > 1 ? navigate(-1) : navigate("/admin/users")
+          }
+          className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6"
         >
-          <ChevronLeft size={14} /> Back to Users
-        </Button>
+          <ChevronLeft size={14} />
+          Back to Users
+        </button>
       )}
       <PageHeader
         title={id ? `${userName || "User"}'s articles` : "All articles"}
-        subtitle={!loading && !error ? `${total} total` : undefined}
       />
 
-      <FilterToolbar className={isUserView ? "grid grid-cols-2 gap-3 sm:grid-cols-4" : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"}>
+      <FilterToolbar
+        className={
+          isUserView
+            ? "grid grid-cols-2 gap-3 sm:grid-cols-4"
+            : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
+        }
+      >
         <MonthYearPicker
           label="Month"
           value={selectedMonthKey}
@@ -201,7 +222,10 @@ const AllArticles = () => {
           aria-label="Article type"
           options={[
             { value: "all", label: "All types" },
-            ...articleTypes.map((type) => ({ value: type.id, label: type.name })),
+            ...articleTypes.map((type) => ({
+              value: type.id,
+              label: type.name,
+            })),
           ]}
         />
         <FilterSelect
@@ -213,7 +237,9 @@ const AllArticles = () => {
         />
         <FilterSelect
           value={sortBy}
-          onValueChange={(value) => setFilterParam("sort", value, "created_desc")}
+          onValueChange={(value) =>
+            setFilterParam("sort", value, "created_desc")
+          }
           placeholder="Sort"
           aria-label="Sort"
           options={[
@@ -248,15 +274,22 @@ const AllArticles = () => {
           <ArticlesTable
             totalCount={total}
             articles={displayedArticles}
-            onRowClick={(articleId: string) => navigate(`/admin/articles/${articleId}`)}
+            onRowClick={(articleId: string) =>
+              navigate(`/admin/articles/${articleId}`)
+            }
           />
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Rows per page</span>
               <FilterSelect
                 value={String(pageSize)}
-                 onValueChange={(v) => setPageSize(Math.min(100, Math.max(5, parseInt(v, 10) || 10)))}
-                 options={[...new Set([...ROW_OPTIONS, pageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))}
+                onValueChange={(v) => {
+                  setPageSize(Math.min(100, Math.max(5, parseInt(v, 10) || 10)));
+                  setPage(1);
+                }}
+                options={[...new Set([...ROW_OPTIONS, pageSize])]
+                  .sort((a, b) => a - b)
+                  .map((n) => ({ value: String(n), label: String(n) }))}
                 searchable={false}
                 className="w-[90px]"
                 triggerClassName="h-8"
@@ -264,7 +297,12 @@ const AllArticles = () => {
               />
             </div>
             {total > pageSize && (
-              <SimplePagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
+              <SimplePagination
+                page={page}
+                total={total}
+                pageSize={pageSize}
+                onChange={setPage}
+              />
             )}
           </div>
         </>

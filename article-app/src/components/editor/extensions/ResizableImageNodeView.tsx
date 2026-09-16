@@ -1,6 +1,6 @@
 import { NodeViewWrapper, type NodeViewProps } from "@tiptap/react";
 import { useRef } from "react";
-
+ 
 export default function ResizableImageNodeView({
   node,
   selected,
@@ -10,7 +10,7 @@ export default function ResizableImageNodeView({
   const { src, alt, title, width } = node.attrs;
   const containerRef = useRef<HTMLDivElement>(null);
   const isEditable = editor?.isEditable ?? true;
-
+ 
   const onMouseDown = (e: React.MouseEvent, dir: string) => {
     if (!isEditable) return;
     e.preventDefault();
@@ -34,7 +34,7 @@ export default function ResizableImageNodeView({
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   };
-
+ 
   const imgStyle: React.CSSProperties = {};
   if (width) {
     const w = String(width);
@@ -65,7 +65,7 @@ export default function ResizableImageNodeView({
       wrapperStyle.textAlign = ta === "center" ? "center" : ta === "right" ? "right" : "left";
     }
   }
-
+ 
   return (
     <NodeViewWrapper
       className={`resizable-image-wrapper ${selected && isEditable ? "ProseMirror-selectednode" : ""}`}

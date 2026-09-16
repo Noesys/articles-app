@@ -25,6 +25,14 @@ import {
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
+import {
+  Autocomplete,
+  AutocompleteContent,
+  AutocompleteEmpty,
+  AutocompleteInput,
+  AutocompleteItem,
+  AutocompleteList,
+} from "@/components/reui/autocomplete";
 
 type ArticlesTableProps = {
   articles: ArticleSummary[];
@@ -56,24 +64,29 @@ const STATUS_CONFIG: Record<
   { className: string; label: string; icon?: boolean }
 > = {
   approved: {
-    className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 border-transparent",
+    className:
+      "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 border-transparent",
     label: "Accepted",
   },
   rewrite_required: {
-    className: "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
+    className:
+      "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
     label: "Rejected",
   },
   pending: {
-    className: "bg-amber-50 text-amber-700 gap-1 ring-1 ring-amber-200/80 border-transparent",
+    className:
+      "bg-amber-50 text-amber-700 gap-1 ring-1 ring-amber-200/80 border-transparent",
     label: "Pending",
     icon: true,
   },
   failed: {
-    className: "bg-orange-50 text-orange-700 ring-1 ring-orange-200/80 border-transparent",
+    className:
+      "bg-orange-50 text-orange-700 ring-1 ring-orange-200/80 border-transparent",
     label: "Failed",
   },
   unknown: {
-    className: "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
+    className:
+      "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
     label: "Unavailable",
   },
 };
@@ -91,21 +104,31 @@ function getNameInitials(name: string) {
   );
 }
 
-export default function ArticlesTableContent({ articles, onRowClick, totalCount }: ArticlesTableProps) {
+export default function ArticlesTableContent({
+  articles,
+  onRowClick,
+  totalCount,
+}: ArticlesTableProps) {
   const [titleFilter, setTitleFilter] = useState("");
 
   const locallyFilteredArticles = useMemo(() => {
     const normalizedTitle = titleFilter.trim().toLowerCase();
     if (!normalizedTitle) return articles;
-    return articles.filter((article) => article.title.toLowerCase().includes(normalizedTitle));
+    return articles.filter((article) =>
+      article.title.toLowerCase().includes(normalizedTitle),
+    );
   }, [articles, titleFilter]);
 
   const dashboard = useMemo(() => {
     const total = titleFilter
-    ? locallyFilteredArticles.length
-    : (totalCount ?? locallyFilteredArticles.length);
-    const approved = locallyFilteredArticles.filter((a) => a.status === "approved").length;
-    const pending = locallyFilteredArticles.filter((a) => a.status === "pending").length;
+      ? locallyFilteredArticles.length
+      : (totalCount ?? locallyFilteredArticles.length);
+    const approved = locallyFilteredArticles.filter(
+      (a) => a.status === "approved",
+    ).length;
+    const pending = locallyFilteredArticles.filter(
+      (a) => a.status === "pending",
+    ).length;
     const rewriteRequired = locallyFilteredArticles.filter(
       (a) => a.status === "rewrite_required",
     ).length;
@@ -117,6 +140,15 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
 
     return { total, approved, pending, rewriteRequired, averageScore };
   }, [locallyFilteredArticles]);
+
+  const searchItems = useMemo(
+    () =>
+      articles.map((a) => ({
+        id: a.id,
+        value: a.title,
+      })),
+    [articles],
+  );
 
   const columns = useMemo<ColumnDef<DataGridFeatures, ArticleSummary>[]>(
     () => [
@@ -130,7 +162,7 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="block truncate font-medium text-teal-600 text-[13px]">
+                  <span className="block truncate font-medium text-foreground text-[13px]">
                     {title}
                   </span>
                 </TooltipTrigger>
@@ -151,7 +183,9 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
               <div className="size-7 shrink-0 rounded-full bg-teal-600 text-white text-[11px] font-semibold flex items-center justify-center">
                 {getNameInitials(name)}
               </div>
-              <span className="truncate text-sm font-medium text-foreground">{name}</span>
+              <span className="truncate text-sm font-medium text-foreground">
+                {name}
+              </span>
             </div>
           );
         },
@@ -160,14 +194,24 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
         accessorKey: "article_type_name",
         header: "Type",
         size: 130,
-        cell: ({ getValue }) => (
-          <Badge
-            variant="outline"
-            className="bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
-          >
-            {getValue() as string}
-          </Badge>
-        ),
+        cell: ({ getValue }) => {
+          const typeName = getValue() as string;
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge
+                    variant="outline"
+                    className="max-w-full bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
+                  >
+                    <span className="min-w-0 truncate">{typeName}</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>{typeName}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        },
       },
       {
         accessorKey: "status",
@@ -177,7 +221,10 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
           const status = getValue() as ArticleStatus;
           const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.unknown;
           return (
-            <Badge variant="outline" className={cn("font-medium", cfg.className)}>
+            <Badge
+              variant="outline"
+              className={cn("font-medium", cfg.className)}
+            >
               {cfg.icon ? <Clock className="size-3" /> : null}
               {cfg.label}
             </Badge>
@@ -188,7 +235,9 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
         accessorKey: "version",
         header: "Version",
         size: 85,
-        cell: ({ getValue }) => <span className="text-sm">v{getValue() as number}</span>,
+        cell: ({ getValue }) => (
+          <span className="text-sm">v{getValue() as number}</span>
+        ),
       },
       {
         accessorKey: "ai_score",
@@ -204,7 +253,14 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
                 value={Math.min(Math.max(score, 0), 10) * 10}
                 className={cn("w-14 h-1.5", classes.bar)}
               />
-              <span className={cn("font-semibold text-[13px] tabular-nums", classes.text)}>{score}</span>
+              <span
+                className={cn(
+                  "font-semibold text-[13px] tabular-nums",
+                  classes.text,
+                )}
+              >
+                {score}
+              </span>
             </span>
           );
         },
@@ -214,7 +270,9 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
         header: "Created",
         size: 125,
         cell: ({ getValue }) => (
-          <span className="text-[13px]">{formatDateToUSLocale(getValue() as string)}</span>
+          <span className="text-[13px]">
+            {formatDateToUSLocale(getValue() as string)}
+          </span>
         ),
       },
     ],
@@ -227,7 +285,12 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
     data: locallyFilteredArticles,
     pageCount: 1,
     getRowId: (row) => row.id,
-    state: { pagination: { pageIndex: 0, pageSize: locallyFilteredArticles.length || 1 } },
+    state: {
+      pagination: {
+        pageIndex: 0,
+        pageSize: locallyFilteredArticles.length || 1,
+      },
+    },
   });
 
   return (
@@ -235,7 +298,9 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="rounded-sm border border-border bg-background px-3.5 py-2.5">
           <div className="text-xs text-muted-foreground">Total articles</div>
-          <div className="mt-0.5 text-xl font-semibold tabular-nums">{dashboard.total}</div>
+          <div className="mt-0.5 text-xl font-semibold tabular-nums">
+            {dashboard.total}
+          </div>
         </div>
         <div className="rounded-sm border border-border bg-background px-3.5 py-2.5">
           <div className="text-xs text-muted-foreground">Accepted</div>
@@ -258,15 +323,38 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
       </div>
 
       <div className="relative flex-1">
-        <Search size={15} className="absolute top-1/2 left-3 z-10 -translate-y-1/2 text-slate-400" />
-        <input
-          type="search"
+        <Autocomplete
+          items={searchItems}
           value={titleFilter}
-          onChange={(e) => setTitleFilter(e.target.value)}
-          placeholder="Search title..."
-          aria-label="Search title"
-          className="h-9 w-full rounded-sm border border-border bg-white py-2 pr-3 pl-9 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
-        />
+          onValueChange={(value) => setTitleFilter(value ?? "")}
+          itemToStringValue={(item) =>
+            typeof item === "string" ? item : item.value
+          }
+        >
+          <div className="relative">
+            <Search
+              size={15}
+              className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 text-slate-400"
+            />
+            <AutocompleteInput
+              placeholder="Search title..."
+              size="lg"
+              className="rounded-sm border-border bg-white pl-9"
+              showClear
+              aria-label="Search title"
+            />
+          </div>
+          <AutocompleteContent>
+            <AutocompleteEmpty>No articles found.</AutocompleteEmpty>
+            <AutocompleteList>
+              {(item) => (
+                <AutocompleteItem key={item.id} value={item}>
+                  {item.value}
+                </AutocompleteItem>
+              )}
+            </AutocompleteList>
+          </AutocompleteContent>
+        </Autocomplete>
       </div>
 
       <DataGrid
@@ -284,7 +372,6 @@ export default function ArticlesTableContent({ articles, onRowClick, totalCount 
               <DataGridTable />
             </DataGridScrollArea>
           </DataGridContainer>
-
         </div>
       </DataGrid>
     </div>

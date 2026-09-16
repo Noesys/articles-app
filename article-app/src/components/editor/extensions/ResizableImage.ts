@@ -8,13 +8,17 @@ export const ResizableImage = Image.extend({
       ...this.parent?.(),
       width: {
         default: null,
-        parseHTML: (el: HTMLElement) => el.getAttribute("width") || el.style.width || null,
+        // Prefer CSS width so percent values like "50%" are not lost to a
+        // numeric width="50" attribute (which browsers treat as pixels).
+        parseHTML: (el: HTMLElement) =>
+          el.style.width || el.getAttribute("width") || null,
         renderHTML: (attrs: { width?: string | number | null }) =>
           attrs.width ? { width: attrs.width } : {},
       },
       height: {
         default: null,
-        parseHTML: (el: HTMLElement) => el.getAttribute("height") || el.style.height || null,
+        parseHTML: (el: HTMLElement) =>
+          el.getAttribute("height") || el.style.height || null,
         renderHTML: (attrs: { height?: string | number | null }) =>
           attrs.height ? { height: attrs.height } : {},
       },
@@ -27,11 +31,21 @@ export const ResizableImage = Image.extend({
       textAlign: {
         default: null,
         parseHTML: (el: HTMLElement) => {
-          const explicit = el.getAttribute("data-align") || el.getAttribute("textalign") || el.getAttribute("textAlign");
+          const explicit =
+            el.getAttribute("data-align") ||
+            el.getAttribute("textalign") ||
+            el.getAttribute("textAlign");
           if (explicit) return explicit.toLowerCase();
           const style = (el.getAttribute("style") || "").toLowerCase();
-          if (style.includes("margin-left:auto") || style.includes("margin-left: auto")) {
-            if (style.includes("margin-right:auto") || style.includes("margin-right: auto")) return "center";
+          if (
+            style.includes("margin-left:auto") ||
+            style.includes("margin-left: auto")
+          ) {
+            if (
+              style.includes("margin-right:auto") ||
+              style.includes("margin-right: auto")
+            )
+              return "center";
             return "right";
           }
           if (style.includes("margin:") && style.includes("auto")) {
@@ -51,21 +65,39 @@ export const ResizableImage = Image.extend({
     return ReactNodeViewRenderer(ResizableImageNodeView);
   },
   renderHTML({ HTMLAttributes }: { HTMLAttributes: Record<string, unknown> }) {
-    // Normalize width to ensure it survives DOMPurify + htmlparser2 (numeric width attr + px style)
-    let normWidth: string | null = null;
+    // Preserve % widths via style only — never emit a numeric width attr for
+    // percent values (width="50" would be interpreted as 50px).
+    let widthStyle: string | null = null;
+    let widthAttr: string | null = null;
     if (HTMLAttributes.width != null) {
       const raw = String(HTMLAttributes.width).trim();
-      const num = parseInt(raw, 10);
-      if (!isNaN(num)) normWidth = String(num);
+      if (raw.endsWith("%")) {
+        widthStyle = raw;
+      } else {
+        const n = parseInt(raw, 10);
+        if (!isNaN(n)) {
+          widthStyle = `${n}px`;
+          widthAttr = String(n);
+        } else {
+          widthStyle = raw.endsWith("px") ? raw : `${raw}px`;
+        }
+      }
     }
+    // Strip stale width/display/margin from carried style to avoid dup on resave
+    const rawStyle = String(HTMLAttributes.style || "");
+    const cleanedStyle = rawStyle
+      .split(";")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter(
+        (p) => !/^(width|height|display|margin(-left|-right)?)\s*:/i.test(p),
+      )
+      .join("; ");
     const styleParts: string[] = [];
-    if (normWidth) styleParts.push(`width:${normWidth}px`);
-    else if (HTMLAttributes.width)
-      styleParts.push(
-        `width:${HTMLAttributes.width}${String(HTMLAttributes.width).endsWith("px") || String(HTMLAttributes.width).endsWith("%") ? "" : "px"}`,
-      );
-    if (HTMLAttributes.height) styleParts.push(`height:${HTMLAttributes.height}`);
-    if (HTMLAttributes.style) styleParts.push(String(HTMLAttributes.style));
+    if (widthStyle) styleParts.push(`width:${widthStyle}`);
+    if (HTMLAttributes.height)
+      styleParts.push(`height:${HTMLAttributes.height}`);
+    if (cleanedStyle) styleParts.push(cleanedStyle);
     if (HTMLAttributes.textAlign === "center")
       styleParts.push("display:block; margin-left:auto; margin-right:auto");
     else if (HTMLAttributes.textAlign === "right")
@@ -73,10 +105,17 @@ export const ResizableImage = Image.extend({
     else if (HTMLAttributes.textAlign === "left")
       styleParts.push("display:block; margin-left:0; margin-right:auto");
     const style = styleParts.join("; ");
-    const { textAlign: _ta, width: _w, ...rest } = HTMLAttributes as Record<string, unknown>;
-    const outAttrs: Record<string, unknown> = { ...rest, style: style || undefined };
-    if (normWidth) outAttrs.width = normWidth;
-    else if (HTMLAttributes.width) outAttrs.width = HTMLAttributes.width;
+    const {
+      textAlign: _ta,
+      width: _w,
+      style: _s,
+      ...rest
+    } = HTMLAttributes as Record<string, unknown>;
+    const outAttrs: Record<string, unknown> = {
+      ...rest,
+      style: style || undefined,
+    };
+    if (widthAttr) outAttrs.width = widthAttr;
     return ["img", outAttrs];
   },
 }).configure({ inline: false, allowBase64: true });

@@ -8,7 +8,14 @@ import { useNavigate } from "react-router-dom";
 import { ArticleTypeWithPrompt } from "@/admin/utils/types";
 import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Autocomplete,
+  AutocompleteContent,
+  AutocompleteEmpty,
+  AutocompleteInput,
+  AutocompleteItem,
+  AutocompleteList,
+} from "@/components/reui/autocomplete";
 
 type ArticleTypesManagerProps = {
   articleTypes: ArticleTypeWithPrompt[];
@@ -32,6 +39,15 @@ export default function ArticleTypesManager({ articleTypes, onDelete }: ArticleT
       );
     });
   }, [articleTypes, query]);
+
+  const searchItems = useMemo(
+    () =>
+      articleTypes.map((t) => ({
+        id: t.id,
+        value: t.name,
+      })),
+    [articleTypes],
+  );
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -59,18 +75,36 @@ export default function ArticleTypesManager({ articleTypes, onDelete }: ArticleT
 
       <FilterToolbar>
         <div className="relative w-full flex-1">
-          <Search
-            size={15}
-            className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 text-slate-400"
-          />
-          <Input
-            type="search"
+          <Autocomplete
+            items={searchItems}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search article types..."
-            aria-label="Search article types"
-            className="h-9 rounded-sm border-border bg-white pl-9"
-          />
+            onValueChange={(value) => setQuery(value ?? "")}
+            itemToStringValue={(item) => (typeof item === "string" ? item : item.value)}
+          >
+            <div className="relative">
+              <Search
+                size={15}
+                className="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 text-slate-400"
+              />
+              <AutocompleteInput
+                placeholder="Search article types..."
+                size="lg"
+                className="rounded-sm border-border bg-white pl-9"
+                showClear
+                aria-label="Search article types"
+              />
+            </div>
+            <AutocompleteContent>
+              <AutocompleteEmpty>No article types found.</AutocompleteEmpty>
+              <AutocompleteList>
+                {(item) => (
+                  <AutocompleteItem key={item.id} value={item}>
+                    {item.value}
+                  </AutocompleteItem>
+                )}
+              </AutocompleteList>
+            </AutocompleteContent>
+          </Autocomplete>
         </div>
       </FilterToolbar>
 
