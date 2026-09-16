@@ -41,9 +41,11 @@ function parseArticleTypeBody(
     }
   }
 
+  const general_instructions = (b as Record<string, unknown>).general_instructions ?? (b as Record<string, unknown>).generalInstructions;
   return {
     ...(name !== undefined ? { name: name.trim() } : {}),
     ...(description !== undefined ? { description: description.trim() || undefined } : {}),
+    ...(general_instructions !== undefined ? { general_instructions: String(general_instructions as string) } as unknown as Partial<ArticleTypeInput> : {}),
     ...(passThreshold !== undefined ? { passThreshold: passThreshold as number } : {}),
     ...(scorePrompt !== undefined ? { scorePrompt: scorePrompt.trim() } : {}),
     ...(scoreMin !== undefined ? { scoreMin: Number(scoreMin) } : {}),

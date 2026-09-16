@@ -24,6 +24,7 @@ import {
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
+import { getScoreColor } from "@/utils/scoreColor";
 import {
   Autocomplete,
   AutocompleteContent,
@@ -48,23 +49,9 @@ type ArticlesTableProps = {
   onCheckAgain?: (articleId: string) => void;
 };
 
-function getAiScoreClasses(status: ArticleStatus) {
-  if (status === "approved") {
-    return {
-      text: "text-emerald-700",
-      bar: "[&_[data-slot=progress-indicator]]:bg-emerald-600",
-    };
-  }
-  if (status === "rewrite_required" || status === "failed") {
-    return {
-      text: "text-red-600",
-      bar: "[&_[data-slot=progress-indicator]]:bg-red-600",
-    };
-  }
-  return {
-    text: "text-amber-600",
-    bar: "[&_[data-slot=progress-indicator]]:bg-amber-500",
-  };
+function getAiScoreClasses(score: number, status: ArticleStatus) {
+  const c = getScoreColor(score, null, status);
+  return { text: c.text, bar: c.barTw };
 }
 
 const STATUS_CONFIG: Record<
@@ -312,7 +299,7 @@ export default function ArticlesTableContent({
         cell: ({ row }) => {
           const score = row.original.ai_score;
           if (score === null) return <span className="text-[13px]">—</span>;
-          const classes = getAiScoreClasses(row.original.status);
+          const classes = getAiScoreClasses(score, row.original.status);
           return (
             <span className="inline-flex items-center gap-2">
               <Progress

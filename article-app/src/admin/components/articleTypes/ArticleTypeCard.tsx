@@ -93,7 +93,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
           )}
         </div>
 
-        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 shrink-0 ">
           <ActionButton
             icon={<Pencil size={15} />}
             label={`Edit ${type.name}`}

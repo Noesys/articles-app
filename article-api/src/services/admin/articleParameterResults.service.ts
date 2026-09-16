@@ -18,7 +18,7 @@ export async function getParameterResults(
   }
 
   const sql = `
-    SELECT r.id, r.parameter_id, p.name, r.value, r.version, r.scored_at
+    SELECT r.id, r.parameter_id, p.name, p.description, p.scope_type as scope_type, p.max_value as max_value, r.value, r.version, r.scored_at
     FROM article_parameter_results r
     JOIN parameters p ON p.id = r.parameter_id
     WHERE ${conditions.join(" AND ")}

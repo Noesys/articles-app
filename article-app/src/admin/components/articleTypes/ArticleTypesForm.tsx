@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState, WheelEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { markdownComponents } from "@/components/markdown/markdownComponents";
 import Button from "../../components/ui/Button";
 import DeleteConfirmation from "./DeleteConfirmation";
 import { api, apiFull } from "@/http-client";
@@ -21,6 +24,12 @@ import {
 import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
 import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
 import { ColumnDef, useTable } from "@tanstack/react-table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PageHeader, PageShell } from "@/components/page-chrome";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Button as ShadcnButton } from "@/components/ui/button";
@@ -33,6 +42,7 @@ import {
 const EMPTY_FORM: FormState = {
   name: "",
   description: "",
+  generalInstructions: "",
   promptContent: "",
   scoreMin: "0",
   scoreMax: "10",
@@ -42,6 +52,7 @@ const EMPTY_FORM: FormState = {
 
 const EMPTY_PARAM_DRAFT: Omit<ParameterDraft, "id" | "isNew"> = {
   name: "",
+  description: "",
   prompt: "",
   scopeType: "numeric",
   minValue: "0",
@@ -53,6 +64,7 @@ function parameterFromResponse(p: ParameterResponse): ParameterDraft {
   return {
     id: p.id,
     name: p.name,
+    description: p.description ?? "",
     prompt: p.prompt,
     scopeType: p.scope_type,
     minValue: p.min_value?.toString() ?? "0",
@@ -65,6 +77,7 @@ function parameterToBody(p: ParameterDraft) {
   if (p.scopeType === "numeric")
     return {
       name: p.name.trim(),
+      description: p.description?.trim() || null,
       prompt: p.prompt.trim(),
       scopeType: "numeric",
       minValue: Number(p.minValue),
@@ -72,6 +85,7 @@ function parameterToBody(p: ParameterDraft) {
     };
   return {
     name: p.name.trim(),
+    description: p.description?.trim() || null,
     prompt: p.prompt.trim(),
     scopeType: "option",
     options: p.options,
@@ -96,7 +110,10 @@ export default function ArticleTypesForm() {
   // modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalDraft, setModalDraft] = useState<ParameterDraft | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<ParameterDraft | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<ParameterDraft | null>(
+    null,
+  );
+  const [instructionsPreviewOpen, setInstructionsPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -110,6 +127,7 @@ export default function ArticleTypesForm() {
         setForm({
           name: t.name,
           description: t.description ?? "",
+          generalInstructions: (t as any).general_instructions ?? "",
           promptContent: t.score_prompt,
           scoreMin: t.score_min.toString(),
           scoreMax: t.score_max.toString(),
@@ -118,7 +136,9 @@ export default function ArticleTypesForm() {
         });
       } catch (err) {
         console.error(err);
-        setError("Couldn't load this article type. Try going back and re-opening it.");
+        setError(
+          "Couldn't load this article type. Try going back and re-opening it.",
+        );
       } finally {
         setLoading(false);
       }
@@ -155,7 +175,9 @@ export default function ArticleTypesForm() {
     if (exists)
       setForm((c) => ({
         ...c,
-        parameters: c.parameters.map((p) => (p.id === modalDraft.id ? modalDraft : p)),
+        parameters: c.parameters.map((p) =>
+          p.id === modalDraft.id ? modalDraft : p,
+        ),
       }));
     else setForm((c) => ({ ...c, parameters: [...c.parameters, modalDraft] }));
     closeModal();
@@ -192,7 +214,9 @@ export default function ArticleTypesForm() {
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    const invalidParameter = form.parameters.find((p) => !p.name.trim() || !p.prompt.trim());
+    const invalidParameter = form.parameters.find(
+      (p) => !p.name.trim() || !p.prompt.trim(),
+    );
     if (invalidParameter) {
       openEditModal(invalidParameter);
       return;
@@ -203,6 +227,7 @@ export default function ArticleTypesForm() {
       const body = JSON.stringify({
         name: form.name.trim(),
         description: form.description.trim(),
+        general_instructions: form.generalInstructions.trim() || null,
         scorePrompt: form.promptContent.trim(),
         scoreMin: scoreMinNum,
         scoreMax: scoreMaxNum,
@@ -212,12 +237,17 @@ export default function ArticleTypesForm() {
       if (isEditing) {
         await api(`/admin/article-types/${id}`, { method: "PATCH", body });
       } else {
-        const created: any = await apiFull(`/admin/article-types`, { method: "POST", body });
+        const created: any = await apiFull(`/admin/article-types`, {
+          method: "POST",
+          body,
+        });
         articleTypeId = created.data.id;
       }
       await Promise.all(
         removedParameterIds.map((paramId) =>
-          api(`/admin/article-types/${articleTypeId}/parameters/${paramId}`, { method: "DELETE" }),
+          api(`/admin/article-types/${articleTypeId}/parameters/${paramId}`, {
+            method: "DELETE",
+          }),
         ),
       );
       await Promise.all(
@@ -228,36 +258,41 @@ export default function ArticleTypesForm() {
               method: "POST",
               body: paramBody,
             });
-          return api(`/admin/article-types/${articleTypeId}/parameters/${p.id}`, {
-            method: "PATCH",
-            body: paramBody,
-          });
+          return api(
+            `/admin/article-types/${articleTypeId}/parameters/${p.id}`,
+            {
+              method: "PATCH",
+              body: paramBody,
+            },
+          );
         }),
       );
       navigate("/admin/article-types");
     } catch (err) {
       console.error(err);
-      setError("Something went wrong saving this article type. Please try again.");
+      setError(
+        "Something went wrong saving this article type. Please try again.",
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <div className="m-5 text-sm text-slate-400">Loading…</div>;
+  if (loading)
+    return <div className="m-5 text-sm text-slate-400">Loading…</div>;
 
   return (
     <PageShell>
-      <ShadcnButton
-        type="button"
-        variant="ghost"
-        size="sm"
+      <button
         onClick={() => navigate("/admin/article-types")}
-        className="mb-3 -ml-2 text-slate-500 hover:text-slate-700"
+        className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6"
       >
-        <ChevronLeft size={16} /> Back to article types
-      </ShadcnButton>
+        <ChevronLeft size={14} /> Back to article types
+      </button>
 
-      <PageHeader title={isEditing ? "Edit article type" : "New article type"} />
+      <PageHeader
+        title={isEditing ? "Edit article type" : "New article type"}
+      />
 
       {error && <InlineAlert>{error}</InlineAlert>}
 
@@ -274,11 +309,15 @@ export default function ArticleTypesForm() {
         </div>
         <div className="grid grid-cols-10 gap-4">
           <div className="col-span-7">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Description
+            </label>
             <input
               type="text"
               value={form.description}
-              onChange={(e) => setForm((c) => ({ ...c, description: e.target.value }))}
+              onChange={(e) =>
+                setForm((c) => ({ ...c, description: e.target.value }))
+              }
               placeholder="Short description (optional)"
               className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
             />
@@ -311,10 +350,14 @@ export default function ArticleTypesForm() {
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Scoring Prompt</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Scoring Prompt
+          </label>
           <textarea
             value={form.promptContent}
-            onChange={(e) => setForm((c) => ({ ...c, promptContent: e.target.value }))}
+            onChange={(e) =>
+              setForm((c) => ({ ...c, promptContent: e.target.value }))
+            }
             placeholder="The full AI scoring prompt for this article type..."
             rows={8}
             className="w-full resize-y rounded-sm border border-border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
@@ -323,15 +366,17 @@ export default function ArticleTypesForm() {
 
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-sm font-medium text-slate-700">Parameters</label>
+            <label className="block text-sm font-medium text-slate-700">
+              Parameters
+            </label>
             <Button
-              variant="ghost"
+              variant="primary"
               size="sm"
               icon={<Plus size={13} />}
               type="button"
               onClick={openAddModal}
             >
-              Add parameter
+              Add Parameter
             </Button>
           </div>
 
@@ -340,6 +385,51 @@ export default function ArticleTypesForm() {
             onEdit={openEditModal}
             onDelete={setPendingDelete}
           />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-sm font-medium text-slate-700">
+              General Instructions{" "}
+              <span className="font-normal text-slate-400">
+                (Shown on article type select)
+              </span>
+            </label>
+            <span className="text-xs text-slate-400"></span>
+          </div>
+          <textarea
+            value={form.generalInstructions}
+            onChange={(e) =>
+              setForm((c) => ({ ...c, generalInstructions: e.target.value }))
+            }
+            placeholder="General guidelines for the article"
+            rows={5}
+            className="w-full resize-y rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+          />
+          {form.generalInstructions.trim() ? (
+            <div className="mt-2 rounded-sm border border-slate-200 bg-white overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setInstructionsPreviewOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-slate-50"
+              >
+                <span className="text-sm font-medium text-slate-600">
+                  General instructions preview
+                </span>
+                <span className="text-slate-400 p-1">{instructionsPreviewOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</span>
+              </button>
+              {instructionsPreviewOpen && (
+                <div className="prose prose-sm max-w-none px-3 py-2">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={markdownComponents}
+                  >
+                    {form.generalInstructions}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex gap-2 justify-end pt-2">
@@ -351,7 +441,12 @@ export default function ArticleTypesForm() {
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} loading={submitting} disabled={!canSubmit} type="button">
+          <Button
+            onClick={handleSubmit}
+            loading={submitting}
+            disabled={!canSubmit}
+            type="button"
+          >
             {isEditing ? "Save Changes" : "Create Type"}
           </Button>
         </div>
@@ -394,6 +489,29 @@ function ParametersTable({
         cell: ({ getValue }) => {
           const v = getValue() as string;
           return v || <span className="text-slate-300 italic">Untitled</span>;
+        },
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+        size: 200,
+        cell: ({ getValue }) => {
+          const v = (getValue() as string) || "";
+          if (!v) return <span className="text-slate-300 italic">—</span>;
+          return (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="block truncate max-w-[200px] text-sm text-slate-600">
+                    {v}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs whitespace-normal break-words">
+                  {v}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
         },
       },
       {
@@ -482,7 +600,7 @@ function ParametersTable({
         </span>
       }
       tableLayout={contiqTableLayout}
-        tableClassNames={contiqTableClassNames}
+      tableClassNames={contiqTableClassNames}
     >
       <DataGridContainer className={contiqTableContainerClassName}>
         <DataGridScrollArea>

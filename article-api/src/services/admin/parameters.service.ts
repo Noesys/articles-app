@@ -30,6 +30,7 @@ export async function getParametersByArticleType(db: D1Database, articleTypeId?:
         id,
         article_type_id,
         name,
+        description,
         prompt,
         scope_type,
         min_value,
@@ -321,16 +322,17 @@ export async function createParameter(
       .prepare(
         `
         INSERT INTO parameters (
-          id, article_type_id, name, prompt, scope_type,
+          id, article_type_id, name, description, prompt, scope_type,
           min_value, max_value, created_by, created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .bind(
         parameterId,
         articleTypeId,
         input.name,
+        input.description ?? null,
         input.prompt,
         input.scopeType,
         input.minValue ?? null,
@@ -393,12 +395,13 @@ export async function updateParameter(db: D1Database, parameterId: string, input
       .prepare(
         `
         UPDATE parameters
-        SET name = ?, prompt = ?, scope_type = ?, min_value = ?, max_value = ?, updated_at = ?
+        SET name = ?, description = ?, prompt = ?, scope_type = ?, min_value = ?, max_value = ?, updated_at = ?
         WHERE id = ?
       `,
       )
       .bind(
         input.name,
+        input.description ?? null,
         input.prompt,
         input.scopeType,
         input.minValue ?? null,

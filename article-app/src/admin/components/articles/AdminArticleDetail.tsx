@@ -6,6 +6,9 @@ import { FilterSelect } from "@/components/ui/filter-select";
 import dayjs from "dayjs";
 import { api } from "../../../http-client";
 import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
+import { getScoreColor, sanitizeFilename } from "@/utils/scoreColor";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import ScoringHistoryTable from "./ScoringHistoryTable";
 import ParameterResultsBox from "./ParameterResultsBox";
 import FeedbackBlock from "./FeedbackBlock";
@@ -23,10 +26,13 @@ function navigateBackOrToArticles(navigate: ReturnType<typeof useNavigate>) {
   else navigate("/admin/articles");
 }
 
-function getScoreBarColor(status: string) {
-  if (status === "approved") return "bg-emerald-500";
-  if (status === "rewrite_required" || status === "failed") return "bg-red-500";
-  return "bg-amber-500";
+function getScoreBarColor(score: number | null, status: string, passThreshold: number | null) {
+  if (score === null) return "bg-amber-500";
+  return getScoreColor(score, passThreshold, status).bar;
+}
+function getScoreTextColor(score: number | null, status: string, passThreshold: number | null) {
+  if (score === null) return "text-slate-900";
+  return getScoreColor(score, passThreshold, status).text;
 }
 
 type ArticleTypeOption = { id: string; name: string };
@@ -51,10 +57,12 @@ export default function AdminArticleDetail() {
   const [currentScore, setCurrentScore] = useState<number | null>(null);
   const [currentFeedback, setCurrentFeedback] = useState("");
   const [parameterResults, setParameterResults] = useState<ParameterResult[]>([]);
+  const [passThreshold, setPassThreshold] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [contentCollapsed, setContentCollapsed] = useState(true);
+  const [feedbackCollapsed, setFeedbackCollapsed] = useState(true);
   const [articleTypes, setArticleTypes] = useState<ArticleTypeOption[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState("");
   const [typeBusy, setTypeBusy] = useState(false);
@@ -137,12 +145,14 @@ export default function AdminArticleDetail() {
       setLoading(true);
       setError(null);
       try {
-        const [types] = await Promise.all([
-          api<ArticleTypeOption[] | { id: string; name: string }[]>(`/admin/article-types`),
+        const [types, art] = await Promise.all([
+          api<any>(`/admin/article-types`),
           loadArticle(),
         ]);
         if (cancelled) return;
-        const list = Array.isArray(types) ? types : [];
+        const list: any[] = Array.isArray(types) ? types : (types as any)?.data ?? [];
+        const t = list.find((x: any) => x.id === (art as any)?.article_type_id);
+        if (t?.pass_threshold != null) setPassThreshold(t.pass_threshold);
         setArticleTypes(
           list
             .map((t) => ({ id: t.id, name: t.name }))
@@ -598,20 +608,13 @@ export default function AdminArticleDetail() {
                   </p>
                 ) : (
                   <>
-                    <p className="text-3xl font-semibold text-slate-900">
+                    <p className={`text-3xl font-semibold ${hasScore ? getScoreTextColor(displayScore, displayStatus, passThreshold) : "text-slate-900"}`}>
                       {hasScore ? formatAiScore(displayScore!) : "—"}
                       <span className="text-base text-slate-400 font-normal"> / 10</span>
                     </p>
 
                     {hasScore && (
-                      <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${getScoreBarColor(displayStatus)}`}
-                          style={{
-                            width: `${(Math.min(displayScore!, 10) / 10) * 100}%`,
-                          }}
-                        />
-                      </div>
+                      <Progress value={Math.min(Math.max(displayScore!,0),10)*10} className={cn("flex-1 h-2", getScoreColor(displayScore!, passThreshold, displayStatus).barTw)} />
                     )}
                   </>
                 )}
@@ -619,35 +622,36 @@ export default function AdminArticleDetail() {
             </div>
           </div>
 
-          <div className="rounded-sm border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-md font-semibold uppercase tracking-wide text-slate-600">
-                Feedback
-              </p>
-
-              {displayFeedback && <CopyButton text={displayFeedback} />}
-            </div>
-
-            {isFailed ? (
-              <div className="space-y-2">
-                <p className="text-sm text-red-600">
-                  Evaluation failed. Re-evaluate or ask the user to re-submit.
-                </p>
-                {displayFeedback && (
-                  <p className="text-sm text-slate-600 break-words rounded-sm border border-red-100 bg-red-50 px-3 py-2">
-                    {displayFeedback}
-                  </p>
+          <div className="rounded-sm border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <button onClick={() => setFeedbackCollapsed(!feedbackCollapsed)} className="w-full flex items-center justify-between px-4 py-3">
+              <p className="text-md font-semibold uppercase tracking-wide text-slate-600">Feedback</p>
+              <div className="flex items-center gap-2">
+                {displayFeedback && <span onClick={(e) => e.stopPropagation()}><CopyButton text={displayFeedback} /></span>}
+                <span className="p-1 text-slate-400">
+                  {feedbackCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                </span>
+              </div>
+            </button>
+            {!feedbackCollapsed && (
+              <div className="px-4 pb-4">
+                {isFailed ? (
+                  <div className="space-y-2">
+                    <p className="text-sm text-red-600">Evaluation failed. Re-evaluate or ask the user to re-submit.</p>
+                    {displayFeedback && (
+                      <p className="text-sm text-slate-600 break-words rounded-sm border border-red-100 bg-red-50 px-3 py-2">{displayFeedback}</p>
+                    )}
+                  </div>
+                ) : isScoring ? (
+                  <div className="flex items-center gap-2 text-sm text-slate-500 py-2">
+                    <Loader2 size={16} className="animate-spin text-slate-400" />
+                    <span>Scoring…</span>
+                  </div>
+                ) : isPendingUnscored ? (
+                  <p className="text-sm text-slate-500">No feedback yet.</p>
+                ) : (
+                  <FeedbackBlock feedback={displayFeedback || "No feedback available yet."} />
                 )}
               </div>
-            ) : isScoring ? (
-              <div className="flex items-center gap-2 text-sm text-slate-500 py-2">
-                <Loader2 size={16} className="animate-spin text-slate-400" />
-                <span>Scoring…</span>
-              </div>
-            ) : isPendingUnscored ? (
-              <p className="text-sm text-slate-500">No feedback yet.</p>
-            ) : (
-              <FeedbackBlock feedback={displayFeedback || "No feedback available yet."} />
             )}
           </div>
           <ParameterResultsBox results={parameterResults} />
@@ -669,7 +673,7 @@ export default function AdminArticleDetail() {
                     <DownloadMarkdownButton
                       title={displayTitle}
                       content={displayContent}
-                      filename="article-review.md"
+                      filename={sanitizeFilename(displayTitle)}
                     />
                   </div>
                 )}

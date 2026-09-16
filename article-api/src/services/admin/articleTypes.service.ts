@@ -109,6 +109,7 @@ export async function getArticleTypeById(
         id,
         name,
         description,
+        general_instructions,
         pass_threshold,
         score_prompt,
         score_min,
@@ -168,6 +169,7 @@ export async function createArticleType(
           id,
           name,
           description,
+          general_instructions,
           pass_threshold,
           score_prompt,
           score_min,
@@ -176,13 +178,14 @@ export async function createArticleType(
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .bind(
         articleTypeId,
         input.name,
         input.description ?? null,
+        input.general_instructions ?? null,
         input.passThreshold,
         input.scorePrompt,
         input.scoreMin,
@@ -208,7 +211,7 @@ export async function updateArticleType(
   const existing = await db
     .prepare(
       `
-      SELECT id, name, description, pass_threshold, score_prompt, score_min, score_max
+      SELECT id, name, description, general_instructions, pass_threshold, score_prompt, score_min, score_max
       FROM article_types
       WHERE id = ?
         AND is_active = 1
@@ -242,6 +245,7 @@ export async function updateArticleType(
 
   const name = input.name ?? existing.name;
   const description = input.description !== undefined ? input.description : existing.description;
+  const general_instructions = input.general_instructions !== undefined ? input.general_instructions : existing.general_instructions;
   const passThreshold = input.passThreshold ?? existing.pass_threshold;
   const scorePrompt = input.scorePrompt ?? existing.score_prompt;
   const scoreMin = input.scoreMin ?? existing.score_min;
@@ -263,6 +267,7 @@ export async function updateArticleType(
       SET
         name = ?,
         description = ?,
+        general_instructions = ?,
         pass_threshold = ?,
         score_prompt = ?,
         score_min = ?,
@@ -274,6 +279,7 @@ export async function updateArticleType(
     .bind(
       name,
       description ?? null,
+      general_instructions ?? null,
       passThreshold,
       scorePrompt,
       scoreMin,

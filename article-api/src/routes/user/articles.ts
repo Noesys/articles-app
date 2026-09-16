@@ -173,13 +173,15 @@ articleRoutes.get("/mine/:id", async (c) => {
   }[] = (
     await db
       .prepare(
-        `SELECT p.name as parameter_name, p.scope_type, r.numeric_value, r.option_id, po.label as option_label FROM article_parameter_results r JOIN parameters p ON p.id=r.parameter_id LEFT JOIN parameter_options po ON po.id=r.option_id WHERE r.article_id=? AND r.version=? ORDER BY p.sort_order`,
+        `SELECT p.name as parameter_name, p.description as parameter_description, p.scope_type, p.max_value, r.numeric_value, r.option_id, po.label as option_label FROM article_parameter_results r JOIN parameters p ON p.id=r.parameter_id LEFT JOIN parameter_options po ON po.id=r.option_id WHERE r.article_id=? AND r.version=? ORDER BY p.sort_order`,
       )
       .bind(articleId, article.version)
       .all()
   ).results as {
     parameter_name: string;
+    parameter_description: string | null;
     scope_type: string;
+    max_value: number | null;
     numeric_value: number | null;
     option_id: string | null;
     option_label: string | null;
@@ -187,12 +189,16 @@ articleRoutes.get("/mine/:id", async (c) => {
   const parameter_results = paramRows.map(
     (r: {
       parameter_name: string;
+      parameter_description: string | null;
       scope_type: string;
+      max_value: number | null;
       numeric_value: number | null;
       option_label: string | null;
     }) => ({
       parameter_name: r.parameter_name,
+      parameter_description: r.parameter_description,
       scope_type: r.scope_type,
+      max_value: r.max_value,
       value: r.scope_type === "option" ? r.option_label : r.numeric_value,
     }),
   );

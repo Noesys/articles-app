@@ -68,6 +68,7 @@ export interface ArticleTypeDetail {
   id: string;
   name: string;
   description: string | null;
+  general_instructions: string | null;
   pass_threshold: number;
   score_prompt: string;
   score_min: number;
@@ -88,6 +89,7 @@ export interface ParameterOptionRow {
 export interface ParameterRow {
   id: string;
   name: string;
+  description: string | null;
   prompt: string;
   scopeType: string;
   minValue: number | null;
@@ -116,6 +118,7 @@ export interface ArticleTypeRow {
   id: string;
   name: string;
   description: string | null;
+  general_instructions: string | null;
   pass_threshold: number;
   score_prompt: string;
   score_min: number;
@@ -126,6 +129,7 @@ export interface ArticleTypeRow {
 export interface ArticleTypeInput {
   name: string;
   description?: string;
+  general_instructions?: string | null;
   passThreshold: number;
   scorePrompt: string;
   scoreMin: number;
@@ -237,6 +241,7 @@ export interface ParameterOptionInput {
 
 export interface ParameterInput {
   name: string;
+  description?: string | null;
   prompt: string;
   scopeType: ScopeType;
   minValue?: number;

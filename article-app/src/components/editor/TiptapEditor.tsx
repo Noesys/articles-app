@@ -97,6 +97,9 @@ export default function TiptapEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        link: false,
+        underline: false,
+        strike: false,
       }),
       TextAlign.configure({ types: ["heading", "paragraph", "image"] }),
       Underline,

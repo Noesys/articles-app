@@ -69,6 +69,7 @@ app.get("/api/article-types", accessAuth, async (c) => {
       id: t.id,
       name: t.name,
       description: t.description,
+      general_instructions: (t as { general_instructions?: string | null }).general_instructions ?? null,
     })),
   });
 });
