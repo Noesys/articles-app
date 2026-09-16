@@ -107,7 +107,7 @@ export default function ArticleCreation() {
       } catch {}
       navigate(
         user?.auth_role === "admin"
-          ? "/admin/my-article"
+          ? "/admin/articles"
           : "/",
       );
     } catch (err) {
@@ -125,7 +125,7 @@ export default function ArticleCreation() {
           onClick={() =>
             navigate(
               user?.auth_role === "admin"
-                ? "/admin/my-article"
+                ? "/admin/articles"
                 : "/",
             )
           }

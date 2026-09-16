@@ -117,17 +117,6 @@ export default function App() {
       />
 
       <Route
-        path="/admin/my-article"
-        element={
-          <RoleBasedRoute allowedRoles={["admin"]}>
-            <AdminLayout>
-              <MyArticles />
-            </AdminLayout>
-          </RoleBasedRoute>
-        }
-      />
-
-      <Route
         path="/admin/articles"
         element={
           <RoleBasedRoute allowedRoles={["admin"]}>

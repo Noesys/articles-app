@@ -27,6 +27,7 @@ export type ArticleSummary = {
   status: ArticleStatus;
   created_at: string;
   author_name: string;
+  user_id: string;
   submitted_at: string;
   month_year: string;
   parameters: ArticleParameterResult[];

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronLeft, Loader2, ChevronDown, ChevronUp, Pencil, Check, X } from "lucide-react";
 import { toast } from "sonner";
@@ -188,6 +188,28 @@ export default function AdminArticleDetail() {
   // Poll while an admin-triggered re-eval is in flight
   const POLLING_INTERVAL = 2500;
   const MAX_POLL_DURATION = 300000;
+  const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
+
+  // Auto-arm polling for a pending/unscored article even when re-evaluation
+  // was triggered elsewhere (the table's row action, another admin, etc.),
+  // not just from this page's own buttons. Keyed per id+version so it only
+  // arms once per version — otherwise an article stuck pending forever
+  // (e.g. type changed to a non-evaluatable one) would re-arm immediately
+  // after every poll timeout and loop forever.
+  const autoArmedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!article || effectiveSnapshot) return;
+    const key = `${article.id}:${article.version}`;
+    const stillPending = currentScore === null && !TERMINAL_STATUSES.includes(article.status);
+    if (!stillPending) {
+      if (autoArmedRef.current === key) autoArmedRef.current = null;
+      return;
+    }
+    if (autoArmedRef.current === key) return;
+    autoArmedRef.current = key;
+    setScoringInFlight(true);
+  }, [article, currentScore, effectiveSnapshot]);
+
   useEffect(() => {
     if (!scoringInFlight || !id || effectiveSnapshot) return;
 

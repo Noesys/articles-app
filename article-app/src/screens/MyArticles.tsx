@@ -1,9 +1,9 @@
 import Header from "../components/Header";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Loader2, FileText } from "lucide-react";
 import dayjs from "dayjs";
-import { useMyArticles } from "../hooks/useMyArticles";
+import { useInfiniteTableData } from "../hooks/useInfiniteTableData";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/ui/filter-select";
@@ -21,17 +21,14 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { SimplePagination } from "@/components/ui/simple-pagination";
-import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
-import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
+import { DataGridVirtualScrollArea } from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
 import {
   ColumnDef,
-  PaginationState,
   SortingState,
   useTable,
 } from "@tanstack/react-table";
-import { api } from "@/http-client";
-import { ArticleListItem } from "@/utils/types";
+import { api, apiFull } from "@/http-client";
+import { ArticleListItem, ArticleRow } from "@/utils/types";
 import {
   contiqTableContainerClassName,
   contiqTableClassNames,
@@ -44,7 +41,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import EmptyState from "@/admin/components/ui/EmptyState";
 import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
 
-type ArticleStatus = "accepted" | "rejected" | "scoring";
+type ArticleStatus = "accepted" | "rejected" | "failed" | "scoring";
 
 const STATUS_CONFIG: Record<string, { className: string; label: string }> = {
   accepted: {
@@ -64,7 +61,10 @@ const STATUS_CONFIG: Record<string, { className: string; label: string }> = {
   },
 };
 
-const ROW_OPTIONS = [10, 25, 50, 100] as const;
+const POLLING_INTERVAL = 2500;
+const MAX_POLL_DURATION = 300000;
+/** Fetch batch size for "View all" — an implementation detail now that the list is virtualized, not a user-facing setting. */
+const VIEW_ALL_FETCH_LIMIT = 30;
 
 function getDisplayStatus(article: {
   status: string;
@@ -76,7 +76,7 @@ function getDisplayStatus(article: {
 } {
   if (article.status === "failed") {
     return {
-      key: "rejected",
+      key: "failed",
       label: "Failed",
       className:
         "bg-orange-50 text-orange-700 ring-1 ring-orange-200/80 border-transparent",
@@ -139,7 +139,6 @@ export default function MyArticles() {
   const month =
     monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : currentMonth;
   const viewAll = searchParams.get("viewAll") === "true";
-  const currentPage = Math.max(1, Number(searchParams.get("page")) || 1);
   const typeFilter = searchParams.get("type") || "all";
   const statusFilter = searchParams.get("status") || "all";
   const setFilterParam = (
@@ -169,42 +168,52 @@ export default function MyArticles() {
       );
   }, []);
 
-  const getViewportPageSizeOuter = () => {
-    if (typeof window === "undefined") return 10;
-    return Math.min(
-      100,
-      Math.max(10, Math.floor((window.innerHeight - 380) / 57)),
-    );
-  };
-  const [outerPageSize, setOuterPageSize] = useState(() =>
-    getViewportPageSizeOuter(),
+  const fetchArticlesPage = useCallback(
+    async ({
+      page,
+      limit,
+      viewAll: fetchViewAll,
+      month: fetchMonth,
+    }: {
+      page: number;
+      limit: number;
+      viewAll: boolean;
+      month?: string;
+    }) => {
+      const params = new URLSearchParams();
+      if (fetchViewAll) {
+        params.set("viewAll", "true");
+        params.set("page", String(page));
+        params.set("limit", String(limit));
+      } else if (fetchMonth) {
+        params.set("month", fetchMonth);
+      }
+      const query = params.toString();
+      const result = await apiFull<ArticleRow[]>(
+        `/articles/mine${query ? `?${query}` : ""}`,
+      );
+      const data = result.data.map((row) => ({
+        ...row.article,
+        authorName: row.author?.name,
+      }));
+      return { data, total: result.pagination?.total ?? data.length };
+    },
+    [],
   );
-  const { articles, loading, error, pagination, isPolling, refetch } =
-    useMyArticles({
-      month: viewAll ? undefined : month,
-      viewAll,
-      page: viewAll ? currentPage : undefined,
-      limit: viewAll ? outerPageSize : 10,
-    });
 
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
-
-  // Reset page only when pageSize actually changes — not on mount / viewAll toggle.
-  const prevOuterPageSize = useRef(outerPageSize);
-  useEffect(() => {
-    if (prevOuterPageSize.current === outerPageSize) return;
-    prevOuterPageSize.current = outerPageSize;
-    if (!viewAll) return;
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current);
-      next.delete("page");
-      return next;
-    });
-  }, [outerPageSize, viewAll, setSearchParams]);
-
-  const totalPages = pagination.totalPages || 1;
+  const {
+    rows: articles,
+    isLoading: loading,
+    isFetchingMore,
+    hasMore,
+    error,
+    fetchMore,
+    refetchLoaded,
+  } = useInfiniteTableData<ArticleListItem, { viewAll: boolean; month?: string }>({
+    fetchPage: fetchArticlesPage,
+    params: { viewAll, month: viewAll ? undefined : month },
+    limit: viewAll ? VIEW_ALL_FETCH_LIMIT : 10,
+  });
 
   const filteredArticles = useMemo(() => {
     let out = articles;
@@ -223,6 +232,68 @@ export default function MyArticles() {
 
     return out;
   }, [articles, typeFilter, statusFilter, articleTypes]);
+
+  // Poll while anything is still scoring, silently re-syncing every
+  // currently-loaded row (not just the first page) so live scores land
+  // without disrupting scroll position. The interval itself lives for the
+  // whole mount and just checks hasPendingRef on each tick — it never gets
+  // torn down and rebuilt off a dependency change, so there's no window
+  // where a stale effect keeps ticking after the last article resolves.
+  const hasPending = articles.some(
+    (a) =>
+      a.status === "pending" ||
+      a.status === "processing" ||
+      (a.ai_score === null && a.status !== "failed"),
+  );
+  const [isPolling, setIsPolling] = useState(false);
+  const hasPendingRef = useRef(hasPending);
+  hasPendingRef.current = hasPending;
+  const pollStartRef = useRef<number | null>(null);
+  const refetchLoadedRef = useRef(refetchLoaded);
+  refetchLoadedRef.current = refetchLoaded;
+
+  // The moment nothing is pending anymore, drop the banner and any stale
+  // timeout flag immediately — independent of the interval's own cadence.
+  useEffect(() => {
+    if (!hasPending) {
+      pollStartRef.current = null;
+      setIsPolling(false);
+      try {
+        sessionStorage.removeItem("toastError");
+      } catch {}
+    }
+  }, [hasPending]);
+
+  useEffect(() => {
+    const tick = () => {
+      if (!hasPendingRef.current) return;
+      if (document.visibilityState === "hidden") return;
+
+      if (pollStartRef.current === null) pollStartRef.current = Date.now();
+      if (Date.now() - pollStartRef.current > MAX_POLL_DURATION) {
+        pollStartRef.current = null;
+        setIsPolling(false);
+        try {
+          sessionStorage.setItem("toastError", "Scoring timed out");
+        } catch {}
+        return;
+      }
+
+      setIsPolling(true);
+      refetchLoadedRef.current({ silent: true });
+    };
+
+    const interval = window.setInterval(tick, POLLING_INTERVAL);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
 
   const [toast, setToast] = useState<string | null>(() => {
     try {
@@ -252,7 +323,7 @@ export default function MyArticles() {
   }, [toast]);
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6]">
+    <div className="h-full bg-[#f3f4f6]">
       {user?.auth_role === "user" && <Header />}
 
       <PageShell>
@@ -293,7 +364,6 @@ export default function MyArticles() {
                 const next = new URLSearchParams(current);
                 if (viewAll) next.delete("viewAll");
                 else next.set("viewAll", "true");
-                next.delete("page");
                 return next;
               });
             }}
@@ -322,6 +392,7 @@ export default function MyArticles() {
               { value: "all", label: "All statuses" },
               { value: "accepted", label: "Accepted" },
               { value: "rejected", label: "Rejected" },
+              { value: "failed", label: "Failed"}
             ]}
           />
         </FilterToolbar>
@@ -358,45 +429,10 @@ export default function MyArticles() {
             month={month}
             viewAll={viewAll}
             onCreate={() => navigate("/articles/new")}
+            onFetchMore={fetchMore}
+            isFetchingMore={isFetchingMore}
+            hasMore={hasMore}
           />
-        )}
-
-        {viewAll && (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Rows per page</span>
-              <FilterSelect
-                value={String(outerPageSize)}
-                onValueChange={(v) => {
-                  const next = Math.min(
-                    100,
-                    Math.max(5, parseInt(v, 10) || 10),
-                  );
-                  setOuterPageSize(next);
-                  setSearchParams((current) => {
-                    const n = new URLSearchParams(current);
-                    n.delete("page");
-                    return n;
-                  });
-                }}
-                options={[...new Set([...ROW_OPTIONS, outerPageSize])]
-                  .sort((a, b) => a - b)
-                  .map((n) => ({ value: String(n), label: String(n) }))}
-                searchable={false}
-                className="w-[90px]"
-                triggerClassName="h-8"
-                aria-label="Rows per page"
-              />
-            </div>
-            {totalPages > 1 && (
-              <SimplePagination
-                page={currentPage}
-                total={pagination.total ?? 0}
-                pageSize={outerPageSize}
-                onChange={(p) => setFilterParam("page", String(p), "1")}
-              />
-            )}
-          </div>
         )}
       </PageShell>
     </div>
@@ -409,24 +445,19 @@ function MyArticlesTable({
   month,
   viewAll,
   onCreate,
+  onFetchMore,
+  isFetchingMore,
+  hasMore,
 }: {
   articles: ArticleListItem[];
   onRowClick: (id: string) => void;
   month: string;
   viewAll: boolean;
   onCreate: () => void;
+  onFetchMore: () => void;
+  isFetchingMore: boolean;
+  hasMore: boolean;
 }) {
-  const getViewportPageSize = () => {
-    if (typeof window === "undefined") return 10;
-    return Math.min(
-      100,
-      Math.max(10, Math.floor((window.innerHeight - 380) / 57)),
-    );
-  };
-  const [pagination, setPagination] = useState<PaginationState>(() => ({
-    pageIndex: 0,
-    pageSize: getViewportPageSize(),
-  }));
   const [sorting, setSorting] = useState<SortingState>([
     { id: "created", desc: true },
   ]);
@@ -548,17 +579,12 @@ function MyArticlesTable({
     features: dataGridFeatures,
     columns,
     data: articles,
-    pageCount: viewAll
-      ? 1
-      : Math.ceil((articles.length || 0) / pagination.pageSize) || 1,
+    pageCount: 1,
     getRowId: (row) => row.id,
     state: {
-      pagination: viewAll
-        ? { pageIndex: 0, pageSize: articles.length || 1 }
-        : pagination,
+      pagination: { pageIndex: 0, pageSize: articles.length || 1 },
       sorting,
     },
-    onPaginationChange: setPagination,
     onSortingChange: setSorting,
   });
 
@@ -592,47 +618,18 @@ function MyArticlesTable({
           ? "No articles found."
           : `No articles for ${dayjs(month).format("MMMM YYYY")}.`
       }
-      tableLayout={contiqTableLayout}
+      tableLayout={{ ...contiqTableLayout, headerSticky: true }}
       tableClassNames={contiqTableClassNames}
     >
       <div className="w-full space-y-2.5">
         <DataGridContainer className={contiqTableContainerClassName}>
-          <DataGridScrollArea>
-            <DataGridTable />
-          </DataGridScrollArea>
+          <DataGridVirtualScrollArea
+            height="57vh"
+            onFetchMore={onFetchMore}
+            isFetchingMore={isFetchingMore}
+            hasMore={hasMore}
+          />
         </DataGridContainer>
-        {!viewAll && (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Rows per page</span>
-              <FilterSelect
-                value={String(pagination.pageSize)}
-                onValueChange={(v) =>
-                  setPagination((p) => ({
-                    ...p,
-                    pageIndex: 0,
-                    pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)),
-                  }))
-                }
-                options={[...new Set([...ROW_OPTIONS, pagination.pageSize])]
-                  .sort((a, b) => a - b)
-                  .map((n) => ({ value: String(n), label: String(n) }))}
-                searchable={false}
-                className="w-[90px]"
-                triggerClassName="h-8"
-                aria-label="Rows per page"
-              />
-            </div>
-            <SimplePagination
-              page={pagination.pageIndex + 1}
-              total={articles.length}
-              pageSize={pagination.pageSize}
-              onChange={(p) =>
-                setPagination((prev) => ({ ...prev, pageIndex: p - 1 }))
-              }
-            />
-          </div>
-        )}
       </div>
     </DataGrid>
   );

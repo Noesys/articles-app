@@ -60,20 +60,6 @@ export interface ArticleListItem {
   authorName?: string;
 }
 
-export interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
-export interface UseMyArticlesOptions {
-  month?: string;
-  viewAll?: boolean;
-  page?: number;
-  limit?: number;
-}
-
 export interface ArticleRow {
   article: Omit<ArticleListItem, "authorName">;
   author?: { id: string; name: string };

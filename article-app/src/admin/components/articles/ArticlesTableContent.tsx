@@ -1,5 +1,5 @@
 import { ArticleStatus, ArticleSummary } from "@/admin/utils/types";
-import { Clock, Search } from "lucide-react";
+import { Clock, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { formatDateToUSLocale } from "@/admin/utils/date";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +16,7 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
-import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
+import { DataGridVirtualScrollArea } from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
 import { ColumnDef, useTable } from "@tanstack/react-table";
 import {
   contiqTableContainerClassName,
@@ -33,11 +32,20 @@ import {
   AutocompleteItem,
   AutocompleteList,
 } from "@/components/reui/autocomplete";
+import { Button } from "@/components/ui/button";
+import { api } from "@/http-client";
+import { toast } from "sonner";
 
 type ArticlesTableProps = {
   articles: ArticleSummary[];
   onRowClick?: (id: string) => void;
   totalCount?: number;
+  onFetchMore?: () => void;
+  isFetchingMore?: boolean;
+  hasMore?: boolean;
+  onReevaluated?: (articleId: string) => void;
+  timedOutIds?: Set<string>;
+  onCheckAgain?: (articleId: string) => void;
 };
 
 function getAiScoreClasses(status: ArticleStatus) {
@@ -104,12 +112,21 @@ function getNameInitials(name: string) {
   );
 }
 
+const EMPTY_TIMED_OUT_IDS: Set<string> = new Set();
+
 export default function ArticlesTableContent({
   articles,
   onRowClick,
   totalCount,
+  onFetchMore,
+  isFetchingMore,
+  hasMore,
+  onReevaluated,
+  timedOutIds = EMPTY_TIMED_OUT_IDS,
+  onCheckAgain,
 }: ArticlesTableProps) {
   const [titleFilter, setTitleFilter] = useState("");
+  const [reevaluatingIds, setReevaluatingIds] = useState<Set<string>>(new Set());
 
   const locallyFilteredArticles = useMemo(() => {
     const normalizedTitle = titleFilter.trim().toLowerCase();
@@ -132,14 +149,37 @@ export default function ArticlesTableContent({
     const rewriteRequired = locallyFilteredArticles.filter(
       (a) => a.status === "rewrite_required",
     ).length;
+    const failed = locallyFilteredArticles.filter((a) => a.status === "failed").length;
+
     const scored = locallyFilteredArticles.filter((a) => a.ai_score !== null);
     const averageScore =
       scored.length > 0
         ? scored.reduce((sum, a) => sum + (a.ai_score ?? 0), 0) / scored.length
         : null;
 
-    return { total, approved, pending, rewriteRequired, averageScore };
+    return { total, approved, pending, rewriteRequired, averageScore, failed };
   }, [locallyFilteredArticles]);
+
+  async function handleReevaluate(id: string) {
+    if (!id || reevaluatingIds.has(id)) return;
+    setReevaluatingIds((prev) => new Set(prev).add(id));
+    try {
+      await api(`/admin/articles/${id}/reevaluate`, { method: "POST" });
+      toast.success("Re-evaluation started");
+      // Immediate refresh so the row picks up the new "pending" status right
+      // away; the parent's polling (while any row is pending) takes over
+      // from there until scoring finishes.
+      onReevaluated?.(id);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReevaluatingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
 
   const searchItems = useMemo(
     () =>
@@ -216,9 +256,35 @@ export default function ArticlesTableContent({
       {
         accessorKey: "status",
         header: "Status",
-        size: 115,
-        cell: ({ getValue }) => {
-          const status = getValue() as ArticleStatus;
+        size: 170,
+        cell: ({ row }) => {
+          if (timedOutIds.has(row.original.id)) {
+            return (
+              <div className="flex items-center gap-1">
+                <Badge
+                  variant="outline"
+                  className="gap-1 font-medium border-transparent bg-slate-50 text-slate-600 ring-1 ring-slate-200/80"
+                  title="Still pending after 90s of auto-refreshing — the score may still land, or this article may need re-evaluating."
+                >
+                  <Clock className="size-3" />
+                  Taking longer than expected
+                </Badge>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCheckAgain?.(row.original.id);
+                  }}
+                  className="rounded-sm p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                  title="Check again"
+                >
+                  <RefreshCw className="size-3.5" />
+                </button>
+              </div>
+            );
+          }
+
+          const status = row.original.status;
           const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.unknown;
           return (
             <Badge
@@ -275,8 +341,34 @@ export default function ArticlesTableContent({
           </span>
         ),
       },
+      {
+        accessorKey: "re_evaluate",
+        header: "Re-evaluate article",
+        size: 125,
+        cell: ({ row }) => {
+          const busy = reevaluatingIds.has(row.id);
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReevaluate(row.id);
+              }}
+              disabled={busy}
+              className="rounded-md p-2 transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              title="Re-evaluate article"
+            >
+              <RotateCcw
+                className={cn(
+                  "h-5 w-5 transition-transform duration-300",
+                  busy ? "animate-spin" : "hover:rotate-180",
+                )}
+              />
+            </button>
+          );
+        },
+      },
     ],
-    [],
+    [reevaluatingIds, timedOutIds, onCheckAgain],
   );
 
   const table = useTable({
@@ -295,7 +387,7 @@ export default function ArticlesTableContent({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="rounded-sm border border-border bg-background px-3.5 py-2.5">
           <div className="text-xs text-muted-foreground">Total articles</div>
           <div className="mt-0.5 text-xl font-semibold tabular-nums">
@@ -318,6 +410,12 @@ export default function ArticlesTableContent({
           <div className="text-xs text-muted-foreground">Rejected</div>
           <div className="mt-0.5 text-xl font-semibold tabular-nums text-red-600">
             {dashboard.rewriteRequired}
+          </div>
+        </div>
+        <div className="rounded-sm border border-border bg-background px-3.5 py-2.5">
+          <div className="text-xs text-muted-foreground">Failed</div>
+          <div className="mt-0.5 text-xl font-semibold tabular-nums text-red-600">
+            {dashboard.failed}
           </div>
         </div>
       </div>
@@ -363,14 +461,17 @@ export default function ArticlesTableContent({
         onRowClick={onRowClick ? (row) => onRowClick(row.id) : undefined}
         emptyMessage="No articles found"
         loadingMode="skeleton"
-        tableLayout={contiqTableLayout}
+        tableLayout={{ ...contiqTableLayout, headerSticky: true }}
         tableClassNames={contiqTableClassNames}
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
-            <DataGridScrollArea>
-              <DataGridTable />
-            </DataGridScrollArea>
+            <DataGridVirtualScrollArea
+              height="57vh"
+              onFetchMore={onFetchMore}
+              isFetchingMore={isFetchingMore}
+              hasMore={hasMore}
+            />
           </DataGridContainer>
         </div>
       </DataGrid>

@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import {
   ColumnDef,
-  PaginationState,
   SortingState,
   useTable,
 } from "@tanstack/react-table";
@@ -18,10 +17,7 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { FilterSelect } from "@/components/ui/filter-select";
-import { SimplePagination } from "@/components/ui/simple-pagination";
-import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
-import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
+import { DataGridVirtualScrollArea } from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,8 +37,6 @@ import {
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
 import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
-
-const ROW_OPTIONS = [10, 25, 50, 100] as const;
 
 const ROLE_LABELS: Record<AuthRole, string> = {
   admin: "Admin",
@@ -80,17 +74,6 @@ export default function UsersTable({
   onUserClick,
 }: UsersTableProps) {
   const { user: currentUser } = useAuth();
-  const getViewportPageSize = () => {
-    if (typeof window === "undefined") return 10;
-    const rowH = 57,
-      chrome = 380;
-    const avail = window.innerHeight - chrome;
-    return Math.min(100, Math.max(10, Math.floor(avail / rowH)));
-  };
-  const [pagination, setPagination] = useState<PaginationState>(() => ({
-    pageIndex: 0,
-    pageSize: getViewportPageSize(),
-  }));
   const [sorting, setSorting] = useState<SortingState>([
     { id: "name", desc: false },
   ]);
@@ -269,10 +252,10 @@ export default function UsersTable({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 px-2.5 text-xs font-medium text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+                  className="h-7 px-2.5 text-xs font-medium bg-teal-500 text-white hover:bg-teal-500 hover:text-white"
                   onClick={() => onUserClick?.(u.id)}
                 >
-                  Articles
+                  View Articles
                 </Button>
               )}
             </div>
@@ -287,13 +270,12 @@ export default function UsersTable({
     features: dataGridFeatures,
     columns,
     data: users,
-    pageCount: Math.ceil((users.length || 0) / pagination.pageSize),
+    pageCount: 1,
     getRowId: (row) => row.id,
     state: {
-      pagination,
+      pagination: { pageIndex: 0, pageSize: users.length || 1 },
       sorting,
     },
-    onPaginationChange: setPagination,
     onSortingChange: setSorting,
   });
 
@@ -325,45 +307,13 @@ export default function UsersTable({
       <DataGrid
         table={table}
         recordCount={users.length}
-        tableLayout={contiqTableLayout}
+        tableLayout={{ ...contiqTableLayout, headerSticky: true }}
         tableClassNames={contiqTableClassNames}
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
-            <DataGridScrollArea>
-              <DataGridTable />
-            </DataGridScrollArea>
+            <DataGridVirtualScrollArea height="100vh" />
           </DataGridContainer>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Rows per page</span>
-              <FilterSelect
-                value={String(pagination.pageSize)}
-                onValueChange={(v) =>
-                  setPagination((p) => ({
-                    ...p,
-                    pageIndex: 0,
-                    pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)),
-                  }))
-                }
-                options={[...new Set([...ROW_OPTIONS, pagination.pageSize])]
-                  .sort((a, b) => a - b)
-                  .map((n) => ({ value: String(n), label: String(n) }))}
-                searchable={false}
-                className="w-[90px]"
-                triggerClassName="h-8"
-                aria-label="Rows per page"
-              />
-            </div>
-            <SimplePagination
-              page={pagination.pageIndex + 1}
-              total={users.length}
-              pageSize={pagination.pageSize}
-              onChange={(p) =>
-                setPagination((prev) => ({ ...prev, pageIndex: p - 1 }))
-              }
-            />
-          </div>
         </div>
       </DataGrid>
 

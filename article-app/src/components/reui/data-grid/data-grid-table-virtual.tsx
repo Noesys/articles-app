@@ -32,6 +32,7 @@ import { flexRender } from "@tanstack/react-table"
 import type { Column, Row, Table } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type {
+  PartialKeys,
   VirtualItem,
   Virtualizer,
   VirtualizerOptions,
@@ -274,7 +275,10 @@ function scrollDataGridTableRowIntoView({
 }
 
 type DataGridTableVirtualizerOptions<TData extends object> = Omit<
-  VirtualizerOptions<HTMLElement, HTMLTableRowElement>,
+  PartialKeys<
+    VirtualizerOptions<HTMLElement, HTMLTableRowElement>,
+    "scrollToFn" | "observeElementRect" | "observeElementOffset"
+  >,
   "count" | "estimateSize" | "getItemKey" | "getScrollElement"
 > & {
   estimateSize?: (index: number, row: Row<DataGridFeatures, TData>) => number
