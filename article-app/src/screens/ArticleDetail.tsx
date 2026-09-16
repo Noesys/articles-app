@@ -1,7 +1,16 @@
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
-import { ChevronLeft, Edit3, X, Check, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  ChevronLeft,
+  Edit3,
+  X,
+  Check,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+} from "lucide-react";
 import dayjs from "dayjs";
 import { useArticle } from "../hooks/useArticle";
 import { api } from "../http-client";
@@ -16,9 +25,12 @@ import { ArticleDetailResponse } from "@/utils/types";
 import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
 import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
 import { serializeArticleContent } from "@/utils/serializeArticleContent";
+import { countWords } from "@/utils/countWords";
 
 const TiptapEditor = lazy(() => import("@/components/editor/TiptapEditor"));
-const ArticleViewer = lazy(() => import("@/components/shadcnEditor/ArticleViewer"));
+const ArticleViewer = lazy(
+  () => import("@/components/shadcnEditor/ArticleViewer"),
+);
 
 function EditorFallback() {
   return (
@@ -37,10 +49,16 @@ function navigateBackOrToArticles(navigate: ReturnType<typeof useNavigate>) {
   else navigate("/");
 }
 
-function getScoreBarColor(status: string) {
-  if (status === "approved") return "bg-emerald-500";
-  if (status === "rewrite_required" || status === "failed") return "bg-red-500";
-  return "bg-amber-500";
+import { getScoreColor, sanitizeFilename } from "@/utils/scoreColor";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
+function getScoreBarColor(score: number | null, status: string, passThreshold: number | null) {
+  if (score === null) return "bg-amber-500";
+  return getScoreColor(score, passThreshold, status).bar;
+}
+function getScoreTextColor(score: number | null, status: string, passThreshold: number | null) {
+  if (score === null) return "text-slate-900";
+  return getScoreColor(score, passThreshold, status).text;
 }
 
 export default function ArticleDetail() {
@@ -56,7 +74,8 @@ export default function ArticleDetail() {
   const queryVersion = searchParams.get("version");
   const rawVersion = routeVersion ?? queryVersion;
   const parsedVersion = rawVersion ? parseInt(rawVersion, 10) : null;
-  const versionParam = parsedVersion !== null && !isNaN(parsedVersion) ? parsedVersion : null;
+  const versionParam =
+    parsedVersion !== null && !isNaN(parsedVersion) ? parsedVersion : null;
 
   const {
     article,
@@ -92,14 +111,19 @@ export default function ArticleDetail() {
     versionParam !== article?.version;
   // If version param matches a history entry, show snapshot; if it equals current version treat as live
   const snapshot =
-    versionParam !== null ? (history.find((h) => h.version === versionParam) ?? null) : null;
+    versionParam !== null
+      ? (history.find((h) => h.version === versionParam) ?? null)
+      : null;
   const effectiveSnapshot = isVersionSnapshot ? snapshot : null;
   const displayTitle = effectiveSnapshot?.title ?? article?.title ?? "";
-  const displayScore = effectiveSnapshot ? effectiveSnapshot.score : currentScore;
+  const displayScore = effectiveSnapshot
+    ? effectiveSnapshot.score
+    : currentScore;
   const displayFeedback = effectiveSnapshot
     ? (effectiveSnapshot.feedback ?? "")
     : (currentFeedback ?? "");
-  const displayStatus = effectiveSnapshot?.status ?? article?.status ?? "pending";
+  const displayStatus =
+    effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
 
   const isFailed = displayStatus === "failed";
@@ -130,7 +154,9 @@ export default function ArticleDetail() {
         return;
       }
       try {
-        const result = await api<ArticleDetailResponse>(`/articles/mine/${article.id}`);
+        const result = await api<ArticleDetailResponse>(
+          `/articles/mine/${article.id}`,
+        );
         setArticle(result.article);
         setHistory(result.history ?? []);
         setCurrentScore(result.current_score);
@@ -170,10 +196,28 @@ export default function ArticleDetail() {
 
   const isPending = currentScore === null && article?.status === "pending";
 
+  const wordCount = countWords(content);
+  const isWordCountValid = wordCount >= 1000;
+  const wordCountColor = isWordCountValid ? "text-emerald-600" : wordCount >= 500 ? "text-amber-600" : "text-slate-500";
+  const [feedbackCollapsed, setFeedbackCollapsed] = useState(true);
+  const [passThreshold, setPassThreshold] = useState<number | null>(null);
+  useEffect(() => {
+    if (!article?.article_type_id) return;
+    api<any>(`/article-types`).then((types: any) => {
+      const list = Array.isArray(types) ? types : types?.data ?? [];
+      const t = list.find((x: any) => x.id === article.article_type_id);
+      if (t?.pass_threshold != null) setPassThreshold(t.pass_threshold);
+    }).catch(() => {});
+  }, [article?.article_type_id]);
+
   async function handleSubmitRewrite() {
     if (!article) return;
     if (!title.trim() || !content.trim()) {
       setSubmitError("Title and content are required");
+      return;
+    }
+    if (countWords(content) < 1000) {
+      setSubmitError("Article must contain at least 1000 words");
       return;
     }
     setSubmitError(null);
@@ -190,7 +234,10 @@ export default function ArticleDetail() {
         }),
       });
       try {
-        sessionStorage.setItem("toast", "Article rewrite submitted! Scoring in progress...");
+        sessionStorage.setItem(
+          "toast",
+          "Article rewrite submitted! Scoring in progress...",
+        );
       } catch {}
       navigate(
         user?.auth_role === "admin" || user?.auth_role === "super_admin"
@@ -199,7 +246,9 @@ export default function ArticleDetail() {
       );
     } catch (err) {
       console.error("Rewrite submission failed:", err);
-      setSubmitError(err instanceof Error ? err.message : "Failed to submit rewrite");
+      setSubmitError(
+        err instanceof Error ? err.message : "Failed to submit rewrite",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -219,7 +268,10 @@ export default function ArticleDetail() {
         <div className="text-center">
           <p className="text-slate-500 mb-4">{error}</p>
 
-          <button onClick={() => navigate("/")} className="text-sm text-teal-600 hover:underline">
+          <button
+            onClick={() => navigate("/")}
+            className="text-sm text-teal-600 hover:underline"
+          >
             Back to Articles
           </button>
         </div>
@@ -256,8 +308,8 @@ export default function ArticleDetail() {
         )}
         {isPending && !effectiveSnapshot && (
           <div className="mb-4 rounded-sm bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin" /> Processing your submission — scoring in
-            background...
+            <Loader2 size={14} className="animate-spin" /> Processing your
+            submission — scoring in background...
           </div>
         )}
         <div className="flex items-start justify-between gap-4 mb-6">
@@ -270,7 +322,9 @@ export default function ArticleDetail() {
               className="flex-1 bg-white text-sm font-medium rounded-sm border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           ) : (
-            <h1 className="text-2xl font-semibold text-slate-900 leading-snug">{displayTitle}</h1>
+            <h1 className="text-2xl font-semibold text-slate-900 leading-snug">
+              {displayTitle}
+            </h1>
           )}
 
           {effectiveSnapshot ? null : isPending ? (
@@ -301,7 +355,11 @@ export default function ArticleDetail() {
                 disabled={submitting}
                 className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-sm px-3 py-2 transition-colors"
               >
-                {submitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                {submitting ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Check size={14} />
+                )}
                 Submit Rewrite
               </button>
             </div>
@@ -326,37 +384,37 @@ export default function ArticleDetail() {
               Current Score
             </p>
 
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full">
+              <div className="flex items-center gap-3 flex-1">
                 {isFailed ? (
                   <div className="py-2">
-                    <p className="font-medium text-red-600">Evaluation failed</p>
+                    <p className="font-medium text-red-600">
+                      Evaluation failed
+                    </p>
                     <p className="text-sm text-slate-500 mt-1">
-                      We couldn't evaluate this article. Please rewrite the article and submit it
-                      again.
+                      We couldn't evaluate this article. Please submit it again.
                     </p>
                   </div>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
-                    <Loader2 size={16} className="animate-spin text-slate-400" />
+                    <Loader2
+                      size={16}
+                      className="animate-spin text-slate-400"
+                    />
                     <span>Scoring...</span>
                   </div>
                 ) : (
                   <>
-                    <p className="text-3xl font-semibold text-slate-900">
+                    <p className={`text-3xl font-semibold ${hasScore ? getScoreTextColor(displayScore, displayStatus, passThreshold) : "text-slate-900"}`}>
                       {hasScore ? formatAiScore(displayScore!) : "—"}
-                      <span className="text-base text-slate-400 font-normal"> / 10</span>
+                      <span className="text-base text-slate-400 font-normal">
+                        {" "}
+                        / 10
+                      </span>
                     </p>
 
                     {hasScore && (
-                      <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${getScoreBarColor(displayStatus)}`}
-                          style={{
-                            width: `${(Math.min(displayScore!, 10) / 10) * 100}%`,
-                          }}
-                        />
-                      </div>
+                      <Progress value={Math.min(Math.max(displayScore!,0),10)*10} className={cn("flex-1 h-2", getScoreColor(displayScore!, passThreshold, displayStatus).barTw)} />
                     )}
                   </>
                 )}
@@ -364,27 +422,33 @@ export default function ArticleDetail() {
             </div>
           </div>
 
-          {/* Feedback */}
-          <div className="rounded-sm border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-md font-semibold uppercase tracking-wide text-slate-600">
-                Feedback
-              </p>
-
-              {displayFeedback && <CopyButton text={displayFeedback} />}
-            </div>
-
-            {isFailed ? (
-              <p className="text-sm text-red-600">
-                Evaluation failed. Please rewrite the article and submit it again.
-              </p>
-            ) : displayScore === null ? (
-              <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-sm border border-slate-200 shadow-sm">
-                <Loader2 size={16} className="animate-spin text-slate-400" />
-                <span>Scoring...</span>
+          {/* Feedback - collapsible, default collapsed, matches ParameterResultsBox */}
+          <div className="rounded-sm border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <button
+              onClick={() => setFeedbackCollapsed(!feedbackCollapsed)}
+              className="w-full flex items-center justify-between px-4 py-3"
+            >
+              <p className="text-md font-semibold uppercase tracking-wide text-slate-600">Feedback</p>
+              <div className="flex items-center gap-2">
+                {displayFeedback && <span onClick={(e) => e.stopPropagation()}><CopyButton text={displayFeedback} /></span>}
+                <span className="p-1 text-slate-400">
+                  {feedbackCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                </span>
               </div>
-            ) : (
-              <FeedbackBlock feedback={displayFeedback || "No feedback available yet."} />
+            </button>
+            {!feedbackCollapsed && (
+              <div className="px-4 pb-4">
+                {isFailed ? (
+                  <p className="text-sm text-red-600">Evaluation failed. Please submit it again.</p>
+                ) : displayScore === null ? (
+                  <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-sm border border-slate-200 shadow-sm">
+                    <Loader2 size={16} className="animate-spin text-slate-400" />
+                    <span>Scoring...</span>
+                  </div>
+                ) : (
+                  <FeedbackBlock feedback={displayFeedback || "No feedback available yet."} />
+                )}
+              </div>
             )}
           </div>
           <ParameterResultsBox results={parameterResults} />
@@ -407,12 +471,16 @@ export default function ArticleDetail() {
                     <DownloadMarkdownButton
                       title={title}
                       content={content}
-                      filename="article-review.md"
+                      filename={sanitizeFilename(displayTitle || title)}
                     />
                   </div>
                 )}
                 <span className="p-1 text-slate-400">
-                  {contentCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                  {contentCollapsed ? (
+                    <ChevronDown size={18} />
+                  ) : (
+                    <ChevronUp size={18} />
+                  )}
                 </span>
               </div>
             </div>
@@ -421,39 +489,56 @@ export default function ArticleDetail() {
               <div className="px-5 py-4">
                 {editing ? (
                   <div>
-                    <div className="flex bg-slate-100 rounded-sm p-0.5 w-fit">
-                      <button
-                        type="button"
-                        onClick={() => setEditorView("editor")}
-                        className={`px-3 py-1 text-xs font-medium rounded-md ${
-                          editorView === "editor"
-                            ? "bg-white text-slate-900 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700"
-                        }`}
-                      >
-                        Editor
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditorView("preview")}
-                        className={`px-3 py-1 text-xs font-medium rounded-md ${
-                          editorView === "preview"
-                            ? "bg-white text-slate-900 shadow-sm"
-                            : "text-slate-500 hover:text-slate-700"
-                        }`}
-                      >
-                        Preview
-                      </button>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex bg-slate-100 rounded-sm p-0.5 w-fit">
+                        <button
+                          type="button"
+                          onClick={() => setEditorView("editor")}
+                          className={`px-3 py-1 text-xs font-medium rounded-md ${
+                            editorView === "editor"
+                              ? "bg-white text-slate-900 shadow-sm"
+                              : "text-slate-500 hover:text-slate-700"
+                          }`}
+                        >
+                          Editor
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditorView("preview")}
+                          className={`px-3 py-1 text-xs font-medium rounded-md ${
+                            editorView === "preview"
+                              ? "bg-white text-slate-900 shadow-sm"
+                              : "text-slate-500 hover:text-slate-700"
+                          }`}
+                        >
+                          Preview
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className={wordCountColor}>Word count: {wordCount}</span>
+                        {isWordCountValid && (
+                          <>
+                            <CheckCircle2
+                              size={12}
+                              className="text-emerald-600"
+                            />
+                            <span className="text-emerald-600">
+                              Ready to submit
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="mx-5">
-                      <Suspense fallback={<EditorFallback />}>
-                        {editorView === "editor" && (
-                          <TiptapEditor value={content} onChange={setContent} />
-                        )}
-                        {editorView === "preview" && <ArticleViewer content={content} />}
-                      </Suspense>
-                    </div>
+                    <Suspense fallback={<EditorFallback />}>
+                      {editorView === "editor" && (
+                        <TiptapEditor value={content} onChange={setContent} />
+                      )}
+                      {editorView === "preview" && (
+                        <ArticleViewer content={content} />
+                      )}
+                    </Suspense>
                   </div>
                 ) : (
                   <Suspense fallback={<EditorFallback />}>
@@ -461,13 +546,19 @@ export default function ArticleDetail() {
                   </Suspense>
                 )}
 
-                {submitError && <p className="mt-3 text-sm text-red-600">{submitError}</p>}
+                {submitError && (
+                  <p className="mt-3 text-sm text-red-600">{submitError}</p>
+                )}
               </div>
             )}
           </div>
 
           {!effectiveSnapshot && (
-            <ScoringHistoryTable isAdmin={false} history={history} articleId={article?.id ?? ""} />
+            <ScoringHistoryTable
+              isAdmin={false}
+              history={history}
+              articleId={article?.id ?? ""}
+            />
           )}
         </div>
       </div>

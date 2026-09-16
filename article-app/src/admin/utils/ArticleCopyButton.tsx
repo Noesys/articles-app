@@ -1,24 +1,29 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
-
-function htmlToPlainText(html: string): string {
-  if (typeof document === "undefined") return html;
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return (tmp.textContent ?? tmp.innerText ?? "").replace(/\u00A0/g, " ");
-}
+import { buildExportMarkdown } from "./articleExport";
 
 export default function ArticleCopyButton({ title, text }: { title: string; text: string }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const plainText = htmlToPlainText(text);
-    const copyText = `# ${title}\n\n${plainText}`;
-
-    navigator.clipboard.writeText(copyText);
-    setCopied(true);
-
+  const handleCopy = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
+    try {
+      const markdown = await buildExportMarkdown(title, text);
+      const html = markdown; // same base64-inlined markdown/HTML as download
+      const ClipboardItemCtor = (window as unknown as { ClipboardItem?: typeof ClipboardItem }).ClipboardItem;
+      if (ClipboardItemCtor && navigator.clipboard.write) {
+        const item = new ClipboardItemCtor({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([markdown], { type: "text/plain" }),
+        });
+        await navigator.clipboard.write([item]);
+      } else {
+        await navigator.clipboard.writeText(markdown);
+      }
+    } catch {
+      await navigator.clipboard.writeText(`# ${title}\n\n${text}`);
+    }
+    setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 

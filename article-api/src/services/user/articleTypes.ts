@@ -8,6 +8,7 @@ export async function getArticleTypes(db: D1Database): Promise<ArticleType[]> {
           id,
           name,
           description,
+          general_instructions,
           created_by,
           created_at,
           updated_at

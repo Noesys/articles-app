@@ -27,12 +27,14 @@ function PageFallback() {
 
 function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      <div className="flex-1 min-w-0 flex flex-col">
+    <div className="h-dvh flex flex-col overflow-hidden">
+      <div className="shrink-0">
         <AdminHeader />
-        <div className="flex-1 min-w-0">
-          <Suspense fallback={<PageFallback />}>{children}</Suspense>
-        </div>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <Suspense fallback={<PageFallback />}>{children}</Suspense>
+      </div>
+      <div className="shrink-0">
         <Footer />
       </div>
     </div>
@@ -41,9 +43,13 @@ function AdminLayout({ children }: { children: ReactNode }) {
 
 function UserLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="flex-1">{children}</div>
-      <Footer />
+    <div className="h-dvh flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+        <div className="flex-1">{children}</div>
+      </div>
+      <div className="shrink-0">
+        <Footer />
+      </div>
     </div>
   );
 }

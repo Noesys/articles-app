@@ -71,6 +71,7 @@ export type ParameterOptionDraft = { id?: string; label: string };
 export type ParameterDraft = {
   id: string;
   name: string;
+  description: string;
   prompt: string;
   scopeType: ScopeType;
   minValue: string;
@@ -82,6 +83,7 @@ export type ParameterDraft = {
 export type FormState = {
   name: string;
   description: string;
+  generalInstructions: string;
   promptContent: string;
   scoreMin: string;
   scoreMax: string;
@@ -102,6 +104,7 @@ export type ArticleTypeResponse = {
 export type ParameterResponse = {
   id: string;
   name: string;
+  description: string | null;
   prompt: string;
   scope_type: ScopeType;
   min_value: number | null;

@@ -27,6 +27,7 @@ function parseParameterBody(body: unknown): ParameterInput | { error: string } {
 
   return {
     name: name.trim(),
+    description: (b.description as string | undefined)?.trim() || null,
     prompt: prompt.trim(),
     scopeType,
     minValue: b.minValue as number | undefined,

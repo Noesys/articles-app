@@ -65,6 +65,18 @@ export default function ArticleTypesParameterModal({
             </div>
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-slate-700">
+                Description <span className="font-normal text-slate-400">(optional, shown in results)</span>
+              </label>
+              <Textarea
+                value={modalDraft.description}
+                onChange={(e) => setModalDraft({ ...modalDraft, description: e.target.value })}
+                placeholder="Brief description shown under the parameter name in results"
+                rows={2}
+                className="rounded-sm bg-white resize-none"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-slate-700">
                 Prompt for the parameter
               </label>
               <Textarea
