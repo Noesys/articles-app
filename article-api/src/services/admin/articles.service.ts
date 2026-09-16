@@ -119,6 +119,23 @@ export async function getArticles(
   return { data, total };
 }
 
+export interface ArticleAuthor {
+  id: string;
+  name: string;
+}
+
+/** All active users, independent of whether they've written any articles — for the authors filter dropdown. */
+export async function getArticleAuthors(db: D1Database): Promise<ArticleAuthor[]> {
+  const sql = `
+    SELECT id, name
+    FROM users
+    WHERE is_active = 1
+    ORDER BY name COLLATE NOCASE ASC
+  `;
+  const result = await db.prepare(sql).all<ArticleAuthor>();
+  return result.results;
+}
+
 export interface ArticleDetail {
   ai_feedback: string;
   id: string;
