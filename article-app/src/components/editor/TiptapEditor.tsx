@@ -77,9 +77,15 @@ function isLiveEditor(editor: Editor | null | undefined): editor is Editor {
 export default function TiptapEditor({
   value,
   onChange,
+  onUploadingChange,
 }: {
   value: string;
   onChange: (v: string) => void;
+  /** Fires whenever an image upload (toolbar insert, paste, or drop) starts
+   * or finishes, so the parent can hold off letting the user submit while
+   * one is still in flight — otherwise a not-yet-inserted image is silently
+   * missing from the submitted content. */
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   // Keep latest onChange without recreating the editor; avoids stale closures
@@ -88,6 +94,18 @@ export default function TiptapEditor({
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
+  const onUploadingChangeRef = useRef(onUploadingChange);
+  useEffect(() => {
+    onUploadingChangeRef.current = onUploadingChange;
+  }, [onUploadingChange]);
+  // Shared by the toolbar's own upload and SmartPaste's paste/drop uploads —
+  // all funnel through this so onUploadingChange reflects "is ANY upload in
+  // flight," not just the last one started.
+  const pendingUploadsRef = useRef(0);
+  const bumpPendingUploads = useCallback((delta: number) => {
+    pendingUploadsRef.current += delta;
+    onUploadingChangeRef.current?.(pendingUploadsRef.current > 0);
+  }, []);
 
   const initialHtml = resolveContentToHtml(value);
 
@@ -109,7 +127,10 @@ export default function TiptapEditor({
       Placeholder.configure({
         placeholder: "Write your article content here...",
       }),
-      SmartPaste,
+      SmartPaste.configure({
+        onUploadStart: () => bumpPendingUploads(1),
+        onUploadEnd: () => bumpPendingUploads(-1),
+      }),
       Table.configure({ resizable: true }),
       TableRow,
       TableHeader,
@@ -124,15 +145,18 @@ export default function TiptapEditor({
 
   const handleImage = useCallback(
     async (file: File) => {
+      bumpPendingUploads(1);
       try {
         const src = await uploadArticleImage(file);
         if (!isLiveEditor(editor)) return;
         editor.chain().focus().setImage({ src }).run();
       } catch (err: unknown) {
         alert(err instanceof Error ? err.message : String(err));
+      } finally {
+        bumpPendingUploads(-1);
       }
     },
-    [editor],
+    [editor, bumpPendingUploads],
   );
 
   useEffect(() => {

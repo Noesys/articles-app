@@ -62,6 +62,16 @@ export function useInfiniteTableData<
 
   const loadedPageRef = useRef(0);
   const requestIdRef = useRef(0);
+  // Deliberately separate from requestIdRef: refetchLoaded (polling) and
+  // runFetch (initial/fetchMore) are independent operations that shouldn't
+  // invalidate each other. If they shared one counter, a poll tick landing
+  // mid-fetchMore would mark that fetchMore stale — its appended page gets
+  // silently dropped, and if the poll's own (narrower) window resolves
+  // afterward it would overwrite rows back down, undoing the just-loaded
+  // page and confusing the virtualizer's fetch-more dedupe (keyed on row
+  // count) into never retrying. See the loadedPageRef check in refetchLoaded
+  // below for how a stale-vs-fetchMore window is still caught safely.
+  const refetchEpochRef = useRef(0);
   const paramsKey = JSON.stringify(params);
 
   const runFetch = useCallback((page: number, mode: "initial" | "more") => {
@@ -89,7 +99,13 @@ export function useInfiniteTableData<
         if (mode === "initial") setRows([]);
       })
       .finally(() => {
-        if (requestId !== requestIdRef.current) return;
+        // Unlike the data mutation above, these flags belong to *this*
+        // invocation specifically — always clear them when it settles, even
+        // if a newer request (e.g. a concurrent poll's refetchLoaded, which
+        // shares this same counter) has since bumped requestIdRef. Gating
+        // this on requestId equality would leave e.g. isFetchingMore stuck
+        // true forever whenever a poll tick lands mid-fetchMore, silently
+        // breaking further infinite-scroll pagination.
         if (mode === "initial") setIsLoading(false);
         else setIsFetchingMore(false);
       });
@@ -119,9 +135,9 @@ export function useInfiniteTableData<
   }, [runFetch]);
 
   const refetchLoaded = useCallback((options?: { silent?: boolean }) => {
-    const pagesLoaded = Math.max(1, loadedPageRef.current || 1);
-    const combinedLimit = pagesLoaded * limitRef.current;
-    const requestId = ++requestIdRef.current;
+    const pagesLoadedAtRequest = Math.max(1, loadedPageRef.current || 1);
+    const combinedLimit = pagesLoadedAtRequest * limitRef.current;
+    const epoch = ++refetchEpochRef.current;
     const silent = options?.silent ?? false;
 
     if (!silent) {
@@ -132,14 +148,21 @@ export function useInfiniteTableData<
     fetchPageRef
       .current({ page: 1, limit: combinedLimit, ...paramsRef.current })
       .then((result) => {
-        if (requestId !== requestIdRef.current) return;
+        // Drop if a newer poll superseded this one, OR if how many pages
+        // are considered loaded has since changed (a concurrent fetchMore
+        // completed, or a param reset is underway) — this result's window
+        // no longer matches reality and applying it would revert rows to a
+        // smaller/stale set. The next poll tick (or the operation that
+        // changed loadedPageRef) will produce a correct, up-to-date window.
+        if (epoch !== refetchEpochRef.current) return;
+        if (loadedPageRef.current !== pagesLoadedAtRequest) return;
         setRows(result.data);
         setTotal(result.total);
-        // loadedPageRef stays at pagesLoaded — this re-fetched the same
-        // window of data, it didn't advance it.
+        // loadedPageRef stays at pagesLoadedAtRequest — this re-fetched the
+        // same window of data, it didn't advance it.
       })
       .catch((err) => {
-        if (requestId !== requestIdRef.current) return;
+        if (epoch !== refetchEpochRef.current) return;
         if (silent) {
           console.error("Silent refresh failed:", err);
           return;
@@ -147,7 +170,8 @@ export function useInfiniteTableData<
         setError(err instanceof Error ? err.message : "Failed to load data");
       })
       .finally(() => {
-        if (requestId !== requestIdRef.current) return;
+        // Same reasoning as runFetch's finally: always clear this call's own
+        // loading flag regardless of whether a newer request superseded it.
         if (!silent) setIsLoading(false);
       });
   }, []);

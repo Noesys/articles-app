@@ -146,7 +146,6 @@ export function FilterSelect({
                 setQuery(e.target.value);
                 setHighlight(0);
               }}
-              onKeyDown={onListKeyDown}
               className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>

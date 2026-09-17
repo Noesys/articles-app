@@ -39,6 +39,7 @@ export default function ArticleCreation() {
   const [typesError, setTypesError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [values, setValues] = useState<FormValues>({
     article_type_id: "",
     title: "",
@@ -107,6 +108,11 @@ export default function ArticleCreation() {
 
     if (countWords(values.content) < 1000) {
       setError("Article must contain at least 1000 words");
+      return;
+    }
+
+    if (isUploadingImages) {
+      setError("Please wait for image uploads to finish before submitting");
       return;
     }
 
@@ -281,6 +287,7 @@ export default function ArticleCreation() {
                     <TiptapEditor
                       value={values.content}
                       onChange={(content) => setValues({ ...values, content })}
+                      onUploadingChange={setIsUploadingImages}
                     />
                   )}
                   {editorView === "preview" && (
@@ -296,11 +303,16 @@ export default function ArticleCreation() {
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {isUploadingImages && (
+              <p className="text-xs text-amber-600">
+                Uploading image(s)… please wait before submitting.
+              </p>
+            )}
 
             <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={submitting || !isWordCountValid}
+                disabled={submitting || !isWordCountValid || isUploadingImages}
                 className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white text-xs font-medium rounded-sm px-4 py-3 transition-colors"
               >
                 {submitting ? (

@@ -64,6 +64,8 @@ imageRoutes.post("/", accessAuth, async (c) => {
   );
 });
 
+imageRoutes.use("/:userId/:filename", accessAuth);
+
 imageRoutes.get("/:userId/:filename", async (c) => {
   const bucket = c.env.IMAGES;
   if (!bucket) throw new AppError("Image storage is not configured", 503);

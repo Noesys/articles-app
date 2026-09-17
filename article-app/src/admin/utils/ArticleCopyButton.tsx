@@ -9,17 +9,13 @@ export default function ArticleCopyButton({ title, text }: { title: string; text
     e.stopPropagation();
     try {
       const markdown = await buildExportMarkdown(title, text);
-      const html = markdown; // same base64-inlined markdown/HTML as download
-      const ClipboardItemCtor = (window as unknown as { ClipboardItem?: typeof ClipboardItem }).ClipboardItem;
-      if (ClipboardItemCtor && navigator.clipboard.write) {
-        const item = new ClipboardItemCtor({
-          "text/html": new Blob([html], { type: "text/html" }),
-          "text/plain": new Blob([markdown], { type: "text/plain" }),
-        });
-        await navigator.clipboard.write([item]);
-      } else {
-        await navigator.clipboard.writeText(markdown);
-      }
+      // Markdown syntax (headings, ![alt](src)) isn't HTML — a text/html
+      // clipboard entry previously carried this same string, so paste
+      // destinations that prefer text/html (Word, Gmail, Slack, ...) rendered
+      // only the literal <img> tags as images and everything else as inert
+      // text, including any image left in ![]() form. Plain text is the
+      // correct, single representation of "copy the markdown".
+      await navigator.clipboard.writeText(markdown);
     } catch {
       await navigator.clipboard.writeText(`# ${title}\n\n${text}`);
     }

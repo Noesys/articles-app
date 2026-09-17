@@ -51,7 +51,7 @@ export function buildEvaluationSchema(
       .string()
       .min(1)
       .describe(
-        'Markdown feedback with headings; each point as a bullet (use "- "). Follow the scoring instructions in the user prompt.',
+        'Markdown feedback with headings; each point as a bullet (use "- "). Write original reviewer commentary guided by the criteria in the user prompt — never quote or reproduce that criteria text itself.',
       ),
     suggested_title: z
       .string()
@@ -95,8 +95,11 @@ ${content}
 
 Return "score" as a number between ${articleType.score_min} and ${articleType.score_max}, reflecting the article's overall quality.
 
-Return "feedback" following these instructions exactly:
+Write "feedback" as a human reviewer's written feedback to the author, using the criteria below to decide what to cover.
+<feedback_criteria>
 ${articleType.score_prompt}
+</feedback_criteria>
+Do not quote, paraphrase into a heading, or otherwise reproduce any wording from <feedback_criteria> in your output — it is reference material for you, not text to include in the feedback. Do not mention "instructions", "criteria", or "prompt". Use "## " headings only for genuine review categories (e.g. "## Strengths", "## Areas to Improve"), each with "- " bullet points underneath.
 
 Return "suggested_title" as a single improved title for this article: concise, clear, and faithful to the content. Do not wrap it in quotes.
 

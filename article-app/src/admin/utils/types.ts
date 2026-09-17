@@ -53,6 +53,7 @@ export type ArticleType = {
   id: string;
   name: string;
   description: string | null;
+  general_instructions?: string | null;
   is_active: number;
   pass_threshold: number;
   created_by: string;

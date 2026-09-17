@@ -52,6 +52,7 @@ export interface ArticleTypeListItem {
   id: string;
   name: string;
   description: string | null;
+  general_instructions: string | null;
   is_active: number;
   pass_threshold: number;
   score_prompt: string;
@@ -101,6 +102,7 @@ export interface ArticleTypeListRow {
   id: string;
   name: string;
   description: string | null;
+  general_instructions: string | null;
   is_active: number;
   pass_threshold: number;
   score_prompt: string;

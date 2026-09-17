@@ -329,6 +329,14 @@ export async function changeArticleType(
   const article = await getArticleById(db, articleId);
   if (!article) return null;
 
+  // An evaluation is already in flight for this article/version — dispatching
+  // another one here would race the in-flight one onto the same version
+  // (persistEvaluationResults' version guard can't distinguish them) and
+  // silently produce mixed/duplicate parameter_results.
+  if (article.status === "pending" || article.status === "processing") {
+    throw new Error("Article is currently being evaluated; please wait for it to finish");
+  }
+
   const typeMeta = await getArticleTypeMeta(db, articleTypeId);
   if (!typeMeta || !typeMeta.is_active) {
     throw new Error("Article type not found or inactive");
@@ -337,23 +345,20 @@ export async function changeArticleType(
   const now = new Date().toISOString();
   const statements: D1PreparedStatement[] = [];
 
-  if (article.ai_score != null || article.ai_feedback || article.status !== "pending") {
-    const historyId = "hist_" + crypto.randomUUID();
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
-           SELECT ?, id, article_type_id, title, COALESCE(ai_feedback,''), content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ?
-           FROM articles WHERE id = ?`,
-        )
-        .bind(historyId, now, articleId),
-    );
-  }
+  // Status is guaranteed not "pending"/"processing" here (checked above), so
+  // this always snapshots and bumps the version.
+  const historyId = "hist_" + crypto.randomUUID();
+  statements.push(
+    db
+      .prepare(
+        `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
+         SELECT ?, id, article_type_id, title, COALESCE(ai_feedback,''), content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ?
+         FROM articles WHERE id = ?`,
+      )
+      .bind(historyId, now, articleId),
+  );
 
-  const nextVersion =
-    article.ai_score != null || article.ai_feedback || article.status !== "pending"
-      ? article.version + 1
-      : article.version;
+  const nextVersion = article.version + 1;
 
   const evaluatable = Number(typeMeta.is_evaluatable) === 1;
   statements.push(
@@ -404,31 +409,49 @@ export async function prepareArticleReevaluate(
   const article = await getArticleById(db, articleId);
   if (!article) return null;
 
+  // An evaluation is already in flight for this article/version — see the
+  // matching guard in changeArticleType for why this must be rejected here.
+  if (article.status === "pending" || article.status === "processing") {
+    throw new Error("Article is currently being evaluated; please wait for it to finish");
+  }
+
   const typeMeta = await getArticleTypeMeta(db, article.article_type_id);
   if (!typeMeta || !typeMeta.is_active) {
     throw new Error("Article type not found or inactive");
   }
 
+  const evaluatable = Number(typeMeta.is_evaluatable) === 1;
+  // Bail out before touching the DB — the route rejects a re-evaluate
+  // request for a non-evaluatable type and never queues a background job,
+  // so mutating first would leave the article stuck pending with no way
+  // to resolve it.
+  if (!evaluatable) {
+    return {
+      version: article.version,
+      title: article.title,
+      content: article.content,
+      article_type_id: article.article_type_id,
+      evaluatable: false,
+    };
+  }
+
   const now = new Date().toISOString();
   const statements: D1PreparedStatement[] = [];
 
-  if (article.ai_score != null || article.ai_feedback || article.status !== "pending") {
-    const historyId = "hist_" + crypto.randomUUID();
-    statements.push(
-      db
-        .prepare(
-          `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
-           SELECT ?, id, article_type_id, title, COALESCE(ai_feedback,''), content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ?
-           FROM articles WHERE id = ?`,
-        )
-        .bind(historyId, now, articleId),
-    );
-  }
+  // Status is guaranteed not "pending"/"processing" here (checked above), so
+  // this always snapshots and bumps the version.
+  const historyId = "hist_" + crypto.randomUUID();
+  statements.push(
+    db
+      .prepare(
+        `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
+         SELECT ?, id, article_type_id, title, COALESCE(ai_feedback,''), content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ?
+         FROM articles WHERE id = ?`,
+      )
+      .bind(historyId, now, articleId),
+  );
 
-  const nextVersion =
-    article.ai_score != null || article.ai_feedback || article.status !== "pending"
-      ? article.version + 1
-      : article.version;
+  const nextVersion = article.version + 1;
 
   statements.push(
     db
@@ -460,6 +483,6 @@ export async function prepareArticleReevaluate(
     title: article.title,
     content: article.content,
     article_type_id: article.article_type_id,
-    evaluatable: Number(typeMeta.is_evaluatable) === 1,
+    evaluatable: true,
   };
 }

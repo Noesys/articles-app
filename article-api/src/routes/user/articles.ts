@@ -21,7 +21,7 @@ function currentMonth(): string {
 
 function validateArticleSize(title: string, content: string): void {
   const MAX_TITLE_BYTES = 500;
-  const MAX_CONTENT_BYTES = 50_000;
+  const MAX_CONTENT_BYTES = 500_000;
   if (new TextEncoder().encode(title).length > MAX_TITLE_BYTES)
     throw new AppError("Title too long", 400);
   if (new TextEncoder().encode(content).length > MAX_CONTENT_BYTES)
@@ -164,20 +164,7 @@ articleRoutes.get("/mine/:id", async (c) => {
       (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
 
   // parameter results for current version
-  const paramRows: {
-    parameter_name: string;
-    scope_type: string;
-    numeric_value: number | null;
-    option_id: string | null;
-    option_label: string | null;
-  }[] = (
-    await db
-      .prepare(
-        `SELECT p.name as parameter_name, p.description as parameter_description, p.scope_type, p.max_value, r.numeric_value, r.option_id, po.label as option_label FROM article_parameter_results r JOIN parameters p ON p.id=r.parameter_id LEFT JOIN parameter_options po ON po.id=r.option_id WHERE r.article_id=? AND r.version=? ORDER BY p.sort_order`,
-      )
-      .bind(articleId, article.version)
-      .all()
-  ).results as {
+  type ParamRow = {
     parameter_name: string;
     parameter_description: string | null;
     scope_type: string;
@@ -185,23 +172,22 @@ articleRoutes.get("/mine/:id", async (c) => {
     numeric_value: number | null;
     option_id: string | null;
     option_label: string | null;
-  }[];
-  const parameter_results = paramRows.map(
-    (r: {
-      parameter_name: string;
-      parameter_description: string | null;
-      scope_type: string;
-      max_value: number | null;
-      numeric_value: number | null;
-      option_label: string | null;
-    }) => ({
-      parameter_name: r.parameter_name,
-      parameter_description: r.parameter_description,
-      scope_type: r.scope_type,
-      max_value: r.max_value,
-      value: r.scope_type === "option" ? r.option_label : r.numeric_value,
-    }),
-  );
+  };
+  const paramRows: ParamRow[] = (
+    await db
+      .prepare(
+        `SELECT p.name as parameter_name, p.description as parameter_description, p.scope_type, p.max_value, r.numeric_value, r.option_id, po.label as option_label FROM article_parameter_results r JOIN parameters p ON p.id=r.parameter_id LEFT JOIN parameter_options po ON po.id=r.option_id WHERE r.article_id=? AND r.version=? ORDER BY p.sort_order`,
+      )
+      .bind(articleId, article.version)
+      .all()
+  ).results as ParamRow[];
+  const parameter_results = paramRows.map((r) => ({
+    parameter_name: r.parameter_name,
+    parameter_description: r.parameter_description,
+    scope_type: r.scope_type,
+    max_value: r.max_value,
+    value: r.scope_type === "option" ? r.option_label : r.numeric_value,
+  }));
   return c.json({
     message: "Article fetched successfully",
     data: {
@@ -241,7 +227,8 @@ articleRoutes.post("/", async (c) => {
   const user = c.get("user");
   const db = c.env.DB;
 
-  const MAX_BODY_BYTES = 100 * 1024;
+  // Must stay comfortably above MAX_CONTENT_BYTES (500,000) plus title/JSON overhead.
+  const MAX_BODY_BYTES = 600 * 1024;
 
   const contentLength = c.req.header("content-length");
   if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
@@ -305,12 +292,30 @@ articleRoutes.post("/", async (c) => {
       );
     }
 
+    // An evaluation is already in flight for this article/version —
+    // accepting another rewrite here would race the in-flight evaluation
+    // onto an unreachable version (its target version never lands, and
+    // persistEvaluationResults' version guard silently no-ops), leaving the
+    // article stuck at "pending" forever. Reject and let the client retry
+    // once the current evaluation finishes.
+    if (existingArticle.status === "pending" || existingArticle.status === "processing") {
+      return c.json(
+        {
+          success: false,
+          message: "Article is currently being evaluated; please wait for it to finish before resubmitting",
+        },
+        409,
+      );
+    }
+
     const historyId = "hist_" + crypto.randomUUID();
     const rewriteMonth = now.slice(0, 7);
 
+    let nextVersion: number | null;
+
     // Atomic snapshot + rewrite; if either fails neither partially persists as orphan
     try {
-      await db.batch([
+      const [, updateResult] = await db.batch<{ version: number }>([
         db
           .prepare(
             `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at) SELECT ?, id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ? FROM articles WHERE id = ?`,
@@ -318,19 +323,28 @@ articleRoutes.post("/", async (c) => {
           .bind(historyId, now, requestedId),
         db
           .prepare(
-            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=?`,
+            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=? RETURNING version`,
           )
           .bind(title, content, rewriteMonth, requestedId),
       ]);
+      nextVersion = updateResult.results[0]?.version ?? null;
     } catch {
       // Fallback to sequential if batch not supported in local D1
       await snapshotArticle(db, requestedId, historyId, now, user.id);
-      await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth, user.id);
+      nextVersion = await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth, user.id);
+    }
+
+    if (nextVersion == null) {
+      return c.json(
+        {
+          success: false,
+          message: "Article not found or does not belong to user",
+        },
+        404,
+      );
     }
 
     articleId = requestedId;
-
-    const nextVersion = existingArticle.version + 1;
 
     // ❌ REMOVED: Synchronous evaluation (was blocking)
     // ✅ ADDED: Background evaluation via waitUntil
@@ -401,19 +415,19 @@ articleRoutes.get("/:id/status", async (c) => {
   const article = await getArticleById(db, articleId, user.id);
   if (!article) return c.json({ success: false, message: "Article not found" }, 404);
   // Map internal status to spec status: pending / accepted / rejected
+  // "failed" must be checked before the ai_score check below — a failed
+  // evaluation never sets ai_score, so it would otherwise fall through to
+  // the "pending" branch and be reported as pending forever.
   let status: string = article.status;
-  if (article.ai_score !== null) {
+  if (article.status === "failed") {
+    status = "rejected";
+  } else if (article.ai_score !== null) {
     status =
       article.status === "approved"
         ? "accepted"
-        : article.status === "failed"
+        : article.status === "rewrite_required"
           ? "rejected"
-          : article.status === "rewrite_required"
-            ? "rejected"
-            : status;
-    // normalize approved/rewrite_required to accepted/rejected for spec compatibility
-    if (status === "approved") status = "accepted";
-    if (status === "rewrite_required") status = "rejected";
+          : status;
   } else {
     status = "pending";
   }

@@ -84,6 +84,22 @@ export async function buildExportMarkdown(
       body = body.replace(tag, `\n\n${html}\n\n`);
     }
   }
+  // An image never resized/aligned by the user serializes as plain Markdown
+  // (`![alt](src)`, see serializeArticleContent.ts) rather than an <img> tag —
+  // the pass above never touches these, so their `src` (a relative
+  // `/api/images/...` URL, only resolvable inside the running app's own
+  // origin) was left as-is, producing a dead link once copied/downloaded
+  // outside the app. Inline them the same way as the <img> pass.
+  if (/!\[[^\]]*\]\([^)]+\)/.test(body)) {
+    const mdImageMatches = [
+      ...body.matchAll(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g),
+    ];
+    for (const [fullMatch, alt, rawSrc] of mdImageMatches) {
+      const dataSrc = await toDataUri(rawSrc);
+      if (dataSrc === rawSrc) continue;
+      body = body.replace(fullMatch, `![${alt}](${dataSrc})`);
+    }
+  }
   body = body.replace(/<\/p><p>/gi, "\n\n").replace(/\n{3,}/g, "\n\n");
   return `# ${cleanTitle}\n\n${body}`;
 }

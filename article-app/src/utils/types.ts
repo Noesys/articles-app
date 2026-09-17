@@ -72,6 +72,15 @@ export interface SmartPasteOptions {
    * Default false — R2 uploads handle binary; remote https srcs stay as URLs.
    */
   inlineRemoteImages: boolean;
+  /**
+   * Pasted/dropped images upload to R2 in a fire-and-forget async block, so
+   * the caller needs to know when one starts/ends to hold off letting the
+   * user submit mid-upload — otherwise a not-yet-inserted image is silently
+   * missing from the submitted content. Called once per file, and paired
+   * (every start eventually gets a matching end, success or failure).
+   */
+  onUploadStart?: () => void;
+  onUploadEnd?: () => void;
 }
 
 /**

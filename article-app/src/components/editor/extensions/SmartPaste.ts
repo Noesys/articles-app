@@ -26,6 +26,19 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
 
   addProseMirrorPlugins() {
     const editor = this.editor;
+    const options = this.options;
+    const uploadAndInsert = async (file: File) => {
+      options.onUploadStart?.();
+      try {
+        const src = await uploadArticleImage(file);
+        if (editor.isDestroyed) return;
+        editor.chain().focus().setImage({ src }).run();
+      } catch {
+        /* ignore unreadable/failed paste-drop image */
+      } finally {
+        options.onUploadEnd?.();
+      }
+    };
 
     const insertHtml = (html: string) => {
       const pos = editor.state.selection.$anchor.pos;
@@ -165,13 +178,7 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
               if (imageFiles.length && !/<img/i.test(cleaned)) {
                 void (async () => {
                   for (const file of imageFiles) {
-                    try {
-                      const src = await uploadArticleImage(file);
-                      if (editor.isDestroyed) return;
-                      editor.chain().focus().setImage({ src }).run();
-                    } catch {
-                      /* ignore unreadable clipboard image */
-                    }
+                    await uploadAndInsert(file);
                   }
                 })();
               }
@@ -184,13 +191,7 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
               event.preventDefault();
               void (async () => {
                 for (const file of imageFiles) {
-                  try {
-                    const src = await uploadArticleImage(file);
-                    if (editor.isDestroyed) return;
-                    editor.chain().focus().setImage({ src }).run();
-                  } catch {
-                    /* ignore */
-                  }
+                  await uploadAndInsert(file);
                 }
               })();
               return true;
@@ -224,13 +225,7 @@ export const SmartPaste = Extension.create<SmartPasteOptions>({
               event.preventDefault();
               void (async () => {
                 for (const file of images) {
-                  try {
-                    const src = await uploadArticleImage(file);
-                    if (editor.isDestroyed) return;
-                    editor.chain().focus().setImage({ src }).run();
-                  } catch {
-                    /* ignore */
-                  }
+                  await uploadAndInsert(file);
                 }
               })();
               return true;

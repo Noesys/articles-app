@@ -101,10 +101,13 @@ export async function updateArticleForRewrite(
   content: string,
   monthYear: string,
   userId?: string,
-): Promise<void> {
+): Promise<number | null> {
   // Defense-in-depth: when userId is provided, the UPDATE matches no rows
   // if the article does not belong to the user.
-  await db
+  // RETURNING the post-write version so callers dispatch evaluations against
+  // the version D1 actually persisted, not a value precomputed from a
+  // pre-write read (which can drift under concurrent rewrites).
+  const result = await db
     .prepare(
       `
         UPDATE articles
@@ -122,6 +125,7 @@ export async function updateArticleForRewrite(
           retry_count = retry_count + 1
         WHERE id = ?
         ${userId ? "AND user_id = ?" : ""}
+        RETURNING version
       `,
     )
     .bind(
@@ -129,5 +133,6 @@ export async function updateArticleForRewrite(
         ? [title, content, monthYear, articleId, userId]
         : [title, content, monthYear, articleId]),
     )
-    .run();
+    .first<{ version: number }>();
+  return result?.version ?? null;
 }

@@ -623,7 +623,18 @@ export default function AdminArticleDetail() {
           </div>
 
           <div className="rounded-sm border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <button onClick={() => setFeedbackCollapsed(!feedbackCollapsed)} className="w-full flex items-center justify-between px-4 py-3">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => setFeedbackCollapsed(!feedbackCollapsed)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setFeedbackCollapsed(!feedbackCollapsed);
+                }
+              }}
+              className="w-full flex items-center justify-between px-4 py-3 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
+            >
               <p className="text-md font-semibold uppercase tracking-wide text-slate-600">Feedback</p>
               <div className="flex items-center gap-2">
                 {displayFeedback && <span onClick={(e) => e.stopPropagation()}><CopyButton text={displayFeedback} /></span>}
@@ -631,7 +642,7 @@ export default function AdminArticleDetail() {
                   {feedbackCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
                 </span>
               </div>
-            </button>
+            </div>
             {!feedbackCollapsed && (
               <div className="px-4 pb-4">
                 {isFailed ? (

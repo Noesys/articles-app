@@ -29,6 +29,7 @@ import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
 import { serializeArticleContent } from "@/utils/serializeArticleContent";
 import { countWords } from "@/utils/countWords";
 import { FilterSelect } from "@/components/ui/filter-select";
+import MarkdownContent from "@/components/markdown/MarkdownContent";
 
 const TiptapEditor = lazy(() => import("@/components/editor/TiptapEditor"));
 const ArticleViewer = lazy(
@@ -70,7 +71,10 @@ export default function ArticleDetail() {
     id: string;
     version?: string;
   }>();
-  const [editorView, setEditorView] = useState<"editor" | "preview">("editor");
+  const [editorView, setEditorView] = useState<
+    "editor" | "preview" | "instructions"
+  >("editor");
+  const [instructionsText, setInstructionsText] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -99,6 +103,7 @@ export default function ArticleDetail() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [contentCollapsed, setContentCollapsed] = useState(true);
 
@@ -165,13 +170,19 @@ export default function ArticleDetail() {
     let timer: number | null = null;
     const pollStart = Date.now();
     const isTimedOut = () => Date.now() - pollStart > MAX_POLL_DURATION;
+    // Non-admins can land here with a pending, unscored article that has no
+    // evaluation actually running (e.g. an admin changed its type without
+    // re-evaluating) — the backend has no field distinguishing that from a
+    // genuinely in-flight evaluation, so this message stays neutral instead
+    // of claiming scoring was in progress.
+    const timeoutMessage = "Still pending — refresh to check for updates";
     const tick = async () => {
       if (stopped || document.visibilityState === "hidden") return;
       if (isTimedOut()) {
         if (timer) clearInterval(timer);
         setAwaitingReeval(false);
         try {
-          sessionStorage.setItem("toastError", "Scoring timed out");
+          sessionStorage.setItem("toastError", timeoutMessage);
         } catch {}
         return;
       }
@@ -201,7 +212,7 @@ export default function ArticleDetail() {
         if (timer) clearInterval(timer);
         setAwaitingReeval(false);
         try {
-          sessionStorage.setItem("toastError", "Scoring timed out");
+          sessionStorage.setItem("toastError", timeoutMessage);
         } catch {}
         return;
       }
@@ -244,6 +255,8 @@ export default function ArticleDetail() {
       const list = Array.isArray(types) ? types : types?.data ?? [];
       const t = list.find((x: any) => x.id === article.article_type_id);
       if (t?.pass_threshold != null) setPassThreshold(t.pass_threshold);
+      const instr = (t?.general_instructions as string | null | undefined)?.trim();
+      setInstructionsText(instr || null);
       if (isAdmin) {
         setArticleTypes(
           list
@@ -262,6 +275,10 @@ export default function ArticleDetail() {
     }
     if (countWords(content) < 1000) {
       setSubmitError("Article must contain at least 1000 words");
+      return;
+    }
+    if (isUploadingImages) {
+      setSubmitError("Please wait for image uploads to finish before submitting");
       return;
     }
     setSubmitError(null);
@@ -551,7 +568,8 @@ export default function ArticleDetail() {
 
                 <button
                   onClick={handleSubmitRewrite}
-                  disabled={submitting}
+                  disabled={submitting || isUploadingImages}
+                  title={isUploadingImages ? "Waiting for image uploads to finish…" : undefined}
                   className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-sm px-3 py-2 transition-colors"
                 >
                   {submitting ? (
@@ -695,9 +713,17 @@ export default function ArticleDetail() {
 
           {/* Feedback - collapsible, default collapsed, matches ParameterResultsBox */}
           <div className="rounded-sm border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <button
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => setFeedbackCollapsed(!feedbackCollapsed)}
-              className="w-full flex items-center justify-between px-4 py-3"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setFeedbackCollapsed(!feedbackCollapsed);
+                }
+              }}
+              className="w-full flex items-center justify-between px-4 py-3 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
             >
               <p className="text-md font-semibold uppercase tracking-wide text-slate-600">Feedback</p>
               <div className="flex items-center gap-2">
@@ -706,7 +732,7 @@ export default function ArticleDetail() {
                   {feedbackCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
                 </span>
               </div>
-            </button>
+            </div>
             {!feedbackCollapsed && (
               <div className="px-4 pb-4">
                 {isFailed ? (
@@ -786,6 +812,19 @@ export default function ArticleDetail() {
                         >
                           Preview
                         </button>
+                        {instructionsText && (
+                          <button
+                            type="button"
+                            onClick={() => setEditorView("instructions")}
+                            className={`px-3 py-1 text-xs font-medium rounded-md ${
+                              editorView === "instructions"
+                                ? "bg-white text-slate-900 shadow-sm"
+                                : "text-slate-500 hover:text-slate-700"
+                            }`}
+                          >
+                            Instructions
+                          </button>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-1.5 text-xs">
@@ -806,10 +845,19 @@ export default function ArticleDetail() {
 
                     <Suspense fallback={<EditorFallback />}>
                       {editorView === "editor" && (
-                        <TiptapEditor value={content} onChange={setContent} />
+                        <TiptapEditor
+                          value={content}
+                          onChange={setContent}
+                          onUploadingChange={setIsUploadingImages}
+                        />
                       )}
                       {editorView === "preview" && (
                         <ArticleViewer content={content} />
+                      )}
+                      {editorView === "instructions" && instructionsText && (
+                        <div className="min-h-[200px] rounded-sm border border-slate-200 bg-white p-4 shadow-sm">
+                          <MarkdownContent>{instructionsText}</MarkdownContent>
+                        </div>
                       )}
                     </Suspense>
                   </div>

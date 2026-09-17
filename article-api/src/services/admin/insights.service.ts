@@ -200,13 +200,20 @@ export async function getEmployeeSubmissions(
   const rowsRaw = await db
     .prepare(
       `
-    SELECT u.id AS userId, u.name AS name, u.job_role AS jobRole,
-           a.month_year AS monthYear, COUNT(*) AS cnt
+    SELECT
+      COALESCE(u.id, ue.id, 'emp_' || a.emp_id) AS userId,
+      COALESCE(u.name, ue.name, a.employee_email) AS name,
+      COALESCE(u.job_role, ue.job_role) AS jobRole,
+      a.month_year AS monthYear, COUNT(*) AS cnt
     FROM articles a
-    JOIN users u ON u.id = a.user_id
+    LEFT JOIN users u
+      ON u.id = a.user_id
+    LEFT JOIN users ue
+      ON a.employee_email IS NOT NULL
+      AND lower(ue.email) = lower(a.employee_email)
     WHERE a.month_year BETWEEN ? AND ?
-    GROUP BY u.id, a.month_year
-    ORDER BY u.name
+    GROUP BY COALESCE(u.id, ue.id, 'emp_' || a.emp_id), a.month_year
+    ORDER BY name
   `,
     )
     .bind(range.start, range.end)
