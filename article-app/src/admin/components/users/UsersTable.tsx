@@ -17,7 +17,10 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { DataGridVirtualScrollArea } from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
+import {
+  DataGridVirtualScrollArea,
+  fitRowsHeight,
+} from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -312,7 +315,7 @@ export default function UsersTable({
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
-            <DataGridVirtualScrollArea height="100vh" />
+            <DataGridVirtualScrollArea height={fitRowsHeight(users.length, "100vh")} />
           </DataGridContainer>
         </div>
       </DataGrid>

@@ -21,7 +21,10 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { DataGridVirtualScrollArea } from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
+import {
+  DataGridVirtualScrollArea,
+  fitRowsHeight,
+} from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
 import {
   ColumnDef,
   SortingState,
@@ -626,7 +629,7 @@ function MyArticlesTable({
       <div className="w-full space-y-2.5">
         <DataGridContainer className={contiqTableContainerClassName}>
           <DataGridVirtualScrollArea
-            height="57vh"
+            height={fitRowsHeight(articles.length, "57vh")}
             onFetchMore={onFetchMore}
             isFetchingMore={isFetchingMore}
             hasMore={hasMore}

@@ -16,7 +16,10 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { DataGridVirtualScrollArea } from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
+import {
+  DataGridVirtualScrollArea,
+  fitRowsHeight,
+} from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
 import { ColumnDef, useTable } from "@tanstack/react-table";
 import {
   contiqTableContainerClassName,
@@ -454,7 +457,7 @@ export default function ArticlesTableContent({
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
             <DataGridVirtualScrollArea
-              height="49.7vh"
+              height={fitRowsHeight(locallyFilteredArticles.length, "49.7vh")}
               onFetchMore={onFetchMore}
               isFetchingMore={isFetchingMore}
               hasMore={hasMore}

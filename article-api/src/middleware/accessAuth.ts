@@ -180,6 +180,16 @@ export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResu
     return { ok: false, status: 403, message: "Forbidden: Account inactive" };
   }
 
+  // Legacy compatibility: "super_admin" predates the current admin/user role
+  // model. Treat those accounts as "admin" instead of rejecting them below,
+  // and self-heal the row so future requests skip this branch entirely.
+  if ((user.auth_role as string) === "super_admin") {
+    await c.env.DB.prepare(`UPDATE users SET auth_role = 'admin' WHERE id = ?`)
+      .bind(user.id)
+      .run();
+    user = { ...user, auth_role: "admin" };
+  }
+
   if (user.auth_role !== "admin" && user.auth_role !== "user") {
     return { ok: false, status: 403, message: "Forbidden: Invalid role" };
   }

@@ -20,6 +20,26 @@ interface DataGridVirtualScrollAreaProps {
  * user scrolls near the end of what's loaded. Sits inside the same
  * DataGridContainer as before, so contiq-data-grid.ts styling is untouched.
  */
+/**
+ * A `height` for DataGridVirtualScrollArea that shrinks to fit `rowCount`
+ * rows (so 1-2 rows don't render inside a viewport-tall box full of empty
+ * space) but never grows past `maxHeight` (so a long list still scrolls
+ * within a bounded viewport instead of pushing the page height out).
+ *
+ * `rowHeight`/`headerHeight` should match whatever `estimateSize` and the
+ * table's actual header height are for the caller — defaults match this
+ * component's own `estimateSize` default and the contiq dense header.
+ */
+function fitRowsHeight(
+  rowCount: number,
+  maxHeight: string,
+  rowHeight = 45,
+  headerHeight = 44,
+): string {
+  const contentHeight = Math.max(0, rowCount) * rowHeight + headerHeight;
+  return `min(${contentHeight}px, ${maxHeight})`;
+}
+
 function DataGridVirtualScrollArea({
   height,
   onFetchMore,
@@ -55,5 +75,5 @@ function DataGridVirtualScrollArea({
   );
 }
 
-export { DataGridVirtualScrollArea };
+export { DataGridVirtualScrollArea, fitRowsHeight };
 export type { DataGridVirtualScrollAreaProps };
