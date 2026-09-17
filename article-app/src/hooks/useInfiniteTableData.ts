@@ -30,11 +30,13 @@ export interface UseInfiniteTableDataResult<TRow> {
   /** Hard reset: clears rows and refetches from page 1, with the initial-loading flag. */
   refetch: () => void;
   /**
-   * Re-fetches every currently-loaded row in a single call (page 1, limit =
-   * loadedPages * limit) and swaps them in place, without touching how many
-   * pages are considered loaded. Silent mode skips the isLoading flag and
-   * error surfacing — for background refresh (e.g. polling) that shouldn't
-   * flash the loading state or disrupt scroll position.
+   * Re-fetches every currently-loaded page (1..N at this hook's page size)
+   * and concatenates them in order, without touching how many pages are
+   * considered loaded. Walks pages instead of requesting a combined limit,
+   * so a refresh after 100+ rows still stays within the API's per-request
+   * cap. Silent mode skips the isLoading flag and error surfacing — for
+   * background refresh (e.g. polling) that shouldn't flash the loading
+   * state or disrupt scroll position.
    */
   refetchLoaded: (options?: { silent?: boolean }) => void;
 }
@@ -136,7 +138,8 @@ export function useInfiniteTableData<
 
   const refetchLoaded = useCallback((options?: { silent?: boolean }) => {
     const pagesLoadedAtRequest = Math.max(1, loadedPageRef.current || 1);
-    const combinedLimit = pagesLoadedAtRequest * limitRef.current;
+    const pageLimit = limitRef.current;
+    const paramsAtRequest = paramsRef.current;
     const epoch = ++refetchEpochRef.current;
     const silent = options?.silent ?? false;
 
@@ -145,9 +148,21 @@ export function useInfiniteTableData<
       setError(null);
     }
 
-    fetchPageRef
-      .current({ page: 1, limit: combinedLimit, ...paramsRef.current })
-      .then((result) => {
+    // List endpoints cap `limit` at 100. A combined page=1&limit=N*pageSize
+    // refresh would truncate after ~4 pages of 30 and leave loadedPageRef
+    // high enough that fetchMore skipped a gap. Fetch each already-loaded
+    // page at the normal page size and concatenate so 200+ loaded rows stay
+    // intact.
+    const pageFetches = Array.from({ length: pagesLoadedAtRequest }, (_, i) =>
+      fetchPageRef.current({
+        page: i + 1,
+        limit: pageLimit,
+        ...paramsAtRequest,
+      }),
+    );
+
+    Promise.all(pageFetches)
+      .then((results) => {
         // Drop if a newer poll superseded this one, OR if how many pages
         // are considered loaded has since changed (a concurrent fetchMore
         // completed, or a param reset is underway) — this result's window
@@ -156,8 +171,8 @@ export function useInfiniteTableData<
         // changed loadedPageRef) will produce a correct, up-to-date window.
         if (epoch !== refetchEpochRef.current) return;
         if (loadedPageRef.current !== pagesLoadedAtRequest) return;
-        setRows(result.data);
-        setTotal(result.total);
+        setRows(results.flatMap((result) => result.data));
+        setTotal(results[0]?.total ?? 0);
         // loadedPageRef stays at pagesLoadedAtRequest — this re-fetched the
         // same window of data, it didn't advance it.
       })
