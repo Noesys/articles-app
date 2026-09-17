@@ -62,7 +62,9 @@ const STATUS_CONFIG: Record<string, { className: string; label: string }> = {
 };
 
 const POLLING_INTERVAL = 2500;
-const MAX_POLL_DURATION = 300000;
+// Matches the backend's sweepStuckEvaluations threshold (index.ts) and
+// ArticleDetail/AdminArticleDetail polling.
+const MAX_POLL_DURATION = 120000;
 /** Fetch batch size for "View all" — an implementation detail now that the list is virtualized, not a user-facing setting. */
 const VIEW_ALL_FETCH_LIMIT = 30;
 

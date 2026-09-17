@@ -256,7 +256,7 @@ export default function ArticlesTableContent({
                   <Clock className="size-3" />
                   Taking longer than expected
                 </Badge>
-                <button
+                {/* <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -266,7 +266,7 @@ export default function ArticlesTableContent({
                   title="Check again"
                 >
                   <RefreshCw className="size-3.5" />
-                </button>
+                </button> */}
               </div>
             );
           }

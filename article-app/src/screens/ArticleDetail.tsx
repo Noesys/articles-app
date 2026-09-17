@@ -154,7 +154,10 @@ export default function ArticleDetail() {
   // Poll every 2.5s while scoring; stops on terminal status/complete/timeout
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
   const POLLING_INTERVAL = 2500;
-  const MAX_POLL_DURATION = 300000;
+  // Matches the backend's sweepStuckEvaluations threshold (index.ts) and
+  // AdminArticleDetail/MyArticles polling — kept consistent so the article
+  // is actually marked "failed" (rewrite enabled) by the time this gives up.
+  const MAX_POLL_DURATION = 120000;
   useEffect(() => {
     if (
       effectiveSnapshot ||
@@ -415,6 +418,36 @@ export default function ArticleDetail() {
     }
   }
 
+  /** User-side equivalent of the admin "Re-evaluate" button — resubmits the
+   * article unchanged (same content/title) once the backend considers the
+   * current pending attempt stale (see STUCK_EVALUATION_THRESHOLD_MS on the
+   * server), so a hung/abandoned evaluation can be retried without editing.
+   * Stays on this page and restarts polling, instead of navigating away
+   * like a real rewrite-with-changes does. */
+  async function handleUserReevaluate() {
+    if (!article || isUploadingImages) return;
+    setReevalBusy(true);
+    try {
+      await api(`/articles`, {
+        method: "POST",
+        body: JSON.stringify({
+          id: article.id,
+          article_type_id: article.article_type_id,
+          title: article.title,
+          content: serializeArticleContent(article.content),
+        }),
+      });
+      toast.success("Re-evaluation started");
+      setCurrentScore(null);
+      setCurrentFeedback("");
+      setAwaitingReeval(true);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReevalBusy(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -471,9 +504,23 @@ export default function ArticleDetail() {
           </div>
         )}
         {isPending && !effectiveSnapshot && (
-          <div className="mb-4 rounded-sm bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
-            <Loader2 size={14} className="animate-spin" /> Processing your
-            submission — scoring in background...
+          <div className="mb-4 rounded-sm bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex flex-wrap items-center justify-between gap-3">
+            <span className="flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin shrink-0" />
+              Processing your submission. Scoring is running in the
+              background and may take up to 2 minutes. Please wait before
+              trying again.
+            </span>
+            {!isAdmin && (
+              <button
+                type="button"
+                onClick={() => void handleUserReevaluate()}
+                disabled={reevalBusy || isUploadingImages}
+                className="shrink-0 rounded-sm border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:opacity-40"
+              >
+                {reevalBusy ? "Starting…" : "Re-evaluate"}
+              </button>
+            )}
           </div>
         )}
         <div className="mb-6">

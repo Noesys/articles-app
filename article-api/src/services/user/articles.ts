@@ -12,6 +12,7 @@ const ARTICLE_COLUMNS = `
   a.version,
   a.submitted_at,
   a.scored_at,
+  a.updated_at,
   a.month_year,
   a.retry_count,
   a.ai_feedback,
@@ -150,10 +151,11 @@ export async function createArticle(
           status,
           version,
           submitted_at,
+          updated_at,
           month_year,
           retry_count
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
     )
     .bind(
@@ -164,6 +166,10 @@ export async function createArticle(
       article.content,
       article.status,
       article.version,
+      article.submitted_at,
+      // sweepStuckEvaluations relies on updated_at marking when this pending
+      // period started — must be set on every write that puts the article
+      // into pending, not just admin re-evaluate/change-type.
       article.submitted_at,
       article.month_year,
       article.retry_count,

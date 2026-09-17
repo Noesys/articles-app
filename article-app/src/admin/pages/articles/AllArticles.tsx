@@ -39,8 +39,12 @@ const STATUS_OPTIONS = [
 /** Fetch batch size — an implementation detail now that the list is virtualized, not a user-facing setting. */
 const FETCH_LIMIT = 30;
 const POLLING_INTERVAL = 2500;
-/** Per-row cap: give up auto-refreshing a single row after this long. */
-const ROW_TIMEOUT_MS = 90000;
+/**
+ * Per-row cap: give up auto-refreshing a single row after this long. Matches
+ * the backend's sweepStuckEvaluations threshold and the detail-page polling
+ * (ArticleDetail/AdminArticleDetail/MyArticles) for consistency.
+ */
+const ROW_TIMEOUT_MS = 120000;
 
 const AllArticles = () => {
   const { id } = useParams();

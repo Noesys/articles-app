@@ -197,7 +197,11 @@ export default function AdminArticleDetail() {
 
   // Poll while an admin-triggered re-eval is in flight
   const POLLING_INTERVAL = 2500;
-  const MAX_POLL_DURATION = 300000;
+  // Matches the backend's sweepStuckEvaluations threshold (index.ts) and the
+  // user-side ArticleDetail/MyArticles polling — kept consistent so the
+  // article is actually marked "failed" (rewrite/re-evaluate enabled) by the
+  // time polling here gives up.
+  const MAX_POLL_DURATION = 120000;
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
 
   // Auto-arm polling for a pending/unscored article even when re-evaluation
@@ -449,6 +453,14 @@ export default function AdminArticleDetail() {
                 {dayjs(displaySubmittedAt).format("MMM D, YYYY h:mm A")}
               </span>
             )}
+          </div>
+        )}
+
+        {isScoring && (
+          <div className="mb-4 rounded-sm bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
+            <Loader2 size={14} className="animate-spin shrink-0" />
+            Processing your submission. Scoring is running in the background
+            and may take up to 2 minutes. Please wait before trying again.
           </div>
         )}
 

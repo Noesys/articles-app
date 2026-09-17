@@ -10,6 +10,7 @@ import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 import { AppError } from "../../utils/errors";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
 import { accessAuth } from "../../middleware/accessAuth";
+import { isStuckPending } from "../../utils/evaluationTiming";
 
 const articleRoutes = new Hono<AppEnv>();
 
@@ -297,8 +298,14 @@ articleRoutes.post("/", async (c) => {
     // onto an unreachable version (its target version never lands, and
     // persistEvaluationResults' version guard silently no-ops), leaving the
     // article stuck at "pending" forever. Reject and let the client retry
-    // once the current evaluation finishes.
-    if (existingArticle.status === "pending" || existingArticle.status === "processing") {
+    // once the current evaluation finishes — unless it's been stuck long
+    // enough (STUCK_EVALUATION_THRESHOLD_MS) to treat as abandoned, in which
+    // case let this rewrite proceed and supersede it (a late-arriving result
+    // from the abandoned attempt is protected by its own version guard).
+    if (
+      (existingArticle.status === "pending" || existingArticle.status === "processing") &&
+      !isStuckPending(existingArticle.updated_at)
+    ) {
       return c.json(
         {
           success: false,
@@ -318,12 +325,22 @@ articleRoutes.post("/", async (c) => {
       const [, updateResult] = await db.batch<{ version: number }>([
         db
           .prepare(
-            `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at) SELECT ?, id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ? FROM articles WHERE id = ?`,
+            // A row still "pending"/"processing" at snapshot time was never
+            // actually resolved (stuck evaluation being superseded — see
+            // isStuckPending above) — record it as failed, not a frozen
+            // "pending" that looks like it's still running.
+            `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
+             SELECT ?, id, article_type_id, title,
+               CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE ai_feedback END,
+               content, ai_score, pass_threshold,
+               CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
+               version, submitted_at, scored_at, ?
+             FROM articles WHERE id = ?`,
           )
           .bind(historyId, now, requestedId),
         db
           .prepare(
-            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=? RETURNING version`,
+            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=? RETURNING version`,
           )
           .bind(title, content, rewriteMonth, requestedId),
       ]);

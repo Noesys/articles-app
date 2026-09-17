@@ -4,6 +4,7 @@ import {
   ArticleListResult,
   ArticleParameterResult,
 } from "../../types/admin-types";
+import { isStuckPending } from "../../utils/evaluationTiming";
 
 export async function getArticles(
   db: D1Database,
@@ -332,8 +333,14 @@ export async function changeArticleType(
   // An evaluation is already in flight for this article/version — dispatching
   // another one here would race the in-flight one onto the same version
   // (persistEvaluationResults' version guard can't distinguish them) and
-  // silently produce mixed/duplicate parameter_results.
-  if (article.status === "pending" || article.status === "processing") {
+  // silently produce mixed/duplicate parameter_results. But if it's been
+  // pending/processing for longer than STUCK_EVALUATION_THRESHOLD_MS, treat
+  // it as abandoned (hung AI call, Worker killed mid-flight, ...) rather
+  // than genuinely in-flight, and let this attempt proceed and supersede it.
+  if (
+    (article.status === "pending" || article.status === "processing") &&
+    !isStuckPending(article.updated_at)
+  ) {
     throw new Error("Article is currently being evaluated; please wait for it to finish");
   }
 
@@ -345,14 +352,25 @@ export async function changeArticleType(
   const now = new Date().toISOString();
   const statements: D1PreparedStatement[] = [];
 
-  // Status is guaranteed not "pending"/"processing" here (checked above), so
-  // this always snapshots and bumps the version.
+  // Reaching here means status is either not pending/processing, or it is
+  // but was stale enough to be treated as abandoned (checked above) — either
+  // way, always snapshot the prior attempt and bump the version. If a
+  // stuck-but-not-actually-dead evaluation's result lands after this, its
+  // own version guard (persistEvaluationResults/handleEvaluationFailure)
+  // will no-op against the version bumped here instead of clobbering it.
+  // A row still "pending"/"processing" here was superseded via the
+  // stale-pending bypass above, not a genuine resolution — record it as
+  // failed rather than freezing a "pending" that never actually finished.
   const historyId = "hist_" + crypto.randomUUID();
   statements.push(
     db
       .prepare(
         `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
-         SELECT ?, id, article_type_id, title, COALESCE(ai_feedback,''), content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ?
+         SELECT ?, id, article_type_id, title,
+           CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE COALESCE(ai_feedback,'') END,
+           content, ai_score, pass_threshold,
+           CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
+           version, submitted_at, scored_at, ?
          FROM articles WHERE id = ?`,
       )
       .bind(historyId, now, articleId),
@@ -410,8 +428,12 @@ export async function prepareArticleReevaluate(
   if (!article) return null;
 
   // An evaluation is already in flight for this article/version — see the
-  // matching guard in changeArticleType for why this must be rejected here.
-  if (article.status === "pending" || article.status === "processing") {
+  // matching guard in changeArticleType for why this must be rejected here,
+  // and for the stale-pending bypass below.
+  if (
+    (article.status === "pending" || article.status === "processing") &&
+    !isStuckPending(article.updated_at)
+  ) {
     throw new Error("Article is currently being evaluated; please wait for it to finish");
   }
 
@@ -438,14 +460,21 @@ export async function prepareArticleReevaluate(
   const now = new Date().toISOString();
   const statements: D1PreparedStatement[] = [];
 
-  // Status is guaranteed not "pending"/"processing" here (checked above), so
-  // this always snapshots and bumps the version.
+  // See the matching comment in changeArticleType — always snapshot + bump
+  // the version here; a late-arriving stuck evaluation's own version guard
+  // protects against it clobbering this new attempt. A row still
+  // "pending"/"processing" here was superseded via the stale-pending bypass,
+  // not a genuine resolution — record it as failed.
   const historyId = "hist_" + crypto.randomUUID();
   statements.push(
     db
       .prepare(
         `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
-         SELECT ?, id, article_type_id, title, COALESCE(ai_feedback,''), content, ai_score, pass_threshold, status, version, submitted_at, scored_at, ?
+         SELECT ?, id, article_type_id, title,
+           CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE COALESCE(ai_feedback,'') END,
+           content, ai_score, pass_threshold,
+           CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
+           version, submitted_at, scored_at, ?
          FROM articles WHERE id = ?`,
       )
       .bind(historyId, now, articleId),
