@@ -41,7 +41,10 @@ export async function evaluateArticle(
     const schema = buildEvaluationSchema(articleType, scoreable);
     const prompt = buildEvaluationPrompt(articleType, scoreable, title, content);
 
-    const aiResult = await callAI(prompt, schema, bindings);
+    const aiResult = await callAI(prompt, schema, bindings, {
+      min: Number(articleType.score_min),
+      max: Number(articleType.score_max),
+    });
 
     const parameterResults: ParameterResultInput[] = scoreable.map((p, i) => {
       const key = `p${i}`;

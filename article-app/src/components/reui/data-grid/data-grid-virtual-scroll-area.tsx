@@ -29,14 +29,22 @@ interface DataGridVirtualScrollAreaProps {
  * `rowHeight`/`headerHeight` should match whatever `estimateSize` and the
  * table's actual header height are for the caller — defaults match this
  * component's own `estimateSize` default and the contiq dense header.
+ *
+ * At rowCount 0, the body isn't virtualized rows at all — it's a single
+ * `DataGridTableEmpty` `<td className="py-6 ...">` row carrying the empty
+ * message, which is taller than one virtualized row. `emptyStateHeight` is
+ * the floor for that case, so the message has room instead of being clipped
+ * by a container sized as if there were zero rows to show.
  */
 function fitRowsHeight(
   rowCount: number,
   maxHeight: string,
   rowHeight = 45,
   headerHeight = 44,
+  emptyStateHeight = 96,
 ): string {
-  const contentHeight = Math.max(0, rowCount) * rowHeight + headerHeight;
+  const bodyHeight = rowCount > 0 ? rowCount * rowHeight : emptyStateHeight;
+  const contentHeight = bodyHeight + headerHeight;
   return `min(${contentHeight}px, ${maxHeight})`;
 }
 
