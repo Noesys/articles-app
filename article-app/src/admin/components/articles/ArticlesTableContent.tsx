@@ -43,7 +43,13 @@ import { toast } from "sonner";
 type ArticlesTableProps = {
   articles: ArticleSummary[];
   onRowClick?: (id: string) => void;
-  totalCount?: number;
+  statusCounts?: {
+    total: number;
+    approved: number;
+    pending: number;
+    rewrite_required: number;
+    failed: number;
+  } | null;
   onFetchMore?: () => void;
   isFetchingMore?: boolean;
   hasMore?: boolean;
@@ -107,7 +113,7 @@ const EMPTY_TIMED_OUT_IDS: Set<string> = new Set();
 export default function ArticlesTableContent({
   articles,
   onRowClick,
-  totalCount,
+  statusCounts,
   onFetchMore,
   isFetchingMore,
   hasMore,
@@ -126,29 +132,19 @@ export default function ArticlesTableContent({
     );
   }, [articles, titleFilter]);
 
-  const dashboard = useMemo(() => {
-    const total = titleFilter
-      ? locallyFilteredArticles.length
-      : (totalCount ?? locallyFilteredArticles.length);
-    const approved = locallyFilteredArticles.filter(
-      (a) => a.status === "approved",
-    ).length;
-    const pending = locallyFilteredArticles.filter(
-      (a) => a.status === "pending",
-    ).length;
-    const rewriteRequired = locallyFilteredArticles.filter(
-      (a) => a.status === "rewrite_required",
-    ).length;
-    const failed = locallyFilteredArticles.filter((a) => a.status === "failed").length;
-
-    const scored = locallyFilteredArticles.filter((a) => a.ai_score !== null);
-    const averageScore =
-      scored.length > 0
-        ? scored.reduce((sum, a) => sum + (a.ai_score ?? 0), 0) / scored.length
-        : null;
-
-    return { total, approved, pending, rewriteRequired, averageScore, failed };
-  }, [locallyFilteredArticles]);
+  // Server-computed, from the same month/status/type filters as the list —
+  // total is always the sum of the four below, and none of them grow just
+  // because more rows get scroll-loaded. Doesn't reflect the author/title
+  // quick filters below (those are client-side only, out of the server's
+  // view), so the cards describe the filtered dataset, not the currently
+  // visible/searched rows.
+  const dashboard = {
+    total: statusCounts?.total ?? 0,
+    approved: statusCounts?.approved ?? 0,
+    pending: statusCounts?.pending ?? 0,
+    rewriteRequired: statusCounts?.rewrite_required ?? 0,
+    failed: statusCounts?.failed ?? 0,
+  };
 
   async function handleReevaluate(id: string) {
     if (!id || reevaluatingIds.has(id)) return;

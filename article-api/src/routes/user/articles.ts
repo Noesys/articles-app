@@ -293,15 +293,7 @@ articleRoutes.post("/", async (c) => {
       );
     }
 
-    // An evaluation is already in flight for this article/version —
-    // accepting another rewrite here would race the in-flight evaluation
-    // onto an unreachable version (its target version never lands, and
-    // persistEvaluationResults' version guard silently no-ops), leaving the
-    // article stuck at "pending" forever. Reject and let the client retry
-    // once the current evaluation finishes — unless it's been stuck long
-    // enough (STUCK_EVALUATION_THRESHOLD_MS) to treat as abandoned, in which
-    // case let this rewrite proceed and supersede it (a late-arriving result
-    // from the abandoned attempt is protected by its own version guard).
+    // Already pending/processing and not stuck (< threshold old) — reject.
     if (
       (existingArticle.status === "pending" || existingArticle.status === "processing") &&
       !isStuckPending(existingArticle.updated_at)
@@ -340,15 +332,15 @@ articleRoutes.post("/", async (c) => {
           .bind(historyId, now, requestedId),
         db
           .prepare(
-            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=? RETURNING version`,
+            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=?, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=? RETURNING version`,
           )
-          .bind(title, content, rewriteMonth, requestedId),
+          .bind(title, content, now, rewriteMonth, requestedId),
       ]);
       nextVersion = updateResult.results[0]?.version ?? null;
     } catch {
       // Fallback to sequential if batch not supported in local D1
       await snapshotArticle(db, requestedId, historyId, now, user.id);
-      nextVersion = await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth, user.id);
+      nextVersion = await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth, now, user.id);
     }
 
     if (nextVersion == null) {

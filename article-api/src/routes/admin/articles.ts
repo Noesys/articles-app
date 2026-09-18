@@ -56,8 +56,10 @@ articlesRoute.get("/", async (c) => {
 // for dashboard stats
 articlesRoute.get("/stats", async (c) => {
   const month = c.req.query("month");
+  const status = c.req.query("status");
+  const type = c.req.query("type");
 
-  const data = await getArticleStats(c.env.DB, month);
+  const data = await getArticleStats(c.env.DB, month, status, type);
 
   return c.json({
     message: "Stats fetched successfully",

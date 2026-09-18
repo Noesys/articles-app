@@ -6,7 +6,7 @@ import { FilterSelect } from "@/components/ui/filter-select";
 import dayjs from "dayjs";
 import { api } from "../../../http-client";
 import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
-import { getScoreColor, sanitizeFilename } from "@/utils/scoreColor";
+import { getDetailScoreColor, sanitizeFilename } from "@/utils/scoreColor";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import ScoringHistoryTable from "./ScoringHistoryTable";
@@ -26,13 +26,9 @@ function navigateBackOrToArticles(navigate: ReturnType<typeof useNavigate>) {
   else navigate("/admin/articles");
 }
 
-function getScoreBarColor(score: number | null, status: string, passThreshold: number | null) {
-  if (score === null) return "bg-amber-500";
-  return getScoreColor(score, passThreshold, status).bar;
-}
 function getScoreTextColor(score: number | null, status: string, passThreshold: number | null) {
   if (score === null) return "text-slate-900";
-  return getScoreColor(score, passThreshold, status).text;
+  return getDetailScoreColor(score, passThreshold, status).text;
 }
 
 type ArticleTypeOption = { id: string; name: string };
@@ -626,7 +622,7 @@ export default function AdminArticleDetail() {
                     </p>
 
                     {hasScore && (
-                      <Progress value={Math.min(Math.max(displayScore!,0),10)*10} className={cn("flex-1 h-2", getScoreColor(displayScore!, passThreshold, displayStatus).barTw)} />
+                      <Progress value={Math.min(Math.max(displayScore!,0),10)*10} className={cn("flex-1 h-2", getDetailScoreColor(displayScore!, passThreshold, displayStatus).barTw)} />
                     )}
                   </>
                 )}

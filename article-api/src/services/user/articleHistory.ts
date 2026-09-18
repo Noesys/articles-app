@@ -100,13 +100,11 @@ export async function updateArticleForRewrite(
   title: string,
   content: string,
   monthYear: string,
+  now: string,
   userId?: string,
 ): Promise<number | null> {
-  // Defense-in-depth: when userId is provided, the UPDATE matches no rows
-  // if the article does not belong to the user.
-  // RETURNING the post-write version so callers dispatch evaluations against
-  // the version D1 actually persisted, not a value precomputed from a
-  // pre-write read (which can drift under concurrent rewrites).
+  // updated_at is bound (not CURRENT_TIMESTAMP) to stay in the same ISO
+  // format as everywhere else it's written — isStuckPending compares it.
   const result = await db
     .prepare(
       `
@@ -120,7 +118,7 @@ export async function updateArticleForRewrite(
           ai_feedback = NULL,
           pass_threshold = NULL,
           submitted_at = CURRENT_TIMESTAMP,
-          updated_at = CURRENT_TIMESTAMP,
+          updated_at = ?,
           scored_at = NULL,
           month_year = ?,
           retry_count = retry_count + 1
@@ -131,8 +129,8 @@ export async function updateArticleForRewrite(
     )
     .bind(
       ...(userId
-        ? [title, content, monthYear, articleId, userId]
-        : [title, content, monthYear, articleId]),
+        ? [title, content, now, monthYear, articleId, userId]
+        : [title, content, now, monthYear, articleId]),
     )
     .first<{ version: number }>();
   return result?.version ?? null;

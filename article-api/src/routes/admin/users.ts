@@ -7,6 +7,7 @@ import {
   updateUserAuthRole,
   updateUserStatus,
 } from "../../services/admin/users.service";
+import { getArticleStats } from "../../services/admin/articles.service";
 import {
   ALLOWED_AUTH_ROLES,
   UpdateUserBody,
@@ -87,6 +88,18 @@ usersRoute.get("/:id/articles", async (c) => {
     message: "User articles fetched successfully",
     data,
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  });
+});
+
+usersRoute.get("/:id/articles/stats", async (c) => {
+  const userId = c.req.param("id");
+  const month = c.req.query("month");
+  const status = c.req.query("status");
+  const type = c.req.query("type");
+  const data = await getArticleStats(c.env.DB, month, status, type, userId);
+  return c.json({
+    message: "Stats fetched successfully",
+    data,
   });
 });
 

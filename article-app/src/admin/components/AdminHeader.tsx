@@ -101,7 +101,7 @@ export default function AdminHeader({ title }: { title?: string }) {
             className="h-8 w-auto shrink-0 object-contain"
           />
           {title && (
-            <span className="hidden truncate text-sm font-medium text-slate-700 2xl:block">
+            <span className="hidden truncate text-sm font-medium text-slate-700 lg:block">
               {title}
             </span>
           )}
@@ -139,7 +139,7 @@ export default function AdminHeader({ title }: { title?: string }) {
 
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
           {user && (
-            <span className="hidden max-w-48 truncate text-sm text-slate-500 2xl:block">
+            <span className="hidden max-w-48 truncate text-sm text-slate-500 lg:block">
               {user.name}
             </span>
           )}

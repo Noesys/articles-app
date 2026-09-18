@@ -28,11 +28,9 @@ function getLanguageModel(env: Bindings) {
   }
 }
 
-// Keep well under the 2-minute pending-sweep threshold (see
-// evaluationPersistence.service.ts's sweepStuckEvaluations) so a hanging
-// provider call resolves into a normal "failed" write, with time to spare
-// for persistence, instead of relying on the sweep or the platform killing
-// the isolate mid-flight.
+// Keep well under STUCK_EVALUATION_THRESHOLD_MS so a hanging provider call
+// resolves into a normal "failed" write instead of the isolate getting
+// killed mid-flight.
 const AI_CALL_TIMEOUT_MS = 90_000;
 
 /**

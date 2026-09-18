@@ -29,7 +29,7 @@ export function buildEvaluationSchema(
         .number()
         .min(min)
         .max(max)
-        .describe(shortDescribe(p.name, p.prompt));
+        .describe(`${shortDescribe(p.name, p.prompt)} (whole number, no decimals)`);
     } else {
       const labels = p.options.map((o) => o.label);
       paramShape[key] = z
@@ -71,7 +71,7 @@ export function buildEvaluationPrompt(
     .map((p, i) => {
       const key = `p${i}`;
       if (p.scope_type === "numeric") {
-        return `- key "${key}" (${p.name}): ${p.prompt}\n  Return a number between ${p.min_value} and ${p.max_value}.`;
+        return `- key "${key}" (${p.name}): ${p.prompt}\n  Return a whole number (integer, no decimals) between ${p.min_value} and ${p.max_value}.`;
       }
       const labels = p.options.map((o) => o.label).join(", ");
       return `- key "${key}" (${p.name}): ${p.prompt}\n  Return EXACTLY one of these labels: ${labels}.`;

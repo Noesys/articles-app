@@ -54,6 +54,13 @@ const AllArticles = () => {
 
   const [articleTypes, setArticleTypes] = useState<ArticleTypeOption[]>([]);
   const [userName, setUserName] = useState("");
+  const [statusCounts, setStatusCounts] = useState<{
+    total: number;
+    approved: number;
+    pending: number;
+    rewrite_required: number;
+    failed: number;
+  } | null>(null);
 
   const monthParam = searchParams.get("month");
   const selectedMonthKey =
@@ -157,7 +164,6 @@ const AllArticles = () => {
 
   const {
     rows: articles,
-    total,
     isLoading: loading,
     isFetchingMore,
     hasMore,
@@ -175,6 +181,40 @@ const AllArticles = () => {
     },
     limit: FETCH_LIMIT,
   });
+
+  // Total + status counts, computed server-side from the same month/status/
+  // type filters as the list itself — always internally consistent (total
+  // is the sum of the four), and independent of how many rows are loaded.
+  const fetchStatusCounts = useCallback(async () => {
+    const params = new URLSearchParams();
+    if (!viewAll && selectedMonthKey) params.set("month", selectedMonthKey);
+    if (selectedStatus !== "all") params.set("status", selectedStatus);
+    if (selectedType !== "all") params.set("type", selectedType);
+
+    const path = id
+      ? `/admin/users/${id}/articles/stats?${params.toString()}`
+      : `/admin/articles/stats?${params.toString()}`;
+
+    try {
+      const data = await api<{
+        total: number;
+        approved: number;
+        pending: number;
+        rewrite_required: number;
+        failed: number;
+      }>(path);
+      setStatusCounts(data);
+    } catch (err) {
+      console.error("Failed to load article status counts:", err);
+    }
+  }, [id, viewAll, selectedMonthKey, selectedStatus, selectedType]);
+
+  useEffect(() => {
+    fetchStatusCounts();
+  }, [fetchStatusCounts]);
+
+  const fetchStatusCountsRef = useRef(fetchStatusCounts);
+  fetchStatusCountsRef.current = fetchStatusCounts;
 
   // Poll while any currently-loaded article is still being (re-)evaluated —
   // e.g. just triggered from the row action — so the table reflects the
@@ -261,6 +301,7 @@ const AllArticles = () => {
 
       setIsPolling(true);
       refetchLoadedRef.current({ silent: true });
+      fetchStatusCountsRef.current();
     };
 
     const interval = window.setInterval(tick, POLLING_INTERVAL);
@@ -286,6 +327,7 @@ const AllArticles = () => {
       return next;
     });
     refetchLoadedRef.current({ silent: true });
+    fetchStatusCountsRef.current();
   }, []);
 
   const filteredByAuthor = useMemo(() => {
@@ -451,10 +493,7 @@ const AllArticles = () => {
       ) : (
         <>
           <ArticlesTable
-            // The server total ignores the author filter (client-side only) —
-            // once one's selected, fall back to the filtered count instead of
-            // showing a stale, filter-blind number.
-            totalCount={selectedAuthor === "all" ? total : undefined}
+            statusCounts={statusCounts}
             articles={displayedArticles}
             onRowClick={(articleId: string) => {
               // AdminArticleDetail has no rewrite flow — an admin viewing
@@ -469,7 +508,10 @@ const AllArticles = () => {
             onFetchMore={fetchMore}
             isFetchingMore={isFetchingMore}
             hasMore={hasMore}
-            onReevaluated={() => refetchLoaded({ silent: true })}
+            onReevaluated={() => {
+              refetchLoaded({ silent: true });
+              fetchStatusCounts();
+            }}
             timedOutIds={timedOutIds}
             onCheckAgain={handleCheckAgain}
           />

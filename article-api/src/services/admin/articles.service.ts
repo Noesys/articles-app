@@ -246,65 +246,67 @@ export async function updateArticleTitle(
   return getArticleById(db, articleId);
 }
 
-function currentMonthYear(): string {
-  return new Date().toISOString().slice(0, 7);
-}
-
 // ---------- getArticleStats ----------
 
 export interface ArticleStats {
-  total_articles: number;
+  total: number;
   approved: number;
-  rewrite_required: number;
   pending: number;
-  average_score: number | null;
+  rewrite_required: number;
+  failed: number;
 }
 
+/**
+ * Status breakdown for the same month/status/type filters getArticles uses,
+ * so total always equals the sum of the four counts — one query, one
+ * consistent snapshot, independent of how many rows the client has loaded.
+ */
 export async function getArticleStats(
   db: D1Database,
   month?: string,
-): Promise<ArticleStats | null> {
-  const targetMonth = month || currentMonthYear();
+  status?: string,
+  type?: string,
+  userId?: string,
+): Promise<ArticleStats> {
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (userId) {
+    conditions.push("user_id = ?");
+    params.push(userId);
+  }
+  if (month) {
+    conditions.push("month_year = ?");
+    params.push(month);
+  }
+  if (status) {
+    conditions.push("status = ?");
+    params.push(status);
+  }
+  if (type) {
+    conditions.push("article_type_id = ?");
+    params.push(type);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   const sql = `
     SELECT
-
-      COUNT(*) AS total_articles,
-
-      SUM(
-        CASE
-          WHEN status = 'approved'
-          THEN 1
-          ELSE 0
-        END
-      ) AS approved,
-
-      SUM(
-        CASE
-          WHEN status = 'rewrite_required'
-          THEN 1
-          ELSE 0
-        END
-      ) AS rewrite_required,
-
-      SUM(
-        CASE
-          WHEN status = 'pending'
-          THEN 1
-          ELSE 0
-        END
-      ) AS pending,
-
-      ROUND(AVG(ai_score), 2) AS average_score
-
+      COUNT(*) AS total,
+      SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN status = 'rewrite_required' THEN 1 ELSE 0 END) AS rewrite_required,
+      SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
     FROM articles
-
-    WHERE month_year = ?
+    ${whereClause}
   `;
 
-  const result = await db.prepare(sql).bind(targetMonth).first<ArticleStats>();
+  const result = await db
+    .prepare(sql)
+    .bind(...params)
+    .first<ArticleStats>();
 
-  return result;
+  return result ?? { total: 0, approved: 0, pending: 0, rewrite_required: 0, failed: 0 };
 }
 
 /** Look up type flags for admin type-change / re-evaluate. */
@@ -330,13 +332,7 @@ export async function changeArticleType(
   const article = await getArticleById(db, articleId);
   if (!article) return null;
 
-  // An evaluation is already in flight for this article/version — dispatching
-  // another one here would race the in-flight one onto the same version
-  // (persistEvaluationResults' version guard can't distinguish them) and
-  // silently produce mixed/duplicate parameter_results. But if it's been
-  // pending/processing for longer than STUCK_EVALUATION_THRESHOLD_MS, treat
-  // it as abandoned (hung AI call, Worker killed mid-flight, ...) rather
-  // than genuinely in-flight, and let this attempt proceed and supersede it.
+  // Already pending/processing and not stuck (< threshold old) — reject.
   if (
     (article.status === "pending" || article.status === "processing") &&
     !isStuckPending(article.updated_at)
@@ -352,15 +348,8 @@ export async function changeArticleType(
   const now = new Date().toISOString();
   const statements: D1PreparedStatement[] = [];
 
-  // Reaching here means status is either not pending/processing, or it is
-  // but was stale enough to be treated as abandoned (checked above) — either
-  // way, always snapshot the prior attempt and bump the version. If a
-  // stuck-but-not-actually-dead evaluation's result lands after this, its
-  // own version guard (persistEvaluationResults/handleEvaluationFailure)
-  // will no-op against the version bumped here instead of clobbering it.
-  // A row still "pending"/"processing" here was superseded via the
-  // stale-pending bypass above, not a genuine resolution — record it as
-  // failed rather than freezing a "pending" that never actually finished.
+  // Always snapshot + bump version here; a row still pending/processing was
+  // superseded via the stale-pending bypass, so record it as failed.
   const historyId = "hist_" + crypto.randomUUID();
   statements.push(
     db
@@ -427,9 +416,7 @@ export async function prepareArticleReevaluate(
   const article = await getArticleById(db, articleId);
   if (!article) return null;
 
-  // An evaluation is already in flight for this article/version — see the
-  // matching guard in changeArticleType for why this must be rejected here,
-  // and for the stale-pending bypass below.
+  // Already pending/processing and not stuck (< threshold old) — reject.
   if (
     (article.status === "pending" || article.status === "processing") &&
     !isStuckPending(article.updated_at)
@@ -460,11 +447,8 @@ export async function prepareArticleReevaluate(
   const now = new Date().toISOString();
   const statements: D1PreparedStatement[] = [];
 
-  // See the matching comment in changeArticleType — always snapshot + bump
-  // the version here; a late-arriving stuck evaluation's own version guard
-  // protects against it clobbering this new attempt. A row still
-  // "pending"/"processing" here was superseded via the stale-pending bypass,
-  // not a genuine resolution — record it as failed.
+  // Always snapshot + bump version here; a row still pending/processing was
+  // superseded via the stale-pending bypass, so record it as failed.
   const historyId = "hist_" + crypto.randomUUID();
   statements.push(
     db

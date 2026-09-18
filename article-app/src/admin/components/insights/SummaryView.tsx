@@ -121,7 +121,7 @@ function ParametersTable({ parameters }: { parameters: ParameterSummary[] }) {
           return (
             <div>
               <span className="text-sm text-slate-600">
-                avg {r.numeric?.avg.toFixed(1)} · min {r.numeric?.min} · max {r.numeric?.max} · n=
+                Avg {r.numeric?.avg.toFixed(1)} · Min {r.numeric?.min} · Max {r.numeric?.max} · Num ={" "}
                 {r.numeric?.count}
               </span>
               {r.numeric?.distribution && (
