@@ -122,7 +122,9 @@ export default function ArticlesTableContent({
   onCheckAgain,
 }: ArticlesTableProps) {
   const [titleFilter, setTitleFilter] = useState("");
-  const [reevaluatingIds, setReevaluatingIds] = useState<Set<string>>(new Set());
+  const [reevaluatingIds, setReevaluatingIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const locallyFilteredArticles = useMemo(() => {
     const normalizedTitle = titleFilter.trim().toLowerCase();
@@ -205,14 +207,23 @@ export default function ArticlesTableContent({
         cell: ({ getValue }) => {
           const name = getValue() as string;
           return (
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="size-7 shrink-0 rounded-full bg-teal-600 text-white text-[11px] font-semibold flex items-center justify-center">
-                {getNameInitials(name)}
-              </div>
-              <span className="truncate text-sm font-medium text-foreground">
-                {name}
-              </span>
-            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="size-7 shrink-0 rounded-full bg-teal-600 text-white text-[11px] font-semibold flex items-center justify-center">
+                      {getNameInitials(name)}
+                    </div>
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {name}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{name}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         },
       },
@@ -223,19 +234,12 @@ export default function ArticlesTableContent({
         cell: ({ getValue }) => {
           const typeName = getValue() as string;
           return (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant="outline"
-                    className="max-w-full bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
-                  >
-                    <span className="min-w-0 truncate">{typeName}</span>
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>{typeName}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Badge
+              variant="outline"
+              className="max-w-full bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
+            >
+              <span className="min-w-0 truncate">{typeName}</span>
+            </Badge>
           );
         },
       },
@@ -255,17 +259,6 @@ export default function ArticlesTableContent({
                   <Clock className="size-3" />
                   Taking longer than expected
                 </Badge>
-                {/* <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCheckAgain?.(row.original.id);
-                  }}
-                  className="rounded-sm p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                  title="Check again"
-                >
-                  <RefreshCw className="size-3.5" />
-                </button> */}
               </div>
             );
           }
@@ -340,7 +333,7 @@ export default function ArticlesTableContent({
                 handleReevaluate(row.id);
               }}
               disabled={busy}
-              className="rounded-md p-2 transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md p-2 transition-all duration-200 hover:bg-gray-200 hover:text-teal-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               title="Re-evaluate article"
             >
               <RotateCcw

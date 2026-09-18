@@ -126,6 +126,10 @@ usersRoute.patch("/:id/role", async (c) => {
 
   const currentUser = c.get("user");
 
+  if (id === currentUser.id && body.role !== "admin") {
+    return c.json({ message: "You cannot change your own role" }, 403);
+  }
+
   await updateUserAuthRole(c.env.DB, id, body.role);
   return c.json({ message: "User role updated successfully" });
 });

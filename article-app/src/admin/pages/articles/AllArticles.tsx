@@ -481,7 +481,7 @@ const AllArticles = () => {
         <InlineAlert variant="warning" role="status">
           <span className="inline-flex items-center gap-1.5">
             <Loader2 size={12} className="animate-spin" aria-hidden />
-            Re-evaluation in progress — auto-refreshing…
+            Re-evaluation in progress — auto-refreshing. Please wait for 2 minutes before re-submitting the article for re-evaluation.
           </span>
         </InlineAlert>
       )}

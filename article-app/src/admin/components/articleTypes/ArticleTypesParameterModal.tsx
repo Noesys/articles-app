@@ -46,12 +46,15 @@ export default function ArticleTypesParameterModal({
 
   return (
     <Dialog open={modalOpen} onOpenChange={(open) => !open && closeModal()}>
-      <DialogContent className="sm:max-w-md" showCloseButton={false}>
+      <DialogContent
+        className="sm:max-w-2xl max-h-[85vh] grid-rows-[auto_1fr_auto] overflow-hidden"
+        showCloseButton={false}
+      >
         <DialogHeader>
           <DialogTitle>{modalDraft?.isNew ? "Add Parameter" : "Edit Parameter"}</DialogTitle>
         </DialogHeader>
         {modalDraft && (
-          <div className="space-y-3">
+          <div className="space-y-3 min-h-0 overflow-y-auto pr-1">
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-slate-700">
                 Parameter name
@@ -84,7 +87,7 @@ export default function ArticleTypesParameterModal({
                 onChange={(e) => setModalDraft({ ...modalDraft, prompt: e.target.value })}
                 placeholder="AI instruction for evaluating this parameter..."
                 rows={2}
-                className="rounded-sm bg-white"
+                className="rounded-sm bg-white max-h-[240px] overflow-y-auto"
               />
             </div>
             <div className="flex flex-col gap-2">

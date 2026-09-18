@@ -177,45 +177,62 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                     }[]
                   ).map((param) => (
                     <div key={param.id} className="rounded-sm border border-slate-200 bg-white p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <h4 className="font-medium text-slate-900">{param.name}</h4>
+                      <div className="flex items-start justify-between gap-4 mb-4">
+                        <h4 className="font-medium text-slate-900">{param.name}</h4>
 
-                          {param.description ? (
-                            <div className="mt-2">
-                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                                Description
-                              </p>
-                              <p className="mt-0.5 text-sm text-slate-600">{param.description}</p>
-                            </div>
-                          ) : null}
-
-                          {param.prompt ? (
-                            <div className="mt-2">
-                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                                Scoring Prompt
-                              </p>
-                              <MarkdownContent className="mt-0.5">{param.prompt}</MarkdownContent>
-                            </div>
-                          ) : null}
-                        </div>
-
-                        <Badge variant="indigo">{param.scopeType.toUpperCase()}</Badge>
-                      </div>
-
-                      <div className="flex gap-1 my-1">
-                        {param.options?.map((option: ParameterOptionDraft) => (
-                          <Badge key={option.id} variant="indigo">
-                            {option.label}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      {(param.options?.length ?? 0) === 0 && (
                         <Badge variant="indigo">
-                          {param.minValue} - {param.maxValue}
+                          {param.scopeType.toUpperCase()}
                         </Badge>
-                      )}
+                      </div>
+
+                      <div className="overflow-hidden rounded-md border border-slate-200">
+                        <table className="w-full text-sm">
+                          <tbody>
+                            <tr className="border-b border-slate-200">
+                              <td className="w-40 bg-slate-50 px-3 py-2 font-medium text-slate-700">
+                                Description
+                              </td>
+                              <td className="px-3 py-2 text-slate-600">
+                                {param.description || "-"}
+                              </td>
+                            </tr>
+
+                            <tr className="border-b border-slate-200">
+                              <td className="bg-slate-50 px-3 py-2 font-medium text-slate-700">
+                                Scoring Prompt
+                              </td>
+                              <td className="px-3 py-2">
+                                {param.prompt ? (
+                                  <MarkdownContent>{param.prompt}</MarkdownContent>
+                                ) : (
+                                  "-"
+                                )}
+                              </td>
+                            </tr>
+
+                            <tr>
+                              <td className="bg-slate-50 px-3 py-2 font-medium text-slate-700">
+                                Options
+                              </td>
+                              <td className="px-3 py-2">
+                                {(param.options?.length ?? 0) > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {param.options?.map((option: ParameterOptionDraft) => (
+                                      <Badge key={option.id} variant="indigo">
+                                        {option.label}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <Badge variant="indigo">
+                                    {param.minValue} - {param.maxValue}
+                                  </Badge>
+                                )}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -324,21 +324,21 @@ export default function ArticleTypesForm() {
           </div>
           <div className="col-span-3">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Pass Threshold
+              Pass Threshold{" "}
+              <span className="font-normal text-slate-400">(Accepts 0-10 only)</span>
             </label>
             <input
               type="number"
               value={form.passThreshold}
+              min={0}
+              max={10}
               onWheel={handleWheel}
-              // onChange={(e) =>
-              //   setForm((c) => ({ ...c, passThreshold: e.target.value }))
-              // }
               onChange={(e) => {
                 const value = Number(e.target.value);
-
+ 
                 if (value > 10) return;
-                if (value < 1 && e.target.value !== "") return;
-
+                if (value < 0 && e.target.value !== "") return;
+ 
                 setForm((c) => ({
                   ...c,
                   passThreshold: e.target.value,
@@ -360,7 +360,7 @@ export default function ArticleTypesForm() {
             }
             placeholder="The full AI scoring prompt for this article type..."
             rows={8}
-            className="w-full resize-y rounded-sm border border-border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+            className="w-full resize-y rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
           />
         </div>
 
