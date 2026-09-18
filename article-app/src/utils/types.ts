@@ -60,20 +60,6 @@ export interface ArticleListItem {
   authorName?: string;
 }
 
-export interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
-
-export interface UseMyArticlesOptions {
-  month?: string;
-  viewAll?: boolean;
-  page?: number;
-  limit?: number;
-}
-
 export interface ArticleRow {
   article: Omit<ArticleListItem, "authorName">;
   author?: { id: string; name: string };
@@ -86,6 +72,15 @@ export interface SmartPasteOptions {
    * Default false — R2 uploads handle binary; remote https srcs stay as URLs.
    */
   inlineRemoteImages: boolean;
+  /**
+   * Pasted/dropped images upload to R2 in a fire-and-forget async block, so
+   * the caller needs to know when one starts/ends to hold off letting the
+   * user submit mid-upload — otherwise a not-yet-inserted image is silently
+   * missing from the submitted content. Called once per file, and paired
+   * (every start eventually gets a matching end, success or failure).
+   */
+  onUploadStart?: () => void;
+  onUploadEnd?: () => void;
 }
 
 /**
@@ -114,7 +109,7 @@ export type AuthUser = {
   name: string;
   email: string;
   job_role: string;
-  auth_role: "super_admin" | "admin" | "user";
+  auth_role: "admin" | "user";
 };
 
 export type MeResponse = AuthUser & { is_active: boolean };

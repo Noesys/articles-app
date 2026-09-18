@@ -66,7 +66,7 @@ function NumericDistribution({ distribution }: { distribution: NumericDistributi
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              {bucket.value}: {bucket.count}
+              {bucket.count} {bucket.count === 1 ? "Article" : "Articles"} scored {bucket.value}
             </TooltipContent>
           </Tooltip>
         ))}

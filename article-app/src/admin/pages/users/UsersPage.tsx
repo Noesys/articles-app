@@ -30,7 +30,6 @@ async function fetchUsers(month?: string, submissionStatus?: "not_submitted"): P
 }
 
 const ROLE_ORDER = {
-  super_admin: 0,
   admin: 1,
   user: 2,
 } as const;
@@ -88,7 +87,7 @@ const UsersPage = () => {
     );
   };
 
-  const handleRoleChange = async (userId: string, nextRole: "user" | "admin" | "super_admin") => {
+  const handleRoleChange = async (userId: string, nextRole: "user" | "admin") => {
     await api(`/admin/users/${userId}/role`, {
       method: "PATCH",
       body: JSON.stringify({ role: nextRole }),

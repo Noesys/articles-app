@@ -150,10 +150,6 @@ export async function updateUserAuthRole(db: D1Database, id: string, role: strin
     throw badRequest("Invalid role");
   }
 
-  if (role === "super_admin") {
-    throw forbidden("Cannot change super_admin role");
-  }
-
   const result = await db
     .prepare(
       `

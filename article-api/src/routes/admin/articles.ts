@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { ArticleHistoryEntry } from "../../types/admin-types";
 import {
   changeArticleType,
+  getArticleAuthors,
   getArticleById,
   getArticleHistory,
   getArticles,
@@ -19,7 +20,7 @@ import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
 
 const articlesRoute = new Hono<AppEnv>();
-articlesRoute.use("*", requireRole("admin", "super_admin"));
+articlesRoute.use("*", requireRole("admin"));
 
 async function backgroundEvaluateArticle(
   db: D1Database,
@@ -60,6 +61,15 @@ articlesRoute.get("/stats", async (c) => {
 
   return c.json({
     message: "Stats fetched successfully",
+    data,
+  });
+});
+
+// All distinct authors, independent of month/status/type filters — for the authors filter dropdown.
+articlesRoute.get("/authors", async (c) => {
+  const data = await getArticleAuthors(c.env.DB);
+  return c.json({
+    message: "Authors fetched successfully",
     data,
   });
 });

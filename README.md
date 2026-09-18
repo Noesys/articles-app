@@ -34,6 +34,8 @@ Table article_types {
   score_prompt text [not null, default: '', note: 'AI instruction for producing the main score']
   score_min real [not null, default: 0]
   score_max real [not null, default: 10]
+  general_instructions text [note: 'general AI instructions applied across all parameters for this type']
+  is_evaluatable int [not null, default: 1, note: '1=evaluatable, 0=not suitable for scoring (e.g. "Not Suitable" type)']
   created_by text [not null, ref: > users.id]
   created_at text [not null]
   updated_at text [not null]
@@ -43,6 +45,7 @@ Table parameters {
   id text [pk]
   article_type_id text [not null, ref: > article_types.id]
   name text [not null, note: 'e.g. Grammar, Theme']
+  description text [note: 'human-readable description of what this parameter evaluates']
   prompt text [not null, note: 'AI instruction for evaluating this specific parameter']
   scope_type text [not null, note: 'numeric | option']
   min_value real [note: 'required when scope_type = numeric']
@@ -86,8 +89,15 @@ Table articles {
   scored_at text
   month_year text [not null, note: 'e.g. 2026-08']
   retry_count int [not null, default: 0]
+  emp_id text [note: 'employee identifier linkage, no FK enforced at seed time']
+  employee_email text
   created_at text
   updated_at text
+
+  indexes {
+    employee_email
+    emp_id
+  }
 }
 
 Table article_parameter_results {
@@ -122,21 +132,6 @@ Table article_history {
   snapshotted_at text [not null, note: 'when this row was written to history']
 }
 
-Table otp_codes {
-  id text [pk]
-  email text [not null]
-  code text [not null]
-  purpose text [not null, default: 'login', note: 'e.g. login']
-  expires_at text [not null]
-  created_at text [not null]
-  used_at text
-
-  indexes {
-    email
-    (email, code)
-  }
-}
-
 Table prompts {
   id text [pk]
   article_type_id text [unique, not null, ref: > article_types.id]
@@ -146,11 +141,6 @@ Table prompts {
   updated_at text [not null]
 }
 
-Table system_settings {
-  key text [pk]
-  value text [not null]
-  updated_at text
-}
 ```
 
 ---
@@ -1084,4 +1074,4 @@ All endpoints require:
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-Only users with `admin` or `super_admin` roles can access Admin APIs.
+Only users with `admin`  roles can access Admin APIs.

@@ -45,9 +45,11 @@ export type Article = {
   version: number;
   submitted_at: string;
   scored_at: string | null;
+  updated_at: string | null;
   month_year: string;
   retry_count: number;
   ai_feedback: string | null;
+  suggested_title: string | null;
 };
 
 export type ArticlePagination = {

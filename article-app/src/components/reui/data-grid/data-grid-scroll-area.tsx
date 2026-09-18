@@ -391,7 +391,11 @@ function DataGridScrollArea({
   }
 
   return (
-    <div ref={containerRef} className="relative">
+    // h-full: inert unless an ancestor gives this a definite height (e.g. a
+    // fixed-height virtualized viewport) — percentage heights with no
+    // definite ancestor resolve to auto, so ordinary content-sized usage is
+    // unaffected.
+    <div ref={containerRef} className="relative h-full">
       <ScrollAreaPrimitive.Root
         data-slot="data-grid-scroll-area"
         // Styling hook: present while the sticky-header scroll mode detects

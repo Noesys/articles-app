@@ -1,4 +1,5 @@
-import { ChevronDown, Clock, FileText, Pencil, Tag, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, Clock, FileText, Info, Pencil, Tag, Trash2 } from "lucide-react";
 import { formatDateToUSLocale } from "../../utils/date";
 import Badge from "../ui/Badge";
 import { ArticleTypeWithPrompt, ParameterOptionDraft } from "@/admin/utils/types";
@@ -58,7 +59,23 @@ function ActionButton({
   );
 }
 
+const INSTRUCTIONS_CLAMP_LINES = 4;
+
 function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: ArticleTypeCardProps) {
+  const [instructionsShowFull, setInstructionsShowFull] = useState(false);
+  const [instructionsOverflows, setInstructionsOverflows] = useState(false);
+  const instructionsClampRef = useRef<HTMLDivElement>(null);
+
+  // Only measurable while clamped (full text has no overflow to detect) and
+  // while the card is actually laid out (the collapsed-card grid trick keeps
+  // this mounted but at 0 height, which would always read as "no overflow").
+  useEffect(() => {
+    if (!isExpanded || instructionsShowFull) return;
+    const el = instructionsClampRef.current;
+    if (!el) return;
+    setInstructionsOverflows(el.scrollHeight > el.clientHeight + 1);
+  }, [isExpanded, instructionsShowFull, type.general_instructions]);
+
   return (
     <div className="group">
       <button
@@ -93,7 +110,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
           )}
         </div>
 
-        <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 shrink-0 ">
           <ActionButton
             icon={<Pencil size={15} />}
             label={`Edit ${type.name}`}
@@ -151,6 +168,7 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                     type.parameters as unknown as {
                       id: string;
                       name: string;
+                      description?: string | null;
                       prompt?: string | null;
                       scopeType: string;
                       options?: ParameterOptionDraft[] | null;
@@ -163,8 +181,22 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                         <div className="min-w-0 flex-1">
                           <h4 className="font-medium text-slate-900">{param.name}</h4>
 
+                          {param.description ? (
+                            <div className="mt-2">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                                Description
+                              </p>
+                              <p className="mt-0.5 text-sm text-slate-600">{param.description}</p>
+                            </div>
+                          ) : null}
+
                           {param.prompt ? (
-                            <MarkdownContent className="mt-1">{param.prompt}</MarkdownContent>
+                            <div className="mt-2">
+                              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                                Scoring Prompt
+                              </p>
+                              <MarkdownContent className="mt-0.5">{param.prompt}</MarkdownContent>
+                            </div>
                           ) : null}
                         </div>
 
@@ -189,6 +221,50 @@ function ArticleTypeCard({ type, isExpanded, onToggle, onEdit, onDelete }: Artic
                 </div>
               ) : (
                 <p className="text-sm text-slate-400 italic">No parameters configured.</p>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500 mb-2">
+                <Info size={13} />
+                General Instructions
+              </div>
+              {type.general_instructions ? (
+                <div>
+                  <div
+                    ref={instructionsClampRef}
+                    style={
+                      instructionsShowFull
+                        ? undefined
+                        : {
+                            display: "-webkit-box",
+                            WebkitLineClamp: INSTRUCTIONS_CLAMP_LINES,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }
+                    }
+                  >
+                    <MarkdownContent className="rounded-sm border border-slate-200 bg-white p-3 shadow-[var(--shadow-card)]">
+                      {type.general_instructions}
+                    </MarkdownContent>
+                  </div>
+                  {instructionsOverflows && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInstructionsShowFull((v) => !v);
+                      }}
+                      className="mt-1.5 text-xs font-medium text-teal-600 hover:text-teal-700"
+                    >
+                      {instructionsShowFull ? "Show less" : "Show more"}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 italic">
+                  No general instructions configured for this type.
+                </p>
               )}
             </div>
           </div>

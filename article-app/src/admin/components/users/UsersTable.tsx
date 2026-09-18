@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import {
   ColumnDef,
-  PaginationState,
   SortingState,
   useTable,
 } from "@tanstack/react-table";
@@ -18,10 +17,10 @@ import {
   dataGridFeatures,
   type DataGridFeatures,
 } from "@/components/reui/data-grid/data-grid";
-import { FilterSelect } from "@/components/ui/filter-select";
-import { SimplePagination } from "@/components/ui/simple-pagination";
-import { DataGridScrollArea } from "@/components/reui/data-grid/data-grid-scroll-area";
-import { DataGridTable } from "@/components/reui/data-grid/data-grid-table";
+import {
+  DataGridVirtualScrollArea,
+  fitRowsHeight,
+} from "@/components/reui/data-grid/data-grid-virtual-scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,10 +41,7 @@ import {
 import { cn } from "@/lib/utils";
 import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
 
-const ROW_OPTIONS = [10, 25, 50, 100] as const;
-
 const ROLE_LABELS: Record<AuthRole, string> = {
-  super_admin: "Super Admin",
   admin: "Admin",
   user: "User",
 };
@@ -60,7 +56,10 @@ function getInitials(name: string) {
 type UsersTableProps = {
   users: User[];
   loading?: boolean;
-  onToggleActive?: (userId: string, nextIsActive: boolean) => void | Promise<void>;
+  onToggleActive?: (
+    userId: string,
+    nextIsActive: boolean,
+  ) => void | Promise<void>;
   onRoleChange?: (userId: string, nextRole: AuthRole) => void | Promise<void>;
   onUserClick?: (userId: string) => void;
 };
@@ -78,42 +77,30 @@ export default function UsersTable({
   onUserClick,
 }: UsersTableProps) {
   const { user: currentUser } = useAuth();
-  const getViewportPageSize = () => {
-    if (typeof window === "undefined") return 10;
-    const rowH = 57, chrome = 380;
-    const avail = window.innerHeight - chrome;
-    return Math.min(100, Math.max(10, Math.floor(avail / rowH)));
-  };
-  const [pagination, setPagination] = useState<PaginationState>(() => ({
-    pageIndex: 0,
-    pageSize: getViewportPageSize(),
-  }));
-  const [sorting, setSorting] = useState<SortingState>([{ id: "name", desc: false }]);
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
   const [pending, setPending] = useState<PendingAction>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const canManageStatus = (target: User) =>
     !!currentUser &&
     currentUser.id !== target.id &&
-    ((currentUser.auth_role === "super_admin" &&
-      (target.auth_role === "admin" || target.auth_role === "user")) ||
-      (currentUser.auth_role === "admin" && target.auth_role === "user"));
+    currentUser.auth_role === "admin" &&
+    (target.auth_role === "admin" || target.auth_role === "user");
 
   const canViewArticles = (target: User) =>
     !!currentUser &&
     currentUser.id !== target.id &&
-    ((currentUser.auth_role === "super_admin" &&
-      (target.auth_role === "admin" || target.auth_role === "user")) ||
-      (currentUser.auth_role === "admin" &&
-        (target.auth_role === "admin" || target.auth_role === "user")));
+    currentUser.auth_role === "admin" &&
+    (target.auth_role === "admin" || target.auth_role === "user");
 
   const canPromote = (target: User) => target.auth_role === "user";
 
   const canDemote = (target: User) =>
     !!currentUser &&
-    currentUser.auth_role === "super_admin" &&
     currentUser.id !== target.id &&
-    target.auth_role === "admin";
+    currentUser.auth_role === "admin" && target.auth_role === "admin";
 
   const columns = useMemo<ColumnDef<DataGridFeatures, User>[]>(
     () => [
@@ -129,7 +116,9 @@ export default function UsersTable({
               <div
                 className={cn(
                   "size-8 shrink-0 rounded-full flex items-center justify-center text-xs font-semibold",
-                  active ? "bg-teal-600 text-white" : "bg-slate-200 text-slate-500",
+                  active
+                    ? "bg-teal-600 text-white"
+                    : "bg-slate-200 text-slate-500",
                 )}
               >
                 {getInitials(u.name)}
@@ -167,9 +156,10 @@ export default function UsersTable({
               variant="outline"
               className={cn(
                 "font-medium border-transparent",
-                role === "super_admin" && "bg-teal-50 text-teal-800 ring-1 ring-teal-300/80",
-                role === "admin" && "bg-sky-50 text-sky-700 ring-1 ring-sky-200/80",
-                role === "user" && "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80",
+                role === "admin" &&
+                  "bg-sky-50 text-sky-700 ring-1 ring-sky-200/80",
+                role === "user" &&
+                  "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80",
               )}
             >
               {ROLE_LABELS[role]}
@@ -227,7 +217,11 @@ export default function UsersTable({
                   )}
                   onClick={() => setPending({ type: "status", user: u })}
                 >
-                  {active ? <UserX className="size-3.5" /> : <UserCheck className="size-3.5" />}
+                  {active ? (
+                    <UserX className="size-3.5" />
+                  ) : (
+                    <UserCheck className="size-3.5" />
+                  )}
                   {active ? "Deactivate" : "Activate"}
                 </Button>
               )}
@@ -236,7 +230,9 @@ export default function UsersTable({
                   size="sm"
                   variant="outline"
                   className="h-7 px-2.5 text-xs font-medium shadow-none border-slate-200 text-slate-700 hover:bg-slate-50"
-                  onClick={() => setPending({ type: "role", user: u, role: "admin" })}
+                  onClick={() =>
+                    setPending({ type: "role", user: u, role: "admin" })
+                  }
                 >
                   <ArrowUpCircle className="size-3.5" />
                   Promote
@@ -247,7 +243,9 @@ export default function UsersTable({
                   size="sm"
                   variant="outline"
                   className="h-7 px-2.5 text-xs font-medium shadow-none border-slate-200 text-slate-700 hover:bg-slate-50"
-                  onClick={() => setPending({ type: "role", user: u, role: "user" })}
+                  onClick={() =>
+                    setPending({ type: "role", user: u, role: "user" })
+                  }
                 >
                   <ArrowDownCircle className="size-3.5" />
                   Demote
@@ -257,10 +255,10 @@ export default function UsersTable({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-7 px-2.5 text-xs font-medium text-teal-700 hover:bg-teal-50 hover:text-teal-800"
+                  className="h-7 px-2.5 text-xs font-medium bg-teal-500 text-white hover:bg-teal-500 hover:text-white"
                   onClick={() => onUserClick?.(u.id)}
                 >
-                  Articles
+                  View Articles
                 </Button>
               )}
             </div>
@@ -275,13 +273,12 @@ export default function UsersTable({
     features: dataGridFeatures,
     columns,
     data: users,
-    pageCount: Math.ceil((users.length || 0) / pagination.pageSize),
+    pageCount: 1,
     getRowId: (row) => row.id,
     state: {
-      pagination,
+      pagination: { pageIndex: 0, pageSize: users.length || 1 },
       sorting,
     },
-    onPaginationChange: setPagination,
     onSortingChange: setSorting,
   });
 
@@ -313,30 +310,13 @@ export default function UsersTable({
       <DataGrid
         table={table}
         recordCount={users.length}
-        tableLayout={contiqTableLayout}
+        tableLayout={{ ...contiqTableLayout, headerSticky: true }}
         tableClassNames={contiqTableClassNames}
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
-            <DataGridScrollArea>
-              <DataGridTable />
-            </DataGridScrollArea>
+            <DataGridVirtualScrollArea height={fitRowsHeight(users.length, "100vh")} />
           </DataGridContainer>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">Rows per page</span>
-              <FilterSelect
-                value={String(pagination.pageSize)}
-                onValueChange={(v) => setPagination((p) => ({ ...p, pageIndex: 0, pageSize: Math.min(100, Math.max(5, parseInt(v, 10) || 10)) }))}
-                options={[...new Set([...ROW_OPTIONS, pagination.pageSize])].sort((a,b)=>a-b).map((n) => ({ value: String(n), label: String(n) }))}
-                searchable={false}
-                className="w-[90px]"
-                triggerClassName="h-8"
-                aria-label="Rows per page"
-              />
-            </div>
-            <SimplePagination page={pagination.pageIndex + 1} total={users.length} pageSize={pagination.pageSize} onChange={(p) => setPagination((prev) => ({ ...prev, pageIndex: p - 1 }))} />
-          </div>
         </div>
       </DataGrid>
 
@@ -346,30 +326,38 @@ export default function UsersTable({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{statusActive ? "Deactivate" : "Activate"} user?</DialogTitle>
+            <DialogTitle>
+              {statusActive ? "Deactivate" : "Activate"} user?
+            </DialogTitle>
             <DialogDescription>
               {statusActive
                 ? "They'll immediately lose access and won't be able to sign in until reactivated."
                 : "They'll regain access and be able to sign in again."}
             </DialogDescription>
           </DialogHeader>
-          {statusUser?.auth_role === "super_admin" && (
-            <div className="flex items-start gap-2 rounded-sm bg-teal-50 px-3 py-2 text-xs text-teal-800">
-              <ShieldCheck size={14} className="shrink-0 mt-0.5" />
-              This is a super admin account. Make sure this action is intended.
-            </div>
-          )}
           <DialogFooter>
-            <Button variant="outline" disabled={submitting} onClick={() => setPending(null)}>
+            <Button
+              variant="outline"
+              disabled={submitting}
+              onClick={() => setPending(null)}
+            >
               Cancel
             </Button>
             <Button
               disabled={submitting}
               variant={statusActive ? "destructive" : "default"}
-              className={!statusActive ? "bg-emerald-600 hover:bg-emerald-700" : undefined}
+              className={
+                !statusActive
+                  ? "bg-emerald-600 hover:bg-emerald-700"
+                  : undefined
+              }
               onClick={confirm}
             >
-              {submitting ? "Please wait..." : statusActive ? "Deactivate" : "Activate"}
+              {submitting
+                ? "Please wait..."
+                : statusActive
+                  ? "Deactivate"
+                  : "Activate"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -392,7 +380,11 @@ export default function UsersTable({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" disabled={submitting} onClick={() => setPending(null)}>
+            <Button
+              variant="outline"
+              disabled={submitting}
+              onClick={() => setPending(null)}
+            >
               Cancel
             </Button>
             <Button disabled={submitting} onClick={confirm}>

@@ -1,24 +1,25 @@
 import { Check, Copy } from "lucide-react";
 import { useState } from "react";
-
-function htmlToPlainText(html: string): string {
-  if (typeof document === "undefined") return html;
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return (tmp.textContent ?? tmp.innerText ?? "").replace(/\u00A0/g, " ");
-}
+import { buildExportMarkdown } from "./articleExport";
 
 export default function ArticleCopyButton({ title, text }: { title: string; text: string }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const plainText = htmlToPlainText(text);
-    const copyText = `# ${title}\n\n${plainText}`;
-
-    navigator.clipboard.writeText(copyText);
-    setCopied(true);
-
+  const handleCopy = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
+    try {
+      const markdown = await buildExportMarkdown(title, text);
+      // Markdown syntax (headings, ![alt](src)) isn't HTML — a text/html
+      // clipboard entry previously carried this same string, so paste
+      // destinations that prefer text/html (Word, Gmail, Slack, ...) rendered
+      // only the literal <img> tags as images and everything else as inert
+      // text, including any image left in ![]() form. Plain text is the
+      // correct, single representation of "copy the markdown".
+      await navigator.clipboard.writeText(markdown);
+    } catch {
+      await navigator.clipboard.writeText(`# ${title}\n\n${text}`);
+    }
+    setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 

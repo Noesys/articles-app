@@ -9,7 +9,7 @@ export function RoleBasedRoute({
   allowedRoles,
 }: {
   children: ReactNode;
-  allowedRoles: ("super_admin" | "admin" | "user")[];
+  allowedRoles: ("admin" | "user")[];
 }) {
   const { user, loading } = useAuth();
 
@@ -28,7 +28,7 @@ export function RoleBasedRoute({
   }
 
   if (!allowedRoles.includes(user.auth_role)) {
-    const isAdmin = user.auth_role === "admin" || user.auth_role === "super_admin";
+    const isAdmin = user.auth_role === "admin";
     // admin hitting user-only route -> admin home; user hitting admin -> user home
     const adminOnly = allowedRoles.every((r) => r !== "user");
     if (adminOnly) return <Navigate to="/" replace />;

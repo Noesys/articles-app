@@ -9,13 +9,12 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
 
-/**
- * Single source of truth for Tiptap extensions.
- * Both TiptapEditor.tsx (editable) and ArticleViewer.tsx (read-only)
- * import this so HTML renders identically in both modes.
- */
+/** Extensions for ArticleViewer.tsx's read-only render. */
 export const tiptapExtensions = [
-  StarterKit,
+  StarterKit.configure({
+    link: false,
+    underline: false,
+  }),
   Underline,
   Link.configure({
     openOnClick: false,

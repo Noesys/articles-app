@@ -25,7 +25,7 @@ export type AuthenticatedUser = {
   email: string;
   name: string;
   job_role: string;
-  auth_role: string; // "user" | "admin" | "super_admin"
+  auth_role: string; // "user" | "admin"
   is_active: number;
 };
 

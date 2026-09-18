@@ -141,8 +141,57 @@ export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResu
     user = await findUserByEmail(c.env.DB, email);
   }
 
+  // update old user names
+  if (user) {
+    const resolvedName = name?.trim();
+    const resolvedJobTitle = jobTitle?.trim();
+
+    const shouldUpdateName =
+      resolvedName &&
+      (
+        !user.name ||
+        user.name === nameFromEmail(user.email)
+      );
+
+    const shouldUpdateJobRole =
+      resolvedJobTitle &&
+      (!user.job_role || user.job_role.trim() === "");
+
+    if (shouldUpdateName || shouldUpdateJobRole) {
+      await c.env.DB.prepare(`
+        UPDATE users
+        SET
+          name = COALESCE(?, name),
+          job_role = COALESCE(?, job_role)
+        WHERE id = ?
+      `)
+        .bind(
+          shouldUpdateName ? resolvedName : null,
+          shouldUpdateJobRole ? resolvedJobTitle : null,
+          user.id
+        )
+        .run();
+
+      user = await findUserByEmail(c.env.DB, email);
+    }
+  }
+
   if (!user || user.is_active !== 1) {
     return { ok: false, status: 403, message: "Forbidden: Account inactive" };
+  }
+
+  // Legacy compatibility: "super_admin" predates the current admin/user role
+  // model. Treat those accounts as "admin" instead of rejecting them below,
+  // and self-heal the row so future requests skip this branch entirely.
+  if ((user.auth_role as string) === "super_admin") {
+    await c.env.DB.prepare(`UPDATE users SET auth_role = 'admin' WHERE id = ?`)
+      .bind(user.id)
+      .run();
+    user = { ...user, auth_role: "admin" };
+  }
+
+  if (user.auth_role !== "admin" && user.auth_role !== "user") {
+    return { ok: false, status: 403, message: "Forbidden: Invalid role" };
   }
 
   return { ok: true, user };

@@ -2,11 +2,13 @@ import Header from "../components/Header";
 import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { FilterSelect } from "@/components/ui/filter-select";
-import { ChevronLeft, Send, Loader2 } from "lucide-react";
+import { ChevronLeft, Send, Loader2, CheckCircle2 } from "lucide-react";
+import MarkdownContent from "@/components/markdown/MarkdownContent";
 import { api } from "../http-client";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminHeader from "@/admin/components/AdminHeader";
 import { serializeArticleContent } from "@/utils/serializeArticleContent";
+import { countWords } from "@/utils/countWords";
 
 const TiptapEditor = lazy(() => import("@/components/editor/TiptapEditor"));
 const ArticleViewer = lazy(
@@ -23,7 +25,12 @@ function EditorFallback() {
 
 type CreateResponse = { id: string; status: string };
 type FormValues = { article_type_id: string; title: string; content: string };
-type ArticleType = { id: string; name: string; description: string | null };
+type ArticleType = {
+  id: string;
+  name: string;
+  description: string | null;
+  general_instructions?: string | null;
+};
 
 export default function ArticleCreation() {
   const navigate = useNavigate();
@@ -32,13 +39,24 @@ export default function ArticleCreation() {
   const [typesError, setTypesError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [values, setValues] = useState<FormValues>({
     article_type_id: "",
     title: "",
     content: "",
   });
-  const [editorView, setEditorView] = useState<"editor" | "preview">("editor");
+  const [editorView, setEditorView] = useState<
+    "editor" | "preview" | "instructions"
+  >("editor");
+  const [instructionsText, setInstructionsText] = useState<string | null>(null);
   const { user } = useAuth();
+  const wordCount = countWords(values.content);
+  const isWordCountValid = wordCount >= 1000;
+  const wordCountColor = isWordCountValid
+    ? "text-emerald-600"
+    : wordCount >= 500
+      ? "text-amber-600"
+      : "text-slate-500";
   useEffect(() => {
     let active = true;
 
@@ -88,6 +106,16 @@ export default function ArticleCreation() {
       return;
     }
 
+    if (countWords(values.content) < 1000) {
+      setError("Article must contain at least 1000 words");
+      return;
+    }
+
+    if (isUploadingImages) {
+      setError("Please wait for image uploads to finish before submitting");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await api<CreateResponse>("/articles", {
@@ -106,8 +134,8 @@ export default function ArticleCreation() {
         );
       } catch {}
       navigate(
-        user?.auth_role === "admin" || user?.auth_role === "super_admin"
-          ? "/admin/my-article"
+        user?.auth_role === "admin"
+          ? "/admin/articles"
           : "/",
       );
     } catch (err) {
@@ -124,8 +152,8 @@ export default function ArticleCreation() {
         <button
           onClick={() =>
             navigate(
-              user?.auth_role === "admin" || user?.auth_role === "super_admin"
-                ? "/admin/my-article"
+              user?.auth_role === "admin"
+                ? "/admin/articles"
                 : "/",
             )
           }
@@ -154,9 +182,17 @@ export default function ArticleCreation() {
 
               <FilterSelect
                 value={values.article_type_id}
-                onValueChange={(value: string) =>
-                  setValues({ ...values, article_type_id: value })
-                }
+                onValueChange={(value: string) => {
+                  setValues({ ...values, article_type_id: value });
+                  const t = types.find((x) => x.id === value);
+                  const instr = (t as any)?.general_instructions?.trim() as
+                    | string
+                    | undefined;
+                  setInstructionsText(instr || null);
+                  if (!instr && editorView === "instructions") {
+                    setEditorView("editor");
+                  }
+                }}
                 options={types.map((t) => ({
                   value: t.id,
                   label: t.description
@@ -191,59 +227,102 @@ export default function ArticleCreation() {
               </label>
 
               <div className="space-y-2">
-                <div className="flex bg-slate-100 rounded-sm p-0.5 w-fit">
-                  <button
-                    type="button"
-                    onClick={() => setEditorView("editor")}
-                    className={`px-3 py-1 text-xs font-medium rounded-md ${
-                      editorView === "editor"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    Editor
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditorView("preview")}
-                    className={`px-3 py-1 text-xs font-medium rounded-md ${
-                      editorView === "preview"
-                        ? "bg-white text-slate-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    Preview
-                  </button>
-                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex bg-slate-100 rounded-sm p-0.5 w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setEditorView("editor")}
+                      className={`px-3 py-1 text-xs font-medium rounded-md ${
+                        editorView === "editor"
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      Editor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditorView("preview")}
+                      className={`px-3 py-1 text-xs font-medium rounded-md ${
+                        editorView === "preview"
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      Preview
+                    </button>
+                    {instructionsText && (
+                      <button
+                        type="button"
+                        onClick={() => setEditorView("instructions")}
+                        className={`px-3 py-1 text-xs font-medium rounded-md ${
+                          editorView === "instructions"
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-500 hover:text-slate-700"
+                        }`}
+                      >
+                        Instructions
+                      </button>
+                    )}
+                  </div>
 
+                  <div className="flex items-center gap-1.5 text-xs">
+                    <span className={wordCountColor}>
+                      Word count: {wordCount}
+                    </span>
+                    {isWordCountValid ? (
+                      <>
+                        <CheckCircle2 size={12} className="text-emerald-600" />
+                        <span className="text-emerald-600">
+                          Ready to submit
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-slate-400">(min 1000)</span>
+                    )}
+                  </div>
+                </div>
                 <Suspense fallback={<EditorFallback />}>
                   {editorView === "editor" && (
                     <TiptapEditor
                       value={values.content}
                       onChange={(content) => setValues({ ...values, content })}
+                      onUploadingChange={setIsUploadingImages}
                     />
                   )}
                   {editorView === "preview" && (
                     <ArticleViewer content={values.content} />
+                  )}
+                  {editorView === "instructions" && instructionsText && (
+                    <div className="min-h-[240px] rounded-sm border border-slate-200 bg-white p-4 shadow-sm">
+                      <MarkdownContent>{instructionsText}</MarkdownContent>
+                    </div>
                   )}
                 </Suspense>
               </div>
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {isUploadingImages && (
+              <p className="text-xs text-amber-600">
+                Uploading image(s)… please wait before submitting.
+              </p>
+            )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white text-sm font-medium rounded-sm py-2.5 transition-colors"
-            >
-              {submitting ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <Send size={15} />
-              )}
-              {submitting ? "Submitting..." : "Submit Article"}
-            </button>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={submitting || !isWordCountValid || isUploadingImages}
+                className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white text-xs font-medium rounded-sm px-4 py-3 transition-colors"
+              >
+                {submitting ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <Send size={12} />
+                )}
+                {submitting ? "Submitting..." : "Submit Article"}
+              </button>
+            </div>
           </form>
         </div>
       </div>

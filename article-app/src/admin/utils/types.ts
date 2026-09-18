@@ -27,6 +27,7 @@ export type ArticleSummary = {
   status: ArticleStatus;
   created_at: string;
   author_name: string;
+  user_id: string;
   submitted_at: string;
   month_year: string;
   parameters: ArticleParameterResult[];
@@ -52,6 +53,7 @@ export type ArticleType = {
   id: string;
   name: string;
   description: string | null;
+  general_instructions?: string | null;
   is_active: number;
   pass_threshold: number;
   created_by: string;
@@ -71,6 +73,7 @@ export type ParameterOptionDraft = { id?: string; label: string };
 export type ParameterDraft = {
   id: string;
   name: string;
+  description: string;
   prompt: string;
   scopeType: ScopeType;
   minValue: string;
@@ -82,6 +85,7 @@ export type ParameterDraft = {
 export type FormState = {
   name: string;
   description: string;
+  generalInstructions: string;
   promptContent: string;
   scoreMin: string;
   scoreMax: string;
@@ -102,6 +106,7 @@ export type ArticleTypeResponse = {
 export type ParameterResponse = {
   id: string;
   name: string;
+  description: string | null;
   prompt: string;
   scope_type: ScopeType;
   min_value: number | null;
@@ -110,7 +115,7 @@ export type ParameterResponse = {
 };
 
 // users
-export type AuthRole = "super_admin" | "admin" | "user";
+export type AuthRole = "admin" | "user";
 
 export type User = {
   id: string;

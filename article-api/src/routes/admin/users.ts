@@ -16,7 +16,7 @@ import {
 import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 const usersRoute = new Hono<AppEnv>();
-usersRoute.use("*", requireRole("admin", "super_admin"));
+usersRoute.use("*", requireRole("admin"));
 
 function parseUpdateUserBody(
   body: unknown,
@@ -112,10 +112,6 @@ usersRoute.patch("/:id/role", async (c) => {
   }
 
   const currentUser = c.get("user");
-
-  if (targetUser.auth_role === "super_admin" && currentUser.auth_role !== "super_admin") {
-    return c.json({ message: "Cannot modify super admin users" }, 403);
-  }
 
   await updateUserAuthRole(c.env.DB, id, body.role);
   return c.json({ message: "User role updated successfully" });

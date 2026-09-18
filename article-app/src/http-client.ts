@@ -34,6 +34,7 @@ async function fetchWithAuth<T>(
   let res: Response;
   try {
     res = await fetch(`${API_BASE}${path}`, {
+      cache: "no-store",
       ...options,
       headers,
       credentials: "include",

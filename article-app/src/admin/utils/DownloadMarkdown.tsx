@@ -1,4 +1,5 @@
 import { Download } from "lucide-react";
+import { buildExportMarkdown } from "./articleExport";
 
 type DownloadMarkdownButtonProps = {
   title: string;
@@ -11,8 +12,8 @@ export function DownloadMarkdownButton({
   content,
   filename = "document.md",
 }: DownloadMarkdownButtonProps) {
-  const handleDownload = () => {
-    const markdown = `# ${title}\n\n${content}`;
+  const handleDownload = async () => {
+    const markdown = await buildExportMarkdown(title, content);
 
     const blob = new Blob([markdown], {
       type: "text/markdown;charset=utf-8",
@@ -34,7 +35,10 @@ export function DownloadMarkdownButton({
   return (
     <button
       type="button"
-      onClick={handleDownload}
+      onClick={(e) => {
+        e.stopPropagation();
+      handleDownload( );
+      }}
       className="inline-flex items-center gap-2 rounded-md cursor-pointer px-3 py-2 text-sm text-gray-500"
     >
       <Download className="h-4 w-4" />

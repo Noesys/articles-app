@@ -260,7 +260,7 @@
 
 ### 5. Role-Based Post-Login Redirect
 
-**Decision:** After login, users redirected to "/" while admins (auth_role = "admin" or "super_admin") redirected to "/admin/articles" based on JWT token claims.
+**Decision:** After login, users redirected to "/" while admins (auth_role = "admin") redirected to "/admin/articles" based on JWT token claims.
 
 **Why:** Regular users and admins need substantially different experiences (user dashboard vs article type/parameter management). Role-based redirect more efficient than unified dashboard with visibility toggles—prevents admin clutter and provides immediate contextual relevance.
 
