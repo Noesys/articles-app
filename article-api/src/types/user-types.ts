@@ -22,6 +22,7 @@ export type ArticleHistory = {
   id: string;
   article_id: string;
   article_type_id: string;
+  article_type_name: string | null;
   title: string;
   ai_feedback: string | null;
   content: string;

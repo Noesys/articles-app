@@ -218,6 +218,8 @@ articleRoutes.get("/mine/:id", async (c) => {
           status: item.status ?? "pending",
           submitted_at: item.submitted_at,
           snapshotted_at: item.snapshotted_at,
+          article_type_id: item.article_type_id,
+          article_type_name: item.article_type_name,
         };
       }),
     },

@@ -31,6 +31,8 @@ export interface HistoryItem {
   status: "approved" | "rewrite_required" | "pending" | "failed";
   submitted_at: string;
   snapshotted_at?: string;
+  article_type_id?: string;
+  article_type_name?: string | null;
 }
 
 export type ParameterResult = {

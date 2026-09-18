@@ -111,6 +111,8 @@ export default function AdminArticleDetail() {
         status?: string;
         submitted_at?: string;
         snapshotted_at?: string;
+        article_type_id?: string;
+        article_type_name?: string | null;
       }) => ({
         article_id: h.article_id || (h.id as string) || "",
         version: h.version,
@@ -121,6 +123,8 @@ export default function AdminArticleDetail() {
         status: h.status || "pending",
         submitted_at: (h.submitted_at || h.snapshotted_at || "") as string,
         snapshotted_at: h.snapshotted_at || "",
+        article_type_id: h.article_type_id,
+        article_type_name: h.article_type_name,
       }),
     );
     setHistory(hist as HistoryItem[]);
@@ -184,6 +188,7 @@ export default function AdminArticleDetail() {
     : (currentFeedback ?? "");
   const displayStatus = effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
+  const displayTypeName = effectiveSnapshot?.article_type_name ?? article?.article_type_name ?? "";
   const suggestedTitle = !effectiveSnapshot ? (article?.suggested_title ?? null) : null;
 
   const isFailed = displayStatus === "failed";
@@ -686,7 +691,7 @@ export default function AdminArticleDetail() {
                 {article && (
                   <div className="flex items-center">
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-sm px-2.5 py-1">
-                      {article.article_type_name}
+                      {displayTypeName}
                     </span>
                     <ArticleCopyButton title={displayTitle} text={displayContent} />
                     <DownloadMarkdownButton

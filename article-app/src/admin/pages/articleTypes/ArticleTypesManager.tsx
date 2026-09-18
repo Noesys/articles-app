@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { ArticleTypeWithPrompt } from "@/admin/utils/types";
 import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Autocomplete,
   AutocompleteContent,
@@ -19,10 +20,33 @@ import {
 
 type ArticleTypesManagerProps = {
   articleTypes: ArticleTypeWithPrompt[];
+  loading?: boolean;
   onDelete?: (id: string) => void | Promise<void>;
 };
 
-export default function ArticleTypesManager({ articleTypes, onDelete }: ArticleTypesManagerProps) {
+/** Mirrors an ArticleTypeCard's collapsed row so the skeleton doesn't shift layout once data arrives. */
+function ArticleTypeCardSkeleton() {
+  return (
+    <div className="flex w-full items-center gap-3 px-4 py-3.5 bg-teal-25">
+      <Skeleton className="h-9 w-9 shrink-0 rounded-sm" />
+      <div className="flex-1 min-w-0 space-y-2">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-3.5 w-64" />
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <Skeleton className="h-8 w-8 rounded-md" />
+        <Skeleton className="h-8 w-8 rounded-md" />
+      </div>
+      <Skeleton className="h-4 w-4 shrink-0 rounded-sm" />
+    </div>
+  );
+}
+
+export default function ArticleTypesManager({
+  articleTypes,
+  loading = false,
+  onDelete,
+}: ArticleTypesManagerProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const navigate = useNavigate();
   const [deleteTarget, setDeleteTarget] = useState<ArticleTypeWithPrompt | null>(null);
@@ -64,7 +88,11 @@ export default function ArticleTypesManager({ articleTypes, onDelete }: ArticleT
     <PageShell>
       <PageHeader
         title="Article types"
-        subtitle={`${articleTypes.length} ${articleTypes.length === 1 ? "type" : "types"}`}
+        subtitle={
+          loading
+            ? "Loading…"
+            : `${articleTypes.length} ${articleTypes.length === 1 ? "type" : "types"}`
+        }
         actions={
           <Button type="button" size="lg" onClick={() => navigate("/admin/article-types/new")}>
             <Plus size={16} />
@@ -109,7 +137,13 @@ export default function ArticleTypesManager({ articleTypes, onDelete }: ArticleT
       </FilterToolbar>
 
       <div className="w-full">
-        {articleTypes.length === 0 ? (
+        {loading ? (
+          <div className="divide-y divide-slate-100 overflow-hidden rounded-sm border border-slate-200 bg-white shadow-[var(--shadow-card)]">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <ArticleTypeCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : articleTypes.length === 0 ? (
           <EmptyState
             icon={<Tag size={20} />}
             title="No article types yet"

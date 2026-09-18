@@ -11,6 +11,8 @@ export interface ArticleHistoryEntry {
   submitted_at: string | null;
   scored_at: string | null;
   snapshotted_at: string;
+  article_type_id: string;
+  article_type_name: string | null;
 }
 
 // article types

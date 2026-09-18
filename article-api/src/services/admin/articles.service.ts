@@ -191,20 +191,23 @@ export async function getArticleHistory(
     .prepare(
       `
       SELECT
-        id,
-        article_id,
-        version,
-        title,
-        content,
-        ai_score,
-        ai_feedback,
-        status,
-        submitted_at,
-        scored_at,
-        snapshotted_at
-      FROM article_history
-      WHERE article_id = ?
-      ORDER BY version ASC
+        h.id,
+        h.article_id,
+        h.version,
+        h.title,
+        h.content,
+        h.ai_score,
+        h.ai_feedback,
+        h.status,
+        h.submitted_at,
+        h.scored_at,
+        h.snapshotted_at,
+        h.article_type_id,
+        at.name AS article_type_name
+      FROM article_history h
+      LEFT JOIN article_types at ON at.id = h.article_type_id
+      WHERE h.article_id = ?
+      ORDER BY h.version ASC
       `,
     )
     .bind(articleId)

@@ -15,6 +15,7 @@ export async function getArticleHistory(
           h.id,
           h.article_id,
           h.article_type_id,
+          at.name AS article_type_name,
           h.title,
           h.ai_feedback,
           h.content,
@@ -25,6 +26,7 @@ export async function getArticleHistory(
           h.scored_at,
           h.snapshotted_at
         FROM article_history h
+        LEFT JOIN article_types at ON at.id = h.article_type_id
         ${userId ? "JOIN articles a ON a.id = h.article_id" : ""}
         WHERE h.article_id = ?
         ${userId ? "AND a.user_id = ?" : ""}

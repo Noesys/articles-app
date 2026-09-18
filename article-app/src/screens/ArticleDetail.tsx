@@ -144,6 +144,8 @@ export default function ArticleDetail() {
   const displayStatus =
     effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
+  const displayTypeName =
+    effectiveSnapshot?.article_type_name ?? article?.article_type_name ?? "";
 
   const isFailed = displayStatus === "failed";
 
@@ -827,7 +829,7 @@ export default function ArticleDetail() {
                 {article && (
                   <div className="flex items-center">
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-sm px-2.5 py-1">
-                      {article.article_type_name}
+                      {displayTypeName}
                     </span>
                       <ArticleCopyButton title={title} text={content} />
                     <DownloadMarkdownButton
