@@ -8,6 +8,10 @@ import AdminHeader from "./admin/components/AdminHeader";
 import Footer from "./components/Footer";
 
 const MyArticles = lazy(() => import("./screens/MyArticles"));
+const ExploreArticles = lazy(() => import("./screens/ExploreArticles"));
+const ExploreArticleView = lazy(() =>
+  import("./screens/ExploreArticles").then((m) => ({ default: m.ExploreArticleView })),
+);
 const ArticleCreation = lazy(() => import("./screens/ArticleCreation"));
 const ArticleDetail = lazy(() => import("./screens/ArticleDetail"));
 const AllArticles = lazy(() => import("./admin/pages/articles/AllArticles"));
@@ -97,6 +101,26 @@ export default function App() {
           <ProtectedRoute>
             <UserLayout>
               <ArticleCreation />
+            </UserLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/explore"
+        element={
+          <ProtectedRoute>
+            <UserLayout>
+              <ExploreArticles />
+            </UserLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/explore/:id"
+        element={
+          <ProtectedRoute>
+            <UserLayout>
+              <ExploreArticleView />
             </UserLayout>
           </ProtectedRoute>
         }
