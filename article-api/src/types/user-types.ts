@@ -1,8 +1,13 @@
+export interface AIParameterEvaluation {
+  value: string | number;
+  feedback: string;
+}
+
 export interface AIEvaluationResult {
   score: number;
   feedback: string;
   suggested_title: string;
-  parameters: Record<string, string | number>;
+  parameters: Record<string, AIParameterEvaluation>;
 }
 
 export type User = {
@@ -121,6 +126,7 @@ export interface ParameterResultInput {
   value: string;
   option_id: string | null;
   numeric_value: number | null;
+  feedback: string | null;
 }
 
 export interface EvaluationOutcome {
