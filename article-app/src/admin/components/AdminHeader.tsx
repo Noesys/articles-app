@@ -1,5 +1,6 @@
 import {
   ChartNoAxesCombined,
+  Compass,
   FileText,
   LogOut,
   Menu,
@@ -35,6 +36,13 @@ const NAV_ITEMS = [
     icon: Tags,
     to: "/admin/article-types",
     activeMatch: ["/admin/article-types"],
+  },
+  {
+    key: "explore",
+    label: "Explore Articles",
+    icon: Compass,
+    to: "/explore",
+    activeMatch: ["/explore"],
   },
   {
     key: "users",

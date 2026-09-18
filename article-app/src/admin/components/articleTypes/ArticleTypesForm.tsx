@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, WheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, WheelEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { ChevronLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown/markdownComponents";
@@ -13,6 +13,7 @@ import {
   FormState,
   ParameterDraft,
   ParameterResponse,
+  ParameterSearchResult,
 } from "@/admin/utils/types";
 import ArticleTypesParameterModal from "./ArticleTypesParameterModal";
 import {
@@ -114,6 +115,62 @@ export default function ArticleTypesForm() {
     null,
   );
   const [instructionsPreviewOpen, setInstructionsPreviewOpen] = useState(false);
+
+  // "Copy from existing parameter" search — independent of isEditing, since
+  // it should work while creating a brand-new type too.
+  const [allParameters, setAllParameters] = useState<ParameterSearchResult[]>([]);
+  const [paramSearchQuery, setParamSearchQuery] = useState("");
+  const [paramSearchOpen, setParamSearchOpen] = useState(false);
+  const paramSearchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    api<ParameterSearchResult[]>("/admin/article-types/parameters/all")
+      .then(setAllParameters)
+      .catch((err) => console.error("Failed to load parameters for search:", err));
+  }, []);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (paramSearchRef.current && !paramSearchRef.current.contains(e.target as Node)) {
+        setParamSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const paramSearchResults = useMemo(() => {
+    const q = paramSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return allParameters
+      .filter((p) => p.article_type_id !== id)
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.options.some((o) => o.label.toLowerCase().includes(q)),
+      )
+      .slice(0, 20);
+  }, [allParameters, paramSearchQuery, id]);
+
+  const handleCopyParameter = (p: ParameterSearchResult) => {
+    setModalDraft({
+      id: crypto.randomUUID(),
+      name: p.name,
+      description: p.description ?? "",
+      prompt: p.prompt,
+      scopeType: p.scope_type,
+      minValue: p.min_value?.toString() ?? "0",
+      maxValue: p.max_value?.toString() ?? "10",
+      // No id carried over — these must be treated as brand-new options
+      // under the new parameter, never referencing the source's option
+      // rows (which belong to a different parameter_id entirely).
+      options: p.options.map((o) => ({ label: o.label })),
+      isNew: true,
+    });
+    setModalOpen(true);
+    setParamSearchQuery("");
+    setParamSearchOpen(false);
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -378,6 +435,57 @@ export default function ArticleTypesForm() {
             >
               Add Parameter
             </Button>
+          </div>
+
+          <div ref={paramSearchRef} className="relative mb-3">
+            <div className="relative">
+              <Search
+                size={14}
+                className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type="text"
+                value={paramSearchQuery}
+                onChange={(e) => {
+                  setParamSearchQuery(e.target.value);
+                  setParamSearchOpen(true);
+                }}
+                onFocus={() => setParamSearchOpen(true)}
+                placeholder="Search existing parameters to reuse (e.g. Authenticity)..."
+                className="w-full rounded-sm border border-border bg-white py-2 pr-3 pl-8 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+              />
+            </div>
+            {paramSearchOpen && paramSearchQuery.trim() && (
+              <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-sm border border-slate-200 bg-white shadow-lg">
+                {paramSearchResults.length === 0 ? (
+                  <p className="px-3 py-2.5 text-sm text-slate-400">
+                    No matching parameters found.
+                  </p>
+                ) : (
+                  paramSearchResults.map((p) => (
+                    <button
+                      key={`${p.article_type_id}:${p.id}`}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleCopyParameter(p);
+                      }}
+                      className="flex w-full flex-col items-start gap-0.5 border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
+                    >
+                      <span className="text-sm font-medium text-slate-800">
+                        {p.name}{" "}
+                        <span className="font-normal text-slate-400">
+                          - {p.article_type_name}
+                        </span>
+                      </span>
+                      <span className="line-clamp-1 text-xs text-slate-500">
+                        {p.prompt}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           <ParametersTable

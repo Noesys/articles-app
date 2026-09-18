@@ -79,6 +79,69 @@ export async function getParametersByArticleType(db: D1Database, articleTypeId?:
   return results;
 }
 
+/**
+ * All active parameters (with options) across every active article type,
+ * for the "copy from an existing parameter" search in ArticleTypesForm.
+ * Read-only — mirrors getParametersByArticleType's query shape exactly,
+ * just without the article_type_id filter and with the type name joined in.
+ */
+export async function getAllParametersWithTypeNames(db: D1Database) {
+  const parameters = await db
+    .prepare(
+      `
+      SELECT
+        p.id,
+        p.article_type_id,
+        at.name AS article_type_name,
+        p.name,
+        p.description,
+        p.prompt,
+        p.scope_type,
+        p.min_value,
+        p.max_value
+      FROM parameters p
+      JOIN article_types at ON at.id = p.article_type_id
+      WHERE p.is_active = 1
+        AND at.is_active = 1
+      ORDER BY at.name, p.sort_order, p.created_at
+    `,
+    )
+    .all();
+
+  const results = [];
+
+  for (const parameter of parameters.results ?? []) {
+    let options: unknown[] = [];
+
+    if (parameter.scope_type === "option") {
+      const optionResult = await db
+        .prepare(
+          `
+          SELECT
+            id,
+            label,
+            sort_order
+          FROM parameter_options
+          WHERE parameter_id = ?
+            AND is_active = 1
+          ORDER BY sort_order
+        `,
+        )
+        .bind(parameter.id)
+        .all();
+
+      options = optionResult.results ?? [];
+    }
+
+    results.push({
+      ...parameter,
+      options,
+    });
+  }
+
+  return results;
+}
+
 export async function getParameterById(db: D1Database, parameterId: string) {
   const parameter = await db
     .prepare(

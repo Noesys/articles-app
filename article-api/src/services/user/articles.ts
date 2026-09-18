@@ -107,57 +107,66 @@ export async function getArticlesByUser(
 export type BrowseArticleItem = {
   id: string;
   title: string;
-  excerpt: string;
   article_type_id: string;
   article_type_name: string;
   author_name: string;
-  month_year: string;
   submitted_at: string;
 };
 
-export type ArticleTypeCount = {
+export type ArticleTypeOption = {
   id: string;
   name: string;
-  count: number;
 };
 
-/** Strip tags for a list-view excerpt; full content is served on detail. */
-function toExcerpt(content: string, maxLen = 220): string {
-  const text = content
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text.length > maxLen ? text.slice(0, maxLen - 1) + "…" : text;
-}
-
 /**
- * Blog-style browse across ALL users — read-only fields only.
- * Never selects ai_score / ai_feedback / suggested_title so scores
- * cannot leak through this endpoint.
+ * Blog-style browse across ALL users — read-only fields only, and only
+ * articles that are (a) accepted and (b) the article's current/live row —
+ * article_history is never queried here, so older versions never surface.
+ * Never selects ai_score / ai_feedback / suggested_title so scores cannot
+ * leak through this endpoint, and never selects content for the list (kept
+ * for detail only) to avoid paying for every row's full body on every page.
  */
 export async function browseArticles(
   db: D1Database,
-  opts: { typeId?: string; sort?: "latest" | "earliest"; page?: number; limit?: number },
+  opts: { typeId?: string; q?: string; page?: number; limit?: number },
 ): Promise<{
   articles: BrowseArticleItem[];
   pagination: ArticlePagination;
-  typeCounts: ArticleTypeCount[];
+  typeOptions: ArticleTypeOption[];
 }> {
-  const sort = opts.sort === "earliest" ? "ASC" : "DESC";
   const page = Math.max(1, Math.floor(opts.page || 1));
   const limit = Math.min(50, Math.max(1, Math.floor(opts.limit || 9)));
   const offset = (page - 1) * limit;
 
-  const conditions: string[] = [];
+  const conditions: string[] = ["a.status = 'approved'"];
   const params: unknown[] = [];
   if (opts.typeId) {
     conditions.push("a.article_type_id = ?");
     params.push(opts.typeId);
   }
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const q = opts.q?.trim();
+  if (q) {
+    conditions.push(
+      "(a.title LIKE ? ESCAPE '\\' OR COALESCE(u.name, ue.name, a.employee_email) LIKE ? ESCAPE '\\')",
+    );
+    const escaped = q.replace(/[\\%_]/g, (m) => `\\${m}`);
+    params.push(`%${escaped}%`, `%${escaped}%`);
+  }
+  const where = `WHERE ${conditions.join(" AND ")}`;
+
+  // Author resolution shared by both the count and the page query, so a
+  // search match against author name can't disagree with what's displayed.
+  const joins = `
+    FROM articles a
+    INNER JOIN article_types at ON at.id = a.article_type_id
+    LEFT JOIN users u ON u.id = a.user_id
+    LEFT JOIN users ue
+      ON a.employee_email IS NOT NULL
+      AND lower(ue.email) = lower(a.employee_email)
+  `;
 
   const countRow = await db
-    .prepare(`SELECT COUNT(*) AS total FROM articles a ${where}`)
+    .prepare(`SELECT COUNT(*) AS total ${joins} ${where}`)
     .bind(...params)
     .first<{ total: number }>();
   const total = countRow?.total ?? 0;
@@ -166,75 +175,67 @@ export async function browseArticles(
     await db
       .prepare(
         `
-        SELECT a.id, a.title, a.content, a.article_type_id,
+        SELECT a.id, a.title, a.article_type_id,
                at.name AS article_type_name,
-               COALESCE(u.name, a.employee_email, 'Unknown') AS author_name,
-               a.month_year, a.submitted_at
-        FROM articles a
-        INNER JOIN article_types at ON at.id = a.article_type_id
-        LEFT JOIN users u ON u.id = a.user_id
+               COALESCE(u.name, ue.name, a.employee_email, 'Unknown') AS author_name,
+               a.submitted_at
+        ${joins}
         ${where}
-        ORDER BY a.submitted_at ${sort}
+        ORDER BY a.submitted_at DESC, a.id DESC
         LIMIT ? OFFSET ?
       `,
       )
       .bind(...params, limit, offset)
-      .all<{
-        id: string;
-        title: string;
-        content: string;
-        article_type_id: string;
-        article_type_name: string;
-        author_name: string;
-        month_year: string;
-        submitted_at: string;
-      }>()
+      .all<BrowseArticleItem>()
   ).results;
 
-  const typeCounts = (
+  // Every type with at least one qualifying article — deliberately not
+  // scoped to article_types.is_active, so a type that's since been
+  // deactivated doesn't disappear from the filter while it still has
+  // accepted articles sitting under it.
+  const typeOptions = (
     await db
       .prepare(
         `
-        SELECT at.id, at.name, COUNT(a.id) AS count
-        FROM article_types at
-        LEFT JOIN articles a ON a.article_type_id = at.id
-        WHERE at.is_active = 1
-        GROUP BY at.id, at.name
+        SELECT DISTINCT at.id, at.name
+        FROM articles a
+        INNER JOIN article_types at ON at.id = a.article_type_id
+        WHERE a.status = 'approved'
         ORDER BY at.name ASC
       `,
       )
-      .all<{ id: string; name: string; count: number }>()
+      .all<ArticleTypeOption>()
   ).results;
 
   return {
-    articles: rows.map((r) => ({
-      id: r.id,
-      title: r.title,
-      excerpt: toExcerpt(r.content ?? ""),
-      article_type_id: r.article_type_id,
-      article_type_name: r.article_type_name,
-      author_name: r.author_name,
-      month_year: r.month_year,
-      submitted_at: r.submitted_at,
-    })),
+    articles: rows,
     pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
-    typeCounts,
+    typeOptions,
   };
 }
 
-/** Single-article read view — title/content/meta only, no scoring fields. */
+/**
+ * Single-article read view — title/content/meta only, no scoring fields.
+ * Enforces the exact same visibility rule as the listing (status='approved')
+ * so a direct/guessed URL can't reach a pending, rejected, or failed
+ * article, or expose an older version — article_history is never consulted.
+ */
 export async function getBrowseArticleById(db: D1Database, articleId: string) {
   return db
     .prepare(
       `
       SELECT a.id, a.title, a.content, a.article_type_id,
              at.name AS article_type_name,
-             COALESCE(u.name, a.employee_email, 'Unknown') AS author_name,
-             a.month_year, a.submitted_at
+             COALESCE(u.name, ue.name, a.employee_email, 'Unknown') AS author_name,
+             a.submitted_at
       FROM articles a
       INNER JOIN article_types at ON at.id = a.article_type_id
       LEFT JOIN users u ON u.id = a.user_id
+      LEFT JOIN users ue
+        ON a.employee_email IS NOT NULL
+        AND lower(ue.email) = lower(a.employee_email)
       WHERE a.id = ?
+        AND a.status = 'approved'
       LIMIT 1
     `,
     )
@@ -246,7 +247,6 @@ export async function getBrowseArticleById(db: D1Database, articleId: string) {
       article_type_id: string;
       article_type_name: string;
       author_name: string;
-      month_year: string;
       submitted_at: string;
     }>();
 }

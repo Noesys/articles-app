@@ -1,6 +1,7 @@
 import { ChevronUp, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import MarkdownContent from "@/components/markdown/MarkdownContent";
+import CopyButton from "@/admin/utils/CopyButton";
 import { cn } from "@/lib/utils";
 
 type Row = {
@@ -26,6 +27,19 @@ function getScoreDisplay(r: Row): string {
   return String(r.value);
 }
 
+function buildResultsText(results: Row[]): string {
+  return results
+    .map((r) => {
+      const name = r.parameter_name || r.name || "";
+      const desc = r.parameter_description ?? r.description ?? null;
+      const lines = [`${name}: ${getScoreDisplay(r)}`];
+      if (desc) lines.push(desc);
+      if (r.feedback) lines.push(r.feedback);
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
 export default function ParameterResultsBox({ results }: { results: Row[] }) {
   const [open, setOpen] = useState(false);
   // Per-parameter collapse state, default everything open.
@@ -36,19 +50,34 @@ export default function ParameterResultsBox({ results }: { results: Row[] }) {
 
   return (
     <div className="rounded-sm border border-slate-200 bg-white shadow-sm overflow-hidden">
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+        }}
+        className="w-full flex items-center justify-between px-4 py-3 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
       >
         <p className="text-md font-semibold uppercase tracking-wide text-slate-600">
           Parameter Results
         </p>
-        {open ? (
-          <ChevronUp size={18} className="text-slate-400" />
-        ) : (
-          <ChevronDown size={18} className="text-slate-400" />
-        )}
-      </button>
+        <div className="flex items-center gap-2">
+          {results && results.length > 0 && (
+            <span onClick={(e) => e.stopPropagation()}>
+              <CopyButton text={buildResultsText(results)} />
+            </span>
+          )}
+          {open ? (
+            <ChevronUp size={18} className="text-slate-400" />
+          ) : (
+            <ChevronDown size={18} className="text-slate-400" />
+          )}
+        </div>
+      </div>
       {open && (
         <div className="px-4 pb-4">
           {!results || !results.length ? (

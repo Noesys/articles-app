@@ -114,6 +114,11 @@ export type ParameterResponse = {
   options: ParameterOptionDraft[];
 };
 
+export type ParameterSearchResult = ParameterResponse & {
+  article_type_id: string;
+  article_type_name: string;
+};
+
 // users
 export type AuthRole = "admin" | "user";
 

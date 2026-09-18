@@ -141,17 +141,17 @@ articleRoutes.get("/mine", async (c) => {
   });
 });
 
-// Blog-style browse: all users' articles, read-only fields (no scores/feedback).
+// Blog-style browse: accepted/current articles from all users, read-only
+// fields (no scores/feedback), always latest-first.
 articleRoutes.get("/browse", async (c) => {
   const typeId = c.req.query("type") || undefined;
-  const sortRaw = c.req.query("sort");
-  const sort = sortRaw === "earliest" ? "earliest" : "latest";
+  const q = c.req.query("q") || undefined;
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
   const limit = Math.min(50, Math.max(1, parseInt(c.req.query("limit") || "9", 10) || 9));
 
-  const { articles, pagination, typeCounts } = await browseArticles(c.env.DB, {
+  const { articles, pagination, typeOptions } = await browseArticles(c.env.DB, {
     typeId,
-    sort,
+    q,
     page,
     limit,
   });
@@ -160,7 +160,7 @@ articleRoutes.get("/browse", async (c) => {
     success: true,
     data: articles,
     pagination,
-    meta: { typeCounts },
+    meta: { typeOptions },
   });
 });
 

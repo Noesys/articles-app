@@ -3,6 +3,7 @@ import { ParameterInput } from "../../types/admin-types";
 import {
   createParameter,
   deactivateParameter,
+  getAllParametersWithTypeNames,
   getParameterById,
   getParametersByArticleType,
   updateParameter,
@@ -35,6 +36,20 @@ function parseParameterBody(body: unknown): ParameterInput | { error: string } {
     options: b.options as ParameterInput["options"],
   };
 }
+
+// A single-segment path here (e.g. "/parameters-search") would be silently
+// shadowed by articleTypesRoute's GET /:id — that route is mounted at this
+// same prefix, registered first, and Hono's cross-app .route() mounting
+// does not give static routes priority over an earlier sub-app's dynamic
+// one (verified directly against Hono's router; only same-app routing does
+// that). This 2-segment path can't collide with anything in either router.
+parametersRoute.get("/parameters/all", async (c) => {
+  const result = await getAllParametersWithTypeNames(c.env.DB);
+  return c.json({
+    message: "Parameters fetched successfully",
+    data: result,
+  });
+});
 
 parametersRoute.get("/:articleTypeId/parameters", async (c) => {
   const articleTypeId = c.req.param("articleTypeId");

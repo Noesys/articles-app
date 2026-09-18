@@ -212,9 +212,16 @@ export default function AdminArticleDetail() {
   // (e.g. type changed to a non-evaluatable one) would re-arm immediately
   // after every poll timeout and loop forever.
   const autoArmedRef = useRef<string | null>(null);
+  // Set by handleChangeType when reevaluate=false ("Change type only"): that
+  // version is intentionally pending with no evaluation dispatched, so the
+  // auto-arm effect below must not treat it as "scoring elsewhere" — without
+  // this it can't tell that apart from a genuinely in-flight evaluation and
+  // wrongly flips scoringInFlight back on right after this page turns it off.
+  const noEvalVersionKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!article || effectiveSnapshot) return;
     const key = `${article.id}:${article.version}`;
+    if (key === noEvalVersionKeyRef.current) return;
     const stillPending = currentScore === null && !TERMINAL_STATUSES.includes(article.status);
     if (!stillPending) {
       if (autoArmedRef.current === key) autoArmedRef.current = null;
@@ -375,7 +382,10 @@ export default function AdminArticleDetail() {
       });
       const started = Boolean(res?.reevaluate);
       toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
-      await loadArticle();
+      const updated = await loadArticle();
+      if (!started && updated) {
+        noEvalVersionKeyRef.current = `${updated.id}:${updated.version}`;
+      }
       setCurrentScore(null);
       setCurrentFeedback("");
       setScoringInFlight(started);

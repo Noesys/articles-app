@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 import {
@@ -115,6 +115,13 @@ export default function ArticleDetail() {
   const [applyBusy, setApplyBusy] = useState(false);
   /** True once an admin explicitly (re)starts scoring — distinct from a merely-pending, not-yet-scored article. */
   const [awaitingReeval, setAwaitingReeval] = useState(false);
+  /** Marks `id:version` as pending-with-no-eval-running (admin changed type
+   * without re-evaluating). Ref, not state, so it resets on remount — a
+   * fresh mount has no in-mount evidence either way, so it defaults to
+   * "assume a real evaluation may be running" and polls, matching what
+   * non-admins already do for a pending article regardless of who/what
+   * triggered it. */
+  const noEvalVersionKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (article) {
@@ -149,6 +156,10 @@ export default function ArticleDetail() {
 
   const isFailed = displayStatus === "failed";
 
+  const versionKey = article ? `${article.id}:${article.version}` : null;
+  const isKnownNoEval =
+    versionKey !== null && versionKey === noEvalVersionKeyRef.current;
+
   // Poll every 2.5s while scoring; stops on terminal status/complete/timeout
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
   const POLLING_INTERVAL = 2500;
@@ -163,8 +174,11 @@ export default function ArticleDetail() {
       currentScore !== null ||
       TERMINAL_STATUSES.includes(article.status) ||
       // Admin's "change type only" leaves the article pending+unscored
-      // without starting a background job — don't poll for that.
-      (isAdmin && !awaitingReeval)
+      // without starting a background job — don't poll for that. Only
+      // skip when THIS mount has confirmed evidence of that (ref survives
+      // within-mount navigation-free updates, not remounts), so a fresh
+      // mount re-entering a genuinely pending article still polls.
+      (isAdmin && isKnownNoEval)
     )
       return;
     let stopped = false;
@@ -228,7 +242,7 @@ export default function ArticleDetail() {
       if (timer) clearInterval(timer);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [article?.id, currentScore, effectiveSnapshot, isAdmin, awaitingReeval]);
+  }, [article?.id, currentScore, effectiveSnapshot, isAdmin, isKnownNoEval]);
 
   // "Not scored yet" (admin's type-only change, no reeval running) is
   // distinct from "actively scoring" — everyone else's "pending" always
@@ -236,7 +250,7 @@ export default function ArticleDetail() {
   const isPendingUnscored =
     isAdmin &&
     !effectiveSnapshot &&
-    !awaitingReeval &&
+    isKnownNoEval &&
     displayStatus === "pending" &&
     displayScore === null;
   const isPending =
@@ -301,7 +315,7 @@ export default function ArticleDetail() {
       } catch {}
       navigate(
         user?.auth_role === "admin"
-          ? "/admin/my-article"
+          ? "/admin/articles"
           : "/",
       );
     } catch (err) {
@@ -387,7 +401,11 @@ export default function ArticleDetail() {
       });
       const started = Boolean(res?.reevaluate);
       toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
-      await refreshArticleQuietly();
+      const updated = await refreshArticleQuietly();
+      noEvalVersionKeyRef.current =
+        !started && updated?.article
+          ? `${updated.article.id}:${updated.article.version}`
+          : null;
       setCurrentScore(null);
       setCurrentFeedback("");
       setAwaitingReeval(started);
@@ -404,6 +422,7 @@ export default function ArticleDetail() {
     try {
       await api(`/admin/articles/${id}/reevaluate`, { method: "POST" });
       toast.success("Re-evaluation started");
+      noEvalVersionKeyRef.current = null;
       setCurrentScore(null);
       setCurrentFeedback("");
       setAwaitingReeval(true);
