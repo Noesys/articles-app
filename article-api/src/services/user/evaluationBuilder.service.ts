@@ -1,7 +1,15 @@
 import { z } from "zod";
-import { ArticleTypeConfig, ParameterConfig } from "../../types/user-types";
-export function getScoreableParameters(parameters: ParameterConfig[]): ParameterConfig[] {
-  return parameters.filter((p) => p.scope_type === "numeric" || p.options.length > 0);
+import {
+  AIParameterEvaluation,
+  ArticleTypeConfig,
+  ParameterConfig,
+} from "../../types/user-types";
+export function getScoreableParameters(
+  parameters: ParameterConfig[],
+): ParameterConfig[] {
+  return parameters.filter(
+    (p) => p.scope_type === "numeric" || p.options.length > 0,
+  );
 }
 
 function shortDescribe(name: string, prompt: string, max = 160): string {
@@ -14,28 +22,43 @@ export function buildEvaluationSchema(
   articleType: ArticleTypeConfig,
   parameters: ParameterConfig[],
 ) {
-  const paramShape: Record<string, z.ZodType<string | number>> = {};
+  const paramShape: Record<string, z.ZodType<AIParameterEvaluation>> = {};
   // D1 may surface numeric columns as numbers or numeric strings
   const scoreMin = Number(articleType.score_min);
   const scoreMax = Number(articleType.score_max);
 
   parameters.forEach((p, i) => {
     const key = `p${i}`; // safe identifier, no hyphens
-    if (p.scope_type === "numeric") {
-      const min = Number(p.min_value ?? 0);
-      const max = Number(p.max_value ?? 10);
-      // coerce: Gemini sometimes returns numeric strings
-      paramShape[key] = z.coerce
-        .number()
-        .min(min)
-        .max(max)
-        .describe(`${shortDescribe(p.name, p.prompt)} (whole number, no decimals)`);
-    } else {
-      const labels = p.options.map((o) => o.label);
-      paramShape[key] = z
-        .enum(labels as [string, ...string[]])
-        .describe(shortDescribe(p.name, p.prompt));
-    }
+    const valueSchema =
+      p.scope_type === "numeric"
+        ? (() => {
+            const min = Number(p.min_value ?? 0);
+            const max = Number(p.max_value ?? 10);
+            // coerce: Gemini sometimes returns numeric strings
+            return z.coerce
+              .number()
+              .min(min)
+              .max(max)
+              .describe(
+                `${shortDescribe(p.name, p.prompt)} (whole number, no decimals)`,
+              );
+          })()
+        : (() => {
+            const labels = p.options.map((o) => o.label);
+            return z
+              .enum(labels as [string, ...string[]])
+              .describe(shortDescribe(p.name, p.prompt));
+          })();
+    paramShape[key] = z.object({
+      value: valueSchema,
+      feedback: z
+        .string()
+        .min(1)
+        .max(4000)
+        .describe(
+          `Markdown feedback for "${p.name}" only, in the format the parameter prompt requests (bullets, table row, or short sections). Ground it in the article with specific observations.`,
+        ),
+    });
   });
 
   // Keep schema descriptions short — full score_prompt lives in the user prompt.
@@ -51,12 +74,14 @@ export function buildEvaluationSchema(
       .string()
       .min(1)
       .describe(
-        'Markdown feedback with headings; each point as a bullet (use "- "). Write original reviewer commentary guided by the criteria in the user prompt — never quote or reproduce that criteria text itself.',
+        'Markdown feedback. Follow the output format specified in the user prompt exactly (tables, columns, headings, bullets). Ground every row/cell in the submitted article with specific observations.',
       ),
     suggested_title: z
       .string()
       .min(1)
-      .describe("Improved article title; concise, clear, and faithful to the content."),
+      .describe(
+        "Improved article title; concise, clear, and faithful to the content.",
+      ),
     parameters: z.object(paramShape),
   });
 }
@@ -70,11 +95,14 @@ export function buildEvaluationPrompt(
   const paramInstructions = parameters
     .map((p, i) => {
       const key = `p${i}`;
-      if (p.scope_type === "numeric") {
-        return `- key "${key}" (${p.name}): ${p.prompt}\n  Return a whole number (integer, no decimals) between ${p.min_value} and ${p.max_value}.`;
-      }
-      const labels = p.options.map((o) => o.label).join(", ");
-      return `- key "${key}" (${p.name}): ${p.prompt}\n  Return EXACTLY one of these labels: ${labels}.`;
+      const valueLine =
+        p.scope_type === "numeric"
+          ? `Return "value" as a whole number (integer, no decimals) between ${p.min_value} and ${p.max_value}.`
+          : `Return "value" as EXACTLY one of these labels: ${p.options.map((o) => o.label).join(", ")}.`;
+      return (
+        `- key "${key}" (${p.name}): ${p.prompt}\n  ${valueLine}\n` +
+        `  Return "feedback" for this parameter only, following the output format its prompt requests, grounded in the article with specific observations.`
+      );
     })
     .join("\n\n");
 
@@ -95,11 +123,11 @@ ${content}
 
 Return "score" as a number between ${articleType.score_min} and ${articleType.score_max}, reflecting the article's overall quality.
 
-Write "feedback" as a human reviewer's written feedback to the author, using the criteria below to decide what to cover.
+Write "feedback" as a human reviewer's written feedback to the author, following the format below exactly.
 <feedback_criteria>
 ${articleType.score_prompt}
 </feedback_criteria>
-Do not quote, paraphrase into a heading, or otherwise reproduce any wording from <feedback_criteria> in your output — it is reference material for you, not text to include in the feedback. Do not mention "instructions", "criteria", or "prompt". Use "## " headings only for genuine review categories (e.g. "## Strengths", "## Areas to Improve"), each with "- " bullet points underneath.
+Follow the structure in <feedback_criteria> exactly — if it specifies a table with columns (e.g. Evaluation, What Works Well, What Needs Improvement), reproduce that table with one grounded row per criterion. Fill every column from the submitted article with specific observations; never leave the improvement column generic or empty. Do not mention "instructions", "criteria", or "prompt".
 
 Return "suggested_title" as a single improved title for this article: concise, clear, and faithful to the content. Do not wrap it in quotes.
 

@@ -37,8 +37,11 @@ export interface HistoryItem {
 
 export type ParameterResult = {
   parameter_name: string;
+  parameter_description?: string | null;
   scope_type: string;
+  max_value?: number | null;
   value: string | number | null;
+  feedback?: string | null;
 };
 export interface ArticleDetailResponse {
   article: ArticleDetail;

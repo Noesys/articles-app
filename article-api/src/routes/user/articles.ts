@@ -173,11 +173,12 @@ articleRoutes.get("/mine/:id", async (c) => {
     numeric_value: number | null;
     option_id: string | null;
     option_label: string | null;
+    feedback: string | null;
   };
   const paramRows: ParamRow[] = (
     await db
       .prepare(
-        `SELECT p.name as parameter_name, p.description as parameter_description, p.scope_type, p.max_value, r.numeric_value, r.option_id, po.label as option_label FROM article_parameter_results r JOIN parameters p ON p.id=r.parameter_id LEFT JOIN parameter_options po ON po.id=r.option_id WHERE r.article_id=? AND r.version=? ORDER BY p.sort_order`,
+        `SELECT p.name as parameter_name, p.description as parameter_description, p.scope_type, p.max_value, r.numeric_value, r.option_id, r.feedback, po.label as option_label FROM article_parameter_results r JOIN parameters p ON p.id=r.parameter_id LEFT JOIN parameter_options po ON po.id=r.option_id WHERE r.article_id=? AND r.version=? ORDER BY p.sort_order`,
       )
       .bind(articleId, article.version)
       .all()
@@ -188,6 +189,7 @@ articleRoutes.get("/mine/:id", async (c) => {
     scope_type: r.scope_type,
     max_value: r.max_value,
     value: r.scope_type === "option" ? r.option_label : r.numeric_value,
+    feedback: r.feedback ?? null,
   }));
   return c.json({
     message: "Article fetched successfully",

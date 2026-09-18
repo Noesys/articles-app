@@ -267,6 +267,9 @@ export interface ParameterResultRow {
   parameter_id: string;
   name: string;
   value: string;
+  numeric_value?: number | null;
+  option_id?: string | null;
+  feedback?: string | null;
   version: number;
   scored_at: string;
 }

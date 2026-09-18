@@ -97,8 +97,8 @@ export async function persistEvaluationResults(
         .prepare(
           `
             INSERT INTO article_parameter_results
-              (id, article_id, parameter_id, value, option_id, numeric_value, version, scored_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              (id, article_id, parameter_id, value, option_id, numeric_value, feedback, version, scored_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
         )
         .bind(
@@ -108,6 +108,7 @@ export async function persistEvaluationResults(
           result.value,
           result.option_id,
           result.numeric_value,
+          result.feedback,
           version,
           scoredAt,
         ),
