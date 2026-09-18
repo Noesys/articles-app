@@ -1,7 +1,7 @@
 import Header from "../components/Header";
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Loader2, FileText } from "lucide-react";
+import { Plus, Loader2, FileText, BookOpen } from "lucide-react";
 import dayjs from "dayjs";
 import { useInfiniteTableData } from "../hooks/useInfiniteTableData";
 import { useAuth } from "../contexts/AuthContext";
@@ -342,14 +342,26 @@ export default function MyArticles() {
               : undefined
           }
           actions={
-            <Button
-              type="button"
-              size="lg"
-              onClick={() => navigate("/articles/new")}
-            >
-              <Plus size={16} />
-              New article
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={() => navigate("/explore")}
+                className="border-border bg-white"
+              >
+                <BookOpen size={16} />
+                Explore articles
+              </Button>
+              <Button
+                type="button"
+                size="lg"
+                onClick={() => navigate("/articles/new")}
+              >
+                <Plus size={16} />
+                New article
+              </Button>
+            </div>
           }
         />
 

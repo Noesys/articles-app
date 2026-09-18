@@ -1,5 +1,11 @@
 import { Hono } from "hono";
-import { getArticlesByUser, getArticleById, createArticle } from "../../services/user/articles";
+import {
+  browseArticles,
+  getArticlesByUser,
+  getArticleById,
+  getBrowseArticleById,
+  createArticle,
+} from "../../services/user/articles";
 import {
   getArticleHistory,
   snapshotArticle,
@@ -133,6 +139,39 @@ articleRoutes.get("/mine", async (c) => {
     data,
     ...(pagination ? { pagination } : {}),
   });
+});
+
+// Blog-style browse: all users' articles, read-only fields (no scores/feedback).
+articleRoutes.get("/browse", async (c) => {
+  const typeId = c.req.query("type") || undefined;
+  const sortRaw = c.req.query("sort");
+  const sort = sortRaw === "earliest" ? "earliest" : "latest";
+  const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(c.req.query("limit") || "9", 10) || 9));
+
+  const { articles, pagination, typeCounts } = await browseArticles(c.env.DB, {
+    typeId,
+    sort,
+    page,
+    limit,
+  });
+
+  return c.json({
+    success: true,
+    data: articles,
+    pagination,
+    meta: { typeCounts },
+  });
+});
+
+articleRoutes.get("/browse/:id", async (c) => {
+  const article = await getBrowseArticleById(c.env.DB, c.req.param("id"));
+
+  if (!article) {
+    return c.json({ success: false, message: "Article not found" }, 404);
+  }
+
+  return c.json({ success: true, data: article });
 });
 
 articleRoutes.get("/mine/:id", async (c) => {
