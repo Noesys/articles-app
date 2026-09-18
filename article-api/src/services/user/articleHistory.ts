@@ -99,6 +99,7 @@ export async function updateArticleForRewrite(
   articleId: string,
   title: string,
   content: string,
+  articleTypeId: string,
   monthYear: string,
   now: string,
   userId?: string,
@@ -112,6 +113,7 @@ export async function updateArticleForRewrite(
         SET
           title = ?,
           content = ?,
+          article_type_id = ?,
           version = version + 1,
           status = 'pending',
           ai_score = NULL,
@@ -129,8 +131,8 @@ export async function updateArticleForRewrite(
     )
     .bind(
       ...(userId
-        ? [title, content, now, monthYear, articleId, userId]
-        : [title, content, now, monthYear, articleId]),
+        ? [title, content, articleTypeId, now, monthYear, articleId, userId]
+        : [title, content, articleTypeId, now, monthYear, articleId]),
     )
     .first<{ version: number }>();
   return result?.version ?? null;

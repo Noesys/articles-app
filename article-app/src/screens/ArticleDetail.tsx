@@ -256,13 +256,11 @@ export default function ArticleDetail() {
       if (t?.pass_threshold != null) setPassThreshold(t.pass_threshold);
       const instr = (t?.general_instructions as string | null | undefined)?.trim();
       setInstructionsText(instr || null);
-      if (isAdmin) {
-        setArticleTypes(
-          list
-            .map((x: any) => ({ id: x.id, name: x.name }))
-            .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)),
-        );
-      }
+      setArticleTypes(
+        list
+          .map((x: any) => ({ id: x.id, name: x.name }))
+          .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)),
+      );
     }).catch(() => {});
   }, [article?.article_type_id, isAdmin]);
 
@@ -288,7 +286,7 @@ export default function ArticleDetail() {
         method: "POST",
         body: JSON.stringify({
           id: article.id,
-          article_type_id: article.article_type_id,
+          article_type_id: selectedTypeId || article.article_type_id,
           title: title.trim(),
           content: serializeArticleContent(content.trim()),
         }),
@@ -599,6 +597,7 @@ export default function ArticleDetail() {
                     if (article) {
                       setTitle(article.title);
                       setContent(article.content);
+                      setSelectedTypeId(article.article_type_id);
                     }
 
                     setSubmitError(null);
@@ -637,6 +636,27 @@ export default function ArticleDetail() {
               </button>
             )}
           </div>
+
+          {editing && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-sm border border-slate-200 bg-white px-3 py-2.5">
+              <label className="text-xs font-medium text-slate-500 shrink-0">
+                Article type
+              </label>
+              <FilterSelect
+                value={selectedTypeId}
+                onValueChange={setSelectedTypeId}
+                options={articleTypes.map((t) => ({ value: t.id, label: t.name }))}
+                placeholder="Select type"
+                className="min-w-[220px] max-w-[320px]"
+                disabled={submitting}
+              />
+              {typeChanged && (
+                <span className="text-xs text-amber-700">
+                  Type will change when you submit — re-evaluated against the new type's criteria.
+                </span>
+              )}
+            </div>
+          )}
 
           {isAdmin && !effectiveSnapshot && article?.suggested_title && (
             <div className="mt-3 rounded-sm border border-slate-200 bg-white px-3 py-2.5">

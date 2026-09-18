@@ -271,6 +271,14 @@ articleRoutes.post("/", async (c) => {
 
   validateArticleSize(title, content);
 
+  const articleType = await db
+    .prepare(`SELECT id FROM article_types WHERE id = ? AND is_active = 1 AND is_evaluatable = 1`)
+    .bind(article_type_id)
+    .first();
+  if (!articleType) {
+    return c.json({ success: false, message: "Invalid or unavailable article type" }, 400);
+  }
+
   title = sanitizeHtmlServer(title);
   content = sanitizeHtmlServer(content);
 
@@ -332,15 +340,24 @@ articleRoutes.post("/", async (c) => {
           .bind(historyId, now, requestedId),
         db
           .prepare(
-            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=?, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=? RETURNING version`,
+            `UPDATE articles SET title=?, content=?, article_type_id=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=?, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=? RETURNING version`,
           )
-          .bind(title, content, now, rewriteMonth, requestedId),
+          .bind(title, content, article_type_id, now, rewriteMonth, requestedId),
       ]);
       nextVersion = updateResult.results[0]?.version ?? null;
     } catch {
       // Fallback to sequential if batch not supported in local D1
       await snapshotArticle(db, requestedId, historyId, now, user.id);
-      nextVersion = await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth, now, user.id);
+      nextVersion = await updateArticleForRewrite(
+        db,
+        requestedId,
+        title,
+        content,
+        article_type_id,
+        rewriteMonth,
+        now,
+        user.id,
+      );
     }
 
     if (nextVersion == null) {

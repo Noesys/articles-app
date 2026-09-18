@@ -300,24 +300,26 @@ export default function MyArticles() {
     };
   }, []);
 
-  const [toast, setToast] = useState<string | null>(() => {
-    try {
-      const t = sessionStorage.getItem("toast");
-      const te = sessionStorage.getItem("toastError");
-      if (t) {
-        sessionStorage.removeItem("toast");
-        if (te) sessionStorage.removeItem("toastError");
-        return t;
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(
+    () => {
+      try {
+        const t = sessionStorage.getItem("toast");
+        const te = sessionStorage.getItem("toastError");
+        if (t) {
+          sessionStorage.removeItem("toast");
+          if (te) sessionStorage.removeItem("toastError");
+          return { message: t, variant: "success" };
+        }
+        if (te) {
+          sessionStorage.removeItem("toastError");
+          return { message: te, variant: "error" };
+        }
+        return null;
+      } catch {
+        return null;
       }
-      if (te) {
-        sessionStorage.removeItem("toastError");
-        return te;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  });
+    },
+  );
 
   useEffect(() => {
     if (toast) {
@@ -404,15 +406,8 @@ export default function MyArticles() {
 
         {typesError && <InlineAlert>{typesError}</InlineAlert>}
         {toast && (
-          <InlineAlert
-            variant={
-              toast.toLowerCase().includes("timed out") ||
-              toast.toLowerCase().includes("failed")
-                ? "error"
-                : "success"
-            }
-          >
-            {toast}
+          <InlineAlert variant={toast.variant}>
+            {toast.message}
           </InlineAlert>
         )}
         {isPolling && (
