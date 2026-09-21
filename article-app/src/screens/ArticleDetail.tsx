@@ -796,20 +796,7 @@ export default function ArticleDetail() {
             )}
           </div>
           <ParameterResultsBox results={parameterResults} />
-          {isAdmin && !effectiveSnapshot && article && (
-            <SuggestionsPanel
-              articleId={article.id}
-              version={article.version}
-              scored={currentScore !== null && !isFailed}
-              onContentUpdated={(next) => {
-                setContent(next);
-                setArticle((prev: any) =>
-                  prev ? { ...prev, content: next, admin_edited_at: new Date().toISOString() } : prev,
-                );
-              }}
-            />
-          )}
-
+          
           {/* Content - COLLAPSIBLE */}
           <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
             <div
@@ -939,6 +926,21 @@ export default function ArticleDetail() {
               </div>
             )}
           </div>
+
+          {isAdmin && !effectiveSnapshot && article && (
+            <SuggestionsPanel
+              articleId={article.id}
+              version={article.version}
+              scored={currentScore !== null && !isFailed}
+              onContentUpdated={(next) => {
+                setContent(next);
+                setArticle((prev: any) =>
+                  prev ? { ...prev, content: next, admin_edited_at: new Date().toISOString() } : prev,
+                );
+              }}
+            />
+          )}
+
 
           {!effectiveSnapshot && (
             <ScoringHistoryTable
