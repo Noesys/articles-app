@@ -256,9 +256,11 @@ export default function ArticleDetail() {
   const isPending =
     currentScore === null && article?.status === "pending" && !isPendingUnscored;
 
+  const [typeMinWords, setTypeMinWords] = useState<number>(1000);
+  const [allTypesCache, setAllTypesCache] = useState<any[]>([]);
   const wordCount = countWords(content);
-  const isWordCountValid = wordCount >= 1000;
-  const wordCountColor = isWordCountValid ? "text-emerald-600" : wordCount >= 500 ? "text-amber-600" : "text-slate-500";
+  const isWordCountValid = wordCount >= typeMinWords;
+  const wordCountColor = isWordCountValid ? "text-emerald-600" : wordCount >= typeMinWords / 2 ? "text-amber-600" : "text-slate-500";
   const [feedbackCollapsed, setFeedbackCollapsed] = useState(true);
   const [passThreshold, setPassThreshold] = useState<number | null>(null);
   useEffect(() => {
@@ -268,8 +270,12 @@ export default function ArticleDetail() {
     const path = isAdmin ? "/admin/article-types" : "/article-types";
     api<any>(path).then((types: any) => {
       const list = Array.isArray(types) ? types : types?.data ?? [];
+      setAllTypesCache(list);
       const t = list.find((x: any) => x.id === article.article_type_id);
       if (t?.pass_threshold != null) setPassThreshold(t.pass_threshold);
+      const sel = list.find((x: any) => x.id === (selectedTypeId || article.article_type_id));
+      if (sel?.min_words != null) setTypeMinWords(Number(sel.min_words) || 1000);
+      else if (t?.min_words != null) setTypeMinWords(Number(t.min_words) || 1000);
       const instr = (t?.general_instructions as string | null | undefined)?.trim();
       setInstructionsText(instr || null);
       setArticleTypes(
@@ -280,14 +286,20 @@ export default function ArticleDetail() {
     }).catch(() => {});
   }, [article?.article_type_id, isAdmin]);
 
+  useEffect(() => {
+    if (!selectedTypeId) return;
+    const sel = allTypesCache.find((x: any) => x.id === selectedTypeId);
+    if (sel?.min_words != null) setTypeMinWords(Number(sel.min_words) || 1000);
+  }, [selectedTypeId, allTypesCache]);
+
   async function handleSubmitRewrite() {
     if (!article) return;
     if (!title.trim() || !content.trim()) {
       setSubmitError("Title and content are required");
       return;
     }
-    if (countWords(content) < 1000) {
-      setSubmitError("Article must contain at least 1000 words");
+    if (countWords(content) < typeMinWords) {
+      setSubmitError(`Article must contain at least ${typeMinWords} words`);
       return;
     }
     if (isUploadingImages) {
@@ -631,7 +643,7 @@ export default function ArticleDetail() {
 
                 <button
                   onClick={handleSubmitRewrite}
-                  disabled={submitting || isUploadingImages}
+                  disabled={submitting || isUploadingImages || !isWordCountValid}
                   title={isUploadingImages ? "Waiting for image uploads to finish…" : undefined}
                   className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-sm px-3 py-2 transition-colors"
                 >
@@ -912,7 +924,7 @@ export default function ArticleDetail() {
                       </div>
 
                       <div className="flex items-center gap-1.5 text-xs">
-                        <span className={wordCountColor}>Word count: {wordCount}</span>
+                        <span className={wordCountColor}>Word count: {wordCount} (min {typeMinWords})</span>
                         {isWordCountValid && (
                           <>
                             <CheckCircle2

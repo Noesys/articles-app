@@ -20,6 +20,7 @@ export async function getArticleTypes(db: D1Database): Promise<ArticleTypeListIt
   at.score_prompt,
   at.score_min,
   at.score_max,
+  at.min_words,
   at.created_by,
   at.created_at,
   at.updated_at,
@@ -92,6 +93,7 @@ export async function getArticleTypes(db: D1Database): Promise<ArticleTypeListIt
       score_prompt: row.score_prompt,
       score_min: row.score_min,
       score_max: row.score_max,
+      min_words: row.min_words ?? 1000,
       created_by: row.created_by,
       created_at: row.created_at,
       updated_at: row.updated_at,
@@ -117,6 +119,7 @@ export async function getArticleTypeById(
         score_prompt,
         score_min,
         score_max,
+        min_words,
         is_active
       FROM article_types
       WHERE id = ?
@@ -160,6 +163,10 @@ export async function createArticleType(
   if (input.passThreshold < input.scoreMin || input.passThreshold > input.scoreMax) {
     throw new Error("pass_threshold must fall within score_min and score_max");
   }
+  const minWords = input.minWords ?? 1000;
+  if (!Number.isInteger(minWords) || minWords < 1) {
+    throw new Error("min_words must be a positive integer");
+  }
 
   const articleTypeId = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -177,11 +184,12 @@ export async function createArticleType(
           score_prompt,
           score_min,
           score_max,
+          min_words,
           created_by,
           created_at,
           updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       )
       .bind(
@@ -193,6 +201,7 @@ export async function createArticleType(
         input.scorePrompt,
         input.scoreMin,
         input.scoreMax,
+        minWords,
         createdBy,
         now,
         now,
@@ -214,8 +223,8 @@ export async function updateArticleType(
   const existing = await db
     .prepare(
       `
-      SELECT id, name, description, general_instructions, pass_threshold, score_prompt, score_min, score_max
-      FROM article_types
+    SELECT id, name, description, general_instructions, pass_threshold, score_prompt, score_min, score_max, min_words
+    FROM article_types
       WHERE id = ?
         AND is_active = 1
     `,
@@ -253,6 +262,10 @@ export async function updateArticleType(
   const scorePrompt = input.scorePrompt ?? existing.score_prompt;
   const scoreMin = input.scoreMin ?? existing.score_min;
   const scoreMax = input.scoreMax ?? existing.score_max;
+  const minWords = input.minWords ?? existing.min_words ?? 1000;
+  if (!Number.isInteger(minWords) || minWords < 1) {
+    throw new Error("min_words must be a positive integer");
+  }
 
   if (scoreMax <= scoreMin) {
     throw new Error("score_max must be greater than score_min");
@@ -275,6 +288,7 @@ export async function updateArticleType(
         score_prompt = ?,
         score_min = ?,
         score_max = ?,
+        min_words = ?,
         updated_at = ?
       WHERE id = ?
     `,
@@ -287,6 +301,7 @@ export async function updateArticleType(
       scorePrompt,
       scoreMin,
       scoreMax,
+      minWords,
       now,
       articleTypeId,
     )

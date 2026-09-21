@@ -26,6 +26,17 @@ function currentMonth(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
+export function countWordsServer(html: string): number {
+  if (!html || html.trim() === "" || html.trim() === "<p></p>") return 0;
+  const text = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return 0;
+  return text.split(" ").filter(Boolean).length;
+}
+
 function validateArticleSize(title: string, content: string): void {
   const MAX_TITLE_BYTES = 500;
   const MAX_CONTENT_BYTES = 500_000;
@@ -315,11 +326,20 @@ articleRoutes.post("/", async (c) => {
   validateArticleSize(title, content);
 
   const articleType = await db
-    .prepare(`SELECT id FROM article_types WHERE id = ? AND is_active = 1 AND is_evaluatable = 1`)
+    .prepare(
+      `SELECT id, COALESCE(min_words, 1000) AS min_words FROM article_types WHERE id = ? AND is_active = 1 AND is_evaluatable = 1`,
+    )
     .bind(article_type_id)
-    .first();
+    .first<{ id: string; min_words: number }>();
   if (!articleType) {
     return c.json({ success: false, message: "Invalid or unavailable article type" }, 400);
+  }
+  const minWords = articleType.min_words ?? 1000;
+  if (countWordsServer(content) < minWords) {
+    return c.json(
+      { success: false, message: `Article must contain at least ${minWords} words` },
+      400,
+    );
   }
 
   title = sanitizeHtmlServer(title);

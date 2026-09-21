@@ -60,6 +60,7 @@ export interface ArticleTypeListItem {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -76,6 +77,7 @@ export interface ArticleTypeDetail {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words: number;
   is_active: number;
 }
 
@@ -110,6 +112,7 @@ export interface ArticleTypeListRow {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -127,6 +130,7 @@ export interface ArticleTypeRow {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words: number;
   is_active: number;
 }
 
@@ -138,6 +142,7 @@ export interface ArticleTypeInput {
   scorePrompt: string;
   scoreMin: number;
   scoreMax: number;
+  minWords?: number;
 }
 
 // users

@@ -41,6 +41,15 @@ function parseArticleTypeBody(
     }
   }
 
+  const minWordsRaw = (b as Record<string, unknown>).minWords ?? (b as Record<string, unknown>).min_words;
+  if (!isUpdate && minWordsRaw !== undefined) {
+    const n = Number(minWordsRaw);
+    if (!Number.isInteger(n) || n < 1) return { error: "minWords must be a positive integer" };
+  }
+  if (isUpdate && minWordsRaw !== undefined) {
+    const n = Number(minWordsRaw);
+    if (!Number.isInteger(n) || n < 1) return { error: "minWords must be a positive integer" };
+  }
   const general_instructions = (b as Record<string, unknown>).general_instructions ?? (b as Record<string, unknown>).generalInstructions;
   return {
     ...(name !== undefined ? { name: name.trim() } : {}),
@@ -50,6 +59,7 @@ function parseArticleTypeBody(
     ...(scorePrompt !== undefined ? { scorePrompt: scorePrompt.trim() } : {}),
     ...(scoreMin !== undefined ? { scoreMin: Number(scoreMin) } : {}),
     ...(scoreMax !== undefined ? { scoreMax: Number(scoreMax) } : {}),
+    ...(minWordsRaw !== undefined ? { minWords: Number(minWordsRaw) } : {}),
   };
 }
 

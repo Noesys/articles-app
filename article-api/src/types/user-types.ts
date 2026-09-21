@@ -70,6 +70,8 @@ export type ArticleType = {
   id: string;
   name: string;
   description: string | null;
+  general_instructions?: string | null;
+  min_words: number;
   created_by: string;
   created_at: string;
   updated_at: string;

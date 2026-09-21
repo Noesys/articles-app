@@ -9,6 +9,7 @@ export async function getArticleTypes(db: D1Database): Promise<ArticleType[]> {
           name,
           description,
           general_instructions,
+          COALESCE(min_words, 1000) AS min_words,
           created_by,
           created_at,
           updated_at
