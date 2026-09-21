@@ -3,6 +3,7 @@ import {
   AIParameterEvaluation,
   ArticleTypeConfig,
   ParameterConfig,
+  PreviousVersionContext,
 } from "../../types/user-types";
 export function getScoreableParameters(
   parameters: ParameterConfig[],
@@ -91,7 +92,34 @@ export function buildEvaluationPrompt(
   parameters: ParameterConfig[],
   title: string,
   content: string,
+  previous: PreviousVersionContext | null = null,
 ): string {
+  const previousBlock = previous
+    ? `
+---
+
+Earlier version (v${previous.version}) of this same article, by the same author, under the same article type. It is context only: use it to judge what changed and whether earlier feedback was addressed. Score and give feedback on the CURRENT version above on its own merits; do not anchor on the earlier score.
+${
+  previous.content_unchanged
+    ? "\nThe article text is unchanged from that earlier version (this is a re-evaluation), so it is not repeated here."
+    : `
+Title: <untrusted_previous_title>
+${previous.title}
+</untrusted_previous_title>
+Content:
+
+<untrusted_previous_content>
+${previous.content}
+</untrusted_previous_content>`
+}
+${previous.ai_score !== null ? `\nScore it received: ${previous.ai_score}` : ""}${
+        previous.ai_feedback
+          ? `\nFeedback it received:\n<previous_feedback>\n${previous.ai_feedback.slice(0, 8000)}\n</previous_feedback>`
+          : ""
+      }
+`
+    : "";
+
   const paramInstructions = parameters
     .map((p, i) => {
       const key = `p${i}`;
@@ -118,7 +146,7 @@ Content:
 <untrusted_article_content>
 ${content}
 </untrusted_article_content>
-
+${previousBlock}
 ---
 
 Return "score" as a number between ${articleType.score_min} and ${articleType.score_max}, reflecting the article's overall quality.

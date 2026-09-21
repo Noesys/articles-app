@@ -89,6 +89,17 @@ export type ArticleTypeConfig = {
   is_active: number;
 };
 
+export type PreviousVersionContext = {
+  version: number;
+  title: string;
+  content: string;
+  /** True for re-evaluations / type-only changes, where the article text didn't change. */
+  content_unchanged: boolean;
+  /** Only set when that version was actually scored. */
+  ai_score: number | null;
+  ai_feedback: string | null;
+};
+
 export type ParameterConfig = {
   id: string;
   article_type_id: string;
