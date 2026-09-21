@@ -56,6 +56,8 @@ export type Article = {
   retry_count: number;
   ai_feedback: string | null;
   suggested_title: string | null;
+  /** Set when an admin applied AI suggestions; cleared when the author rewrites. */
+  admin_edited_at: string | null;
 };
 
 export type ArticlePagination = {

@@ -255,6 +255,7 @@ articleRoutes.get("/mine/:id", async (c) => {
         ai_score: article.ai_score,
         ai_feedback: article.ai_feedback || null,
         suggested_title: article.suggested_title || null,
+        admin_edited_at: article.admin_edited_at ?? null,
       },
       current_feedback: currentFeedback,
       current_score: article.ai_score,
@@ -395,7 +396,7 @@ articleRoutes.post("/", async (c) => {
             `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
              SELECT ?, id, article_type_id, title,
                CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE ai_feedback END,
-               content, ai_score, pass_threshold,
+               COALESCE(pre_edit_content, content), ai_score, pass_threshold,
                CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
                version, submitted_at, scored_at, ?
              FROM articles WHERE id = ?`,
@@ -403,7 +404,7 @@ articleRoutes.post("/", async (c) => {
           .bind(historyId, now, requestedId),
         db
           .prepare(
-            `UPDATE articles SET title=?, content=?, article_type_id=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=?, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=? RETURNING version`,
+            `UPDATE articles SET title=?, content=?, article_type_id=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=?, scored_at=NULL, month_year=?, retry_count=retry_count+1, admin_edited_at=NULL, pre_edit_content=NULL WHERE id=? RETURNING version`,
           )
           .bind(title, content, article_type_id, now, rewriteMonth, requestedId),
       ]);

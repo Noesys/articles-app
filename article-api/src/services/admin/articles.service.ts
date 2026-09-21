@@ -156,6 +156,7 @@ export interface ArticleDetail {
   author_email: string;
   job_role: string;
   suggested_title: string | null;
+  admin_edited_at: string | null;
 }
 
 export async function getArticleById(db: D1Database, id: string): Promise<ArticleDetail | null> {
@@ -395,7 +396,7 @@ export async function changeArticleType(
         `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
          SELECT ?, id, article_type_id, title,
            CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE COALESCE(ai_feedback,'') END,
-           content, ai_score, pass_threshold,
+           COALESCE(pre_edit_content, content), ai_score, pass_threshold,
            CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
            version, submitted_at, scored_at, ?
          FROM articles WHERE id = ?`,
@@ -418,6 +419,7 @@ export async function changeArticleType(
              suggested_title = NULL,
              pass_threshold = NULL,
              scored_at = NULL,
+             pre_edit_content = NULL,
              updated_at = ?
          WHERE id = ?`,
       )
@@ -494,7 +496,7 @@ export async function prepareArticleReevaluate(
         `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
          SELECT ?, id, article_type_id, title,
            CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE COALESCE(ai_feedback,'') END,
-           content, ai_score, pass_threshold,
+           COALESCE(pre_edit_content, content), ai_score, pass_threshold,
            CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
            version, submitted_at, scored_at, ?
          FROM articles WHERE id = ?`,
@@ -515,6 +517,7 @@ export async function prepareArticleReevaluate(
              suggested_title = NULL,
              pass_threshold = NULL,
              scored_at = NULL,
+             pre_edit_content = NULL,
              updated_at = ?
          WHERE id = ?`,
       )

@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import ScoringHistoryTable from "./ScoringHistoryTable";
 import ParameterResultsBox from "./ParameterResultsBox";
+import SuggestionsPanel from "./SuggestionsPanel";
 import FeedbackBlock from "./FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
 import { HistoryItem, ArticleDetail, ParameterResult } from "@/utils/types";
@@ -362,25 +363,22 @@ export default function AdminArticleDetail() {
     setTitleDraft(article?.title ?? "");
   }
 
-  async function handleChangeType(reevaluate: boolean) {
+  async function handleChangeType() {
     if (!id || !selectedTypeId) return;
     setTypeBusy(true);
     try {
-      const res: any = await api(`/admin/articles/${id}/type`, {
+      await api(`/admin/articles/${id}/type`, {
         method: "PATCH",
         body: JSON.stringify({
           article_type_id: selectedTypeId,
-          reevaluate,
+          reevaluate: false,
         }),
       });
-      const started = Boolean(res?.reevaluate);
-      toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
       await loadArticle();
-      if (started) {
-        setCurrentScore(null);
-        setCurrentFeedback("");
-        setScoringInFlight(true);
-      }
+      toast.warning(
+        "Article type updated. Re-evaluate to keep the score, feedback and parameter results consistent with the new type.",
+        { duration: 10000 },
+      );
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -565,18 +563,10 @@ export default function AdminArticleDetail() {
               <button
                 type="button"
                 disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}
-                onClick={() => handleChangeType(true)}
+                onClick={() => handleChangeType()}
                 className="rounded-sm bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
-                {typeBusy ? "Saving…" : "Change type & re-evaluate"}
-              </button>
-              <button
-                type="button"
-                disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}
-                onClick={() => handleChangeType(false)}
-                className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
-              >
-                Change type only
+                {typeBusy ? "Saving…" : "Change type only"}
               </button>
               <button
                 type="button"
@@ -588,7 +578,7 @@ export default function AdminArticleDetail() {
               </button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              "Change type only" just updates the type. "Change type & re-evaluate" snapshots the prior score and re-scores. Not suitable skips AI scoring.
+              "Change type only" just updates the type and keeps the current score. Re-evaluate snapshots it and re-scores. Not suitable skips AI scoring.
             </p>
           </div>
         )}
@@ -681,6 +671,18 @@ export default function AdminArticleDetail() {
             )}
           </div>
           <ParameterResultsBox results={parameterResults} />
+          {!effectiveSnapshot && article && (
+            <SuggestionsPanel
+              articleId={article.id}
+              version={article.version}
+              scored={currentScore !== null && !isFailed}
+              onContentUpdated={(content) =>
+                setArticle((prev) =>
+                  prev ? { ...prev, content, admin_edited_at: new Date().toISOString() } : prev,
+                )
+              }
+            />
+          )}
 
           <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
             <div
@@ -695,6 +697,14 @@ export default function AdminArticleDetail() {
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-sm px-2.5 py-1">
                       {displayTypeName}
                     </span>
+                    {!effectiveSnapshot && article.admin_edited_at && (
+                      <span
+                        title={`Edited by an admin on ${dayjs(article.admin_edited_at).format("MMM D, YYYY h:mm A")}`}
+                        className="ml-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2.5 py-1"
+                      >
+                        Edited by admin
+                      </span>
+                    )}
                     <ArticleCopyButton title={displayTitle} text={displayContent} />
                     <DownloadMarkdownButton
                       title={displayTitle}

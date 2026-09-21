@@ -20,6 +20,7 @@ import "react-resizable/css/styles.css";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminHeader from "@/admin/components/AdminHeader";
 import ParameterResultsBox from "@/admin/components/articles/ParameterResultsBox";
+import SuggestionsPanel from "@/admin/components/articles/SuggestionsPanel";
 import ScoringHistoryTable from "@/admin/components/articles/ScoringHistoryTable";
 import FeedbackBlock from "@/admin/components/articles/FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
@@ -113,8 +114,8 @@ export default function ArticleDetail() {
   const [titleDraft, setTitleDraft] = useState("");
   const [titleBusy, setTitleBusy] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
-  /** True once an admin explicitly (re)starts scoring — distinct from a merely-pending, not-yet-scored article. */
-  const [awaitingReeval, setAwaitingReeval] = useState(false);
+  /** Bumped when an action starts scoring, so polling restarts even if an earlier poll already timed out. */
+  const [pollEpoch, setPollEpoch] = useState(0);
 
   useEffect(() => {
     if (article) {
@@ -168,17 +169,13 @@ export default function ArticleDetail() {
     let timer: number | null = null;
     const pollStart = Date.now();
     const isTimedOut = () => Date.now() - pollStart > MAX_POLL_DURATION;
-    // Non-admins can land here with a pending, unscored article that has no
-    // evaluation actually running (e.g. an admin changed its type without
-    // re-evaluating) — the backend has no field distinguishing that from a
-    // genuinely in-flight evaluation, so this message stays neutral instead
-    // of claiming scoring was in progress.
+    // Neutral wording: a pending article may have had its evaluation cut short,
+    // and nothing tells us that apart from one that is still running.
     const timeoutMessage = "Still pending — refresh to check for updates";
     const tick = async () => {
       if (stopped || document.visibilityState === "hidden") return;
       if (isTimedOut()) {
         if (timer) clearInterval(timer);
-        setAwaitingReeval(false);
         try {
           sessionStorage.setItem("toastError", timeoutMessage);
         } catch {}
@@ -194,7 +191,6 @@ export default function ArticleDetail() {
         setCurrentFeedback(result.current_feedback ?? "");
         setParameterResults(result.parameter_results ?? []);
         if (result.current_score !== null) {
-          setAwaitingReeval(false);
           try {
             sessionStorage.removeItem("toastError");
           } catch {}
@@ -208,7 +204,6 @@ export default function ArticleDetail() {
     timer = window.setInterval(() => {
       if (isTimedOut()) {
         if (timer) clearInterval(timer);
-        setAwaitingReeval(false);
         try {
           sessionStorage.setItem("toastError", timeoutMessage);
         } catch {}
@@ -225,7 +220,7 @@ export default function ArticleDetail() {
       if (timer) clearInterval(timer);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [article?.id, currentScore, effectiveSnapshot]);
+  }, [article?.id, article?.status, currentScore, effectiveSnapshot, pollEpoch]);
 
   const isPending = currentScore === null && article?.status === "pending";
 
@@ -376,22 +371,19 @@ export default function ArticleDetail() {
     return result;
   }
 
-  async function handleChangeType(reevaluate: boolean) {
+  async function handleChangeType() {
     if (!id || !selectedTypeId) return;
     setTypeBusy(true);
     try {
-      const res: any = await api(`/admin/articles/${id}/type`, {
+      await api(`/admin/articles/${id}/type`, {
         method: "PATCH",
-        body: JSON.stringify({ article_type_id: selectedTypeId, reevaluate }),
+        body: JSON.stringify({ article_type_id: selectedTypeId, reevaluate: false }),
       });
-      const started = Boolean(res?.reevaluate);
-      toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
       await refreshArticleQuietly();
-      if (started) {
-        setCurrentScore(null);
-        setCurrentFeedback("");
-        setAwaitingReeval(true);
-      }
+      toast.warning(
+        "Article type updated. Re-evaluate to keep the score, feedback and parameter results consistent with the new type.",
+        { duration: 10000 },
+      );
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -405,9 +397,11 @@ export default function ArticleDetail() {
     try {
       await api(`/admin/articles/${id}/reevaluate`, { method: "POST" });
       toast.success("Re-evaluation started");
+      // Reload so article.status is "pending" — the polling effect skips terminal statuses.
+      await refreshArticleQuietly();
       setCurrentScore(null);
       setCurrentFeedback("");
-      setAwaitingReeval(true);
+      setPollEpoch((n) => n + 1);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -437,7 +431,7 @@ export default function ArticleDetail() {
       toast.success("Re-evaluation started");
       setCurrentScore(null);
       setCurrentFeedback("");
-      setAwaitingReeval(true);
+      setPollEpoch((n) => n + 1);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -699,18 +693,10 @@ export default function ArticleDetail() {
               <button
                 type="button"
                 disabled={!typeChanged || typeBusy || reevalBusy || isPending || editing}
-                onClick={() => handleChangeType(true)}
+                onClick={() => handleChangeType()}
                 className="rounded-sm bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
-                {typeBusy ? "Saving…" : "Change type & re-evaluate"}
-              </button>
-              <button
-                type="button"
-                disabled={!typeChanged || typeBusy || reevalBusy || isPending || editing}
-                onClick={() => handleChangeType(false)}
-                className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
-              >
-                Change type only
+                {typeBusy ? "Saving…" : "Change type only"}
               </button>
               <button
                 type="button"
@@ -722,7 +708,7 @@ export default function ArticleDetail() {
               </button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              "Change type only" just updates the type. "Change type & re-evaluate" snapshots the prior score and re-scores. Not suitable skips AI scoring.
+              "Change type only" just updates the type and keeps the current score. Re-evaluate snapshots it and re-scores. Not suitable skips AI scoring.
             </p>
           </div>
         )}
@@ -810,6 +796,19 @@ export default function ArticleDetail() {
             )}
           </div>
           <ParameterResultsBox results={parameterResults} />
+          {isAdmin && !effectiveSnapshot && article && (
+            <SuggestionsPanel
+              articleId={article.id}
+              version={article.version}
+              scored={currentScore !== null && !isFailed}
+              onContentUpdated={(next) => {
+                setContent(next);
+                setArticle((prev: any) =>
+                  prev ? { ...prev, content: next, admin_edited_at: new Date().toISOString() } : prev,
+                );
+              }}
+            />
+          )}
 
           {/* Content - COLLAPSIBLE */}
           <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
@@ -825,6 +824,14 @@ export default function ArticleDetail() {
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-sm px-2.5 py-1">
                       {displayTypeName}
                     </span>
+                    {!effectiveSnapshot && article.admin_edited_at && (
+                      <span
+                        title={`Edited by an admin on ${dayjs(article.admin_edited_at).format("MMM D, YYYY h:mm A")}`}
+                        className="ml-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2.5 py-1"
+                      >
+                        Edited by admin
+                      </span>
+                    )}
                       <ArticleCopyButton title={title} text={content} />
                     <DownloadMarkdownButton
                       title={title}

@@ -80,7 +80,7 @@ export async function snapshotArticle(
           article_type_id,
           title,
           CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE ai_feedback END,
-          content,
+          COALESCE(pre_edit_content, content),
           ai_score,
           pass_threshold,
           CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
@@ -125,7 +125,9 @@ export async function updateArticleForRewrite(
           updated_at = ?,
           scored_at = NULL,
           month_year = ?,
-          retry_count = retry_count + 1
+          retry_count = retry_count + 1,
+          admin_edited_at = NULL,
+          pre_edit_content = NULL
         WHERE id = ?
         ${userId ? "AND user_id = ?" : ""}
         RETURNING version

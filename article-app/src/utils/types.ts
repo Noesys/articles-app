@@ -19,6 +19,8 @@ export interface ArticleDetail {
   status: string;
   version: number;
   suggested_title?: string | null;
+  /** Set when an admin applied AI suggestions to the text; cleared on the author's next rewrite. */
+  admin_edited_at?: string | null;
 }
 
 export interface HistoryItem {
