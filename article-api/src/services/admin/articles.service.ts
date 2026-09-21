@@ -324,6 +324,41 @@ export async function getArticleTypeMeta(
 }
 
 /**
+ * Change ONLY the article's type: no snapshot, version bump, status change or
+ * score reset — everything else about the article stays exactly as it was.
+ * Returns false when the article doesn't exist.
+ */
+export async function updateArticleTypeOnly(
+  db: D1Database,
+  articleId: string,
+  articleTypeId: string,
+): Promise<boolean> {
+  const article = await getArticleById(db, articleId);
+  if (!article) return false;
+
+  // An in-flight evaluation was started under the old type and will write
+  // its result to this row — changing the type underneath it would leave a
+  // score that doesn't match the article's type.
+  if (
+    (article.status === "pending" || article.status === "processing") &&
+    !isStuckPending(article.updated_at)
+  ) {
+    throw new Error("Article is currently being evaluated; please wait for it to finish");
+  }
+
+  const typeMeta = await getArticleTypeMeta(db, articleTypeId);
+  if (!typeMeta || !typeMeta.is_active) {
+    throw new Error("Article type not found or inactive");
+  }
+
+  await db
+    .prepare(`UPDATE articles SET article_type_id = ? WHERE id = ?`)
+    .bind(articleTypeId, articleId)
+    .run();
+  return true;
+}
+
+/**
  * Change article type, clear prior scores, optionally prepare for re-evaluation.
  * Snapshots current version into history when scores/feedback exist.
  */

@@ -5,7 +5,6 @@ import { useLocation, useNavigate, useParams, useSearchParams } from "react-rout
 import { BookOpen, CalendarDays, ChevronLeft, Loader2, Search, User } from "lucide-react";
 import dayjs from "dayjs";
 import { useAuth } from "../contexts/AuthContext";
-import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/ui/filter-select";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
@@ -194,6 +193,24 @@ export default function ExploreArticles() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows.length]);
 
+  // Page-scroll infinite loading: fetch the next page when the sentinel below
+  // the list comes within 400px of the viewport. The observer is recreated
+  // after every load so a sentinel that is still on-screen (short page) fires
+  // again. Skipped after an error so a failing request doesn't retry in a loop.
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = loadMoreSentinelRef.current;
+    if (!el || !hasMore || isFetchingMore || error) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) fetchMore();
+      },
+      { rootMargin: "0px 0px 400px 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, isFetchingMore, rows.length, error, fetchMore]);
+
   const hasActiveFilters = Boolean(activeQuery || activeType !== "all");
 
   return (
@@ -202,7 +219,7 @@ export default function ExploreArticles() {
       <PageShell>
         <PageHeader
           title="Explore articles"
-          subtitle={!isLoading ? `${total} ${total === 1 ? "article" : "articles"}` : undefined}
+          subtitle={!isLoading ? `${total} ${total === 1 ? "article" : "articles"}` : "loading..."}
         />
 
         <FilterToolbar>
@@ -280,25 +297,10 @@ export default function ExploreArticles() {
                 </button>
               ))}
             </div>
-            {hasMore && (
-              <div className="flex justify-center pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  disabled={isFetchingMore}
-                  onClick={() => fetchMore()}
-                  className="border-border bg-white"
-                >
-                  {isFetchingMore ? (
-                    <>
-                      <Loader2 size={15} className="animate-spin" />
-                      Loading…
-                    </>
-                  ) : (
-                    "Load more"
-                  )}
-                </Button>
+            {hasMore && <div ref={loadMoreSentinelRef} aria-hidden className="h-px" />}
+            {isFetchingMore && (
+              <div className="flex justify-center py-4" role="status" aria-label="Loading more articles">
+                <Loader2 size={22} className="animate-spin text-slate-400" />
               </div>
             )}
           </>

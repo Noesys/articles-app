@@ -7,8 +7,10 @@ import {
   getArticleHistory,
   getArticles,
   getArticleStats,
+  getArticleTypeMeta,
   prepareArticleReevaluate,
   updateArticleTitle,
+  updateArticleTypeOnly,
 } from "../../services/admin/articles.service";
 import {
   getParameterResults,
@@ -203,8 +205,10 @@ articlesRoute.post("/:id/parameter-results", async (c) => {
 });
 
 /**
- * Change article type. With reevaluate=true (default when type is evaluatable),
- * clears scores and runs AI scoring in the background.
+ * Change article type. With reevaluate=true (default) and an evaluatable type,
+ * snapshots, bumps the version and runs AI scoring in the background. With
+ * reevaluate=false — or a non-evaluatable target type, which can't be scored —
+ * it ONLY changes the type and leaves everything else untouched.
  */
 articlesRoute.patch("/:id/type", async (c) => {
   const id = c.req.param("id");
@@ -215,6 +219,27 @@ articlesRoute.patch("/:id/type", async (c) => {
 
   if (!body.article_type_id) {
     return c.json({ success: false, message: "article_type_id is required" }, 400);
+  }
+
+  const targetType = await getArticleTypeMeta(c.env.DB, body.article_type_id);
+  const evaluatable = Number(targetType?.is_evaluatable) === 1;
+
+  if (body.reevaluate === false || (targetType && !evaluatable)) {
+    let found: boolean;
+    try {
+      found = await updateArticleTypeOnly(c.env.DB, id, body.article_type_id);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return c.json({ success: false, message: msg }, 400);
+    }
+    if (!found) {
+      return c.json({ success: false, message: "Article not found" }, 404);
+    }
+    const article = await getArticleById(c.env.DB, id);
+    return c.json({
+      message: "Article type updated",
+      data: { article, reevaluate: false, evaluatable },
+    });
   }
 
   let result;
@@ -229,7 +254,7 @@ articlesRoute.patch("/:id/type", async (c) => {
     return c.json({ success: false, message: "Article not found" }, 404);
   }
 
-  const shouldReevaluate = body.reevaluate !== false && result.evaluatable;
+  const shouldReevaluate = result.evaluatable;
   if (shouldReevaluate) {
     c.executionCtx.waitUntil(
       backgroundEvaluateArticle(

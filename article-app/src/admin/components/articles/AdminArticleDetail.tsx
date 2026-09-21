@@ -212,16 +212,9 @@ export default function AdminArticleDetail() {
   // (e.g. type changed to a non-evaluatable one) would re-arm immediately
   // after every poll timeout and loop forever.
   const autoArmedRef = useRef<string | null>(null);
-  // Set by handleChangeType when reevaluate=false ("Change type only"): that
-  // version is intentionally pending with no evaluation dispatched, so the
-  // auto-arm effect below must not treat it as "scoring elsewhere" — without
-  // this it can't tell that apart from a genuinely in-flight evaluation and
-  // wrongly flips scoringInFlight back on right after this page turns it off.
-  const noEvalVersionKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!article || effectiveSnapshot) return;
     const key = `${article.id}:${article.version}`;
-    if (key === noEvalVersionKeyRef.current) return;
     const stillPending = currentScore === null && !TERMINAL_STATUSES.includes(article.status);
     if (!stillPending) {
       if (autoArmedRef.current === key) autoArmedRef.current = null;
@@ -382,13 +375,12 @@ export default function AdminArticleDetail() {
       });
       const started = Boolean(res?.reevaluate);
       toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
-      const updated = await loadArticle();
-      if (!started && updated) {
-        noEvalVersionKeyRef.current = `${updated.id}:${updated.version}`;
+      await loadArticle();
+      if (started) {
+        setCurrentScore(null);
+        setCurrentFeedback("");
+        setScoringInFlight(true);
       }
-      setCurrentScore(null);
-      setCurrentFeedback("");
-      setScoringInFlight(started);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -596,7 +588,7 @@ export default function AdminArticleDetail() {
               </button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Changing type snapshots the prior score (if any). Not suitable skips AI scoring.
+              "Change type only" just updates the type. "Change type & re-evaluate" snapshots the prior score and re-scores. Not suitable skips AI scoring.
             </p>
           </div>
         )}

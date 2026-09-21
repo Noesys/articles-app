@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 import {
@@ -115,13 +115,6 @@ export default function ArticleDetail() {
   const [applyBusy, setApplyBusy] = useState(false);
   /** True once an admin explicitly (re)starts scoring — distinct from a merely-pending, not-yet-scored article. */
   const [awaitingReeval, setAwaitingReeval] = useState(false);
-  /** Marks `id:version` as pending-with-no-eval-running (admin changed type
-   * without re-evaluating). Ref, not state, so it resets on remount — a
-   * fresh mount has no in-mount evidence either way, so it defaults to
-   * "assume a real evaluation may be running" and polls, matching what
-   * non-admins already do for a pending article regardless of who/what
-   * triggered it. */
-  const noEvalVersionKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (article) {
@@ -156,10 +149,6 @@ export default function ArticleDetail() {
 
   const isFailed = displayStatus === "failed";
 
-  const versionKey = article ? `${article.id}:${article.version}` : null;
-  const isKnownNoEval =
-    versionKey !== null && versionKey === noEvalVersionKeyRef.current;
-
   // Poll every 2.5s while scoring; stops on terminal status/complete/timeout
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
   const POLLING_INTERVAL = 2500;
@@ -172,13 +161,7 @@ export default function ArticleDetail() {
       effectiveSnapshot ||
       !article ||
       currentScore !== null ||
-      TERMINAL_STATUSES.includes(article.status) ||
-      // Admin's "change type only" leaves the article pending+unscored
-      // without starting a background job — don't poll for that. Only
-      // skip when THIS mount has confirmed evidence of that (ref survives
-      // within-mount navigation-free updates, not remounts), so a fresh
-      // mount re-entering a genuinely pending article still polls.
-      (isAdmin && isKnownNoEval)
+      TERMINAL_STATUSES.includes(article.status)
     )
       return;
     let stopped = false;
@@ -242,19 +225,9 @@ export default function ArticleDetail() {
       if (timer) clearInterval(timer);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [article?.id, currentScore, effectiveSnapshot, isAdmin, isKnownNoEval]);
+  }, [article?.id, currentScore, effectiveSnapshot]);
 
-  // "Not scored yet" (admin's type-only change, no reeval running) is
-  // distinct from "actively scoring" — everyone else's "pending" always
-  // means the latter, since only the admin type-change flow can produce it.
-  const isPendingUnscored =
-    isAdmin &&
-    !effectiveSnapshot &&
-    isKnownNoEval &&
-    displayStatus === "pending" &&
-    displayScore === null;
-  const isPending =
-    currentScore === null && article?.status === "pending" && !isPendingUnscored;
+  const isPending = currentScore === null && article?.status === "pending";
 
   const [typeMinWords, setTypeMinWords] = useState<number>(1000);
   const [allTypesCache, setAllTypesCache] = useState<any[]>([]);
@@ -413,14 +386,12 @@ export default function ArticleDetail() {
       });
       const started = Boolean(res?.reevaluate);
       toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
-      const updated = await refreshArticleQuietly();
-      noEvalVersionKeyRef.current =
-        !started && updated?.article
-          ? `${updated.article.id}:${updated.article.version}`
-          : null;
-      setCurrentScore(null);
-      setCurrentFeedback("");
-      setAwaitingReeval(started);
+      await refreshArticleQuietly();
+      if (started) {
+        setCurrentScore(null);
+        setCurrentFeedback("");
+        setAwaitingReeval(true);
+      }
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -434,7 +405,6 @@ export default function ArticleDetail() {
     try {
       await api(`/admin/articles/${id}/reevaluate`, { method: "POST" });
       toast.success("Re-evaluation started");
-      noEvalVersionKeyRef.current = null;
       setCurrentScore(null);
       setCurrentFeedback("");
       setAwaitingReeval(true);
@@ -661,7 +631,6 @@ export default function ArticleDetail() {
                   setEditing(true);
                   setContentCollapsed(false);
                 }}
-                disabled={isPendingUnscored}
                 className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white rounded-sm px-3 py-2 transition-colors shrink-0"
               >
                 <Edit3 size={14} />
@@ -713,7 +682,7 @@ export default function ArticleDetail() {
           )}
         </div>
 
-        {isAdmin && !effectiveSnapshot && (
+        {isAdmin && !effectiveSnapshot && !editing && (
           <div className="rounded-sm border border-slate-200 bg-white p-4 shadow-sm mb-6">
             <p className="text-md font-semibold uppercase tracking-wide text-slate-600 mb-3">
               Article type
@@ -753,7 +722,7 @@ export default function ArticleDetail() {
               </button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Changing type snapshots the prior score (if any). Not suitable skips AI scoring.
+              "Change type only" just updates the type. "Change type & re-evaluate" snapshots the prior score and re-scores. Not suitable skips AI scoring.
             </p>
           </div>
         )}
@@ -776,10 +745,6 @@ export default function ArticleDetail() {
                       We couldn't evaluate this article. Please submit it again.
                     </p>
                   </div>
-                ) : isPendingUnscored ? (
-                  <p className="text-sm text-slate-500 py-1">
-                    Not scored yet — use Re-evaluate to run scoring.
-                  </p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
                     <Loader2
@@ -833,8 +798,6 @@ export default function ArticleDetail() {
               <div className="px-4 pb-4">
                 {isFailed ? (
                   <p className="text-sm text-red-600">Evaluation failed. Please submit it again.</p>
-                ) : isPendingUnscored ? (
-                  <p className="text-sm text-slate-500">No feedback yet.</p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-sm border border-slate-200 shadow-sm">
                     <Loader2 size={16} className="animate-spin text-slate-400" />
