@@ -90,6 +90,7 @@ export type FormState = {
   scoreMin: string;
   scoreMax: string;
   passThreshold: string;
+  minWords: string;
   parameters: ParameterDraft[];
 };
 
@@ -101,6 +102,7 @@ export type ArticleTypeResponse = {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words?: number;
 };
 
 export type ParameterResponse = {

@@ -48,6 +48,7 @@ const EMPTY_FORM: FormState = {
   scoreMin: "0",
   scoreMax: "10",
   passThreshold: "10",
+  minWords: "1000",
   parameters: [],
 };
 
@@ -189,6 +190,7 @@ export default function ArticleTypesForm() {
           scoreMin: t.score_min.toString(),
           scoreMax: t.score_max.toString(),
           passThreshold: t.pass_threshold.toString(),
+          minWords: (t.min_words ?? 1000).toString(),
           parameters: params.map(parameterFromResponse),
         });
       } catch (err) {
@@ -256,17 +258,23 @@ export default function ArticleTypesForm() {
   const scoreMinNum = Number(form.scoreMin);
   const scoreMaxNum = Number(form.scoreMax);
   const passThresholdNum = Number(form.passThreshold);
+  const minWordsNum = Number(form.minWords);
   const scoreRangeInvalid =
     form.scoreMin !== "" && form.scoreMax !== "" && scoreMaxNum <= scoreMinNum;
   const thresholdInvalid =
     !scoreRangeInvalid &&
     form.passThreshold !== "" &&
     (passThresholdNum < scoreMinNum || passThresholdNum > scoreMaxNum);
+  const minWordsInvalid =
+    form.minWords.trim() === "" ||
+    !Number.isInteger(minWordsNum) ||
+    minWordsNum < 1;
   const canSubmit =
     form.name.trim() &&
     form.promptContent.trim() &&
     !scoreRangeInvalid &&
     !thresholdInvalid &&
+    !minWordsInvalid &&
     !submitting;
 
   const handleSubmit = async () => {
@@ -289,6 +297,7 @@ export default function ArticleTypesForm() {
         scoreMin: scoreMinNum,
         scoreMax: scoreMaxNum,
         passThreshold: passThresholdNum,
+        minWords: minWordsNum,
       });
       let articleTypeId = id;
       if (isEditing) {
@@ -364,48 +373,78 @@ export default function ArticleTypesForm() {
             className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
           />
         </div>
+
+        {/* Description on the left (tall) + stacked Pass Threshold / Min Word Count on the right */}
         <div className="grid grid-cols-10 gap-4">
-          <div className="col-span-7">
+          <div className="col-span-7 flex flex-col">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Description
             </label>
-            <input
-              type="text"
+            <textarea
               value={form.description}
               onChange={(e) =>
                 setForm((c) => ({ ...c, description: e.target.value }))
               }
               placeholder="Short description (optional)"
-              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+              rows={4}
+              className="w-full resize-y rounded-sm border border-border bg-white px-3 py-4 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
             />
           </div>
-          <div className="col-span-3">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Pass Threshold{" "}
-              <span className="font-normal text-slate-400">(Accepts 0-10 only)</span>
-            </label>
-            <input
-              type="number"
-              value={form.passThreshold}
-              min={0}
-              max={10}
-              onWheel={handleWheel}
-              onChange={(e) => {
-                const value = Number(e.target.value);
- 
-                if (value > 10) return;
-                if (value < 0 && e.target.value !== "") return;
- 
-                setForm((c) => ({
-                  ...c,
-                  passThreshold: e.target.value,
-                }));
-              }}
-              placeholder="10"
-              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
-            />
+
+          <div className="col-span-3 flex flex-col gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Pass Threshold{" "}
+                <span className="font-normal text-slate-400">(Accepts 0-10 only)</span>
+              </label>
+              <input
+                type="number"
+                value={form.passThreshold}
+                min={0}
+                max={10}
+                onWheel={handleWheel}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
+
+                  if (value > 10) return;
+                  if (value < 0 && e.target.value !== "") return;
+
+                  setForm((c) => ({
+                    ...c,
+                    passThreshold: e.target.value,
+                  }));
+                }}
+                placeholder="10"
+                className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Minimum Word Count
+              </label>
+              <input
+                type="number"
+                value={form.minWords}
+                min={1}
+                step={1}
+                onWheel={handleWheel}
+                onChange={(e) => {
+                  if (e.target.value !== "" && Number(e.target.value) < 1) return;
+                  setForm((c) => ({ ...c, minWords: e.target.value }));
+                }}
+                placeholder="1000"
+                className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+              />
+              {minWordsInvalid && (
+                <p className="mt-1 text-xs text-red-600">
+                  Enter a positive whole number.
+                </p>
+              )}
+            </div>
           </div>
         </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Scoring Prompt
