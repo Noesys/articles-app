@@ -6,6 +6,7 @@ import {
   buildEvaluationPrompt,
 } from "./evaluationBuilder.service";
 import { evaluateArticle as callAI } from "./ai.service";
+import { generateAndStoreSuggestions } from "./suggestions.service";
 import type { EvaluationOutcome, ParameterResultInput } from "../../types/user-types";
 import { Bindings } from "../../types/shared-types";
 
@@ -95,6 +96,9 @@ export async function evaluateArticle(
       pass_threshold: articleType.pass_threshold,
       parameter_results: parameterResults,
     });
+
+    // Separate lightweight pass — best-effort, never fails the evaluation.
+    await generateAndStoreSuggestions(db, articleId, version, content, bindings);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("Article evaluation failed:", msg, error);

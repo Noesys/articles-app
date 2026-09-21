@@ -18,6 +18,10 @@ import { AppEnv, Bindings } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 import { evaluateArticle } from "../../services/user/evaluateArticle.service";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
+import {
+  listSuggestions,
+  applySuggestions,
+} from "../../services/user/suggestions.service";
 
 const articlesRoute = new Hono<AppEnv>();
 articlesRoute.use("*", requireRole("admin"));
@@ -32,7 +36,15 @@ async function backgroundEvaluateArticle(
   bindings: Bindings,
 ) {
   try {
-    await evaluateArticle(db, articleId, articleTypeId, title, content, version, bindings);
+    await evaluateArticle(
+      db,
+      articleId,
+      articleTypeId,
+      title,
+      content,
+      version,
+      bindings,
+    );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("Admin background evaluation failed:", msg, err);
@@ -44,8 +56,18 @@ articlesRoute.get("/", async (c) => {
   const status = c.req.query("status");
   const type = c.req.query("type");
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10));
-  const { data, total } = await getArticles(c.env.DB, month, status, type, page, limit);
+  const limit = Math.min(
+    100,
+    Math.max(1, parseInt(c.req.query("limit") || "10", 10) || 10),
+  );
+  const { data, total } = await getArticles(
+    c.env.DB,
+    month,
+    status,
+    type,
+    page,
+    limit,
+  );
   return c.json({
     message: "Articles fetched successfully",
     data,
@@ -98,7 +120,11 @@ articlesRoute.get("/:id", async (c) => {
     article.ai_feedback ||
     (history.length > 0 ? history[history.length - 1].ai_feedback || "" : "");
 
-  const parameter_results = await getParameterResults(db, articleId, article.version);
+  const parameter_results = await getParameterResults(
+    db,
+    articleId,
+    article.version,
+  );
 
   return c.json({
     message: "Article fetched successfully",
@@ -184,14 +210,19 @@ articlesRoute.get("/:id/parameter-results", async (c) => {
   const id = c.req.param("id");
   const versionQuery = c.req.query("version");
   const version = versionQuery ? parseInt(versionQuery, 10) : undefined;
-  const data = await getParameterResults(c.env.DB, id, isNaN(version!) ? undefined : version);
+  const data = await getParameterResults(
+    c.env.DB,
+    id,
+    isNaN(version!) ? undefined : version,
+  );
   return c.json({ message: "Parameter results fetched", data });
 });
 
 articlesRoute.post("/:id/parameter-results", async (c) => {
   const id = c.req.param("id");
   const body = await c.req.json();
-  if (!Array.isArray(body.results)) return c.json({ message: "results array required" }, 400);
+  if (!Array.isArray(body.results))
+    return c.json({ message: "results array required" }, 400);
   const data = await storeParameterResults(
     c.env.DB,
     id,
@@ -214,7 +245,10 @@ articlesRoute.patch("/:id/type", async (c) => {
   };
 
   if (!body.article_type_id) {
-    return c.json({ success: false, message: "article_type_id is required" }, 400);
+    return c.json(
+      { success: false, message: "article_type_id is required" },
+      400,
+    );
   }
 
   let result;
@@ -277,7 +311,8 @@ articlesRoute.post("/:id/reevaluate", async (c) => {
     return c.json(
       {
         success: false,
-        message: "Article type is not evaluatable (e.g. Not suitable). Change type first.",
+        message:
+          "Article type is not evaluatable (e.g. Not suitable). Change type first.",
       },
       400,
     );
@@ -300,6 +335,72 @@ articlesRoute.post("/:id/reevaluate", async (c) => {
     message: "Re-evaluation started",
     data: { article, reevaluate: true },
   });
+});
+
+/** List AI content suggestions for an article (admin-only). */
+articlesRoute.get("/:id/suggestions", async (c) => {
+  const id = c.req.param("id");
+  const versionQuery = c.req.query("version");
+  const version = versionQuery ? parseInt(versionQuery, 10) : undefined;
+  const suggestions = await listSuggestions(
+    c.env.DB,
+    id,
+    version !== undefined && !isNaN(version) ? version : undefined,
+  );
+  return c.json({ message: "Suggestions fetched", data: { suggestions } });
+});
+
+/** Apply selected suggestions in-place (no version bump, no re-evaluation). */
+articlesRoute.post("/:id/suggestions/apply", async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as {
+    suggestionIds?: unknown;
+  };
+  if (!Array.isArray(body.suggestionIds) || body.suggestionIds.length === 0) {
+    return c.json(
+      { success: false, message: "suggestionIds array required" },
+      400,
+    );
+  }
+  const ids = body.suggestionIds.filter(
+    (v): v is string => typeof v === "string",
+  );
+  if (ids.length === 0 || ids.length > 40) {
+    return c.json(
+      { success: false, message: "Provide 1-40 suggestion ids" },
+      400,
+    );
+  }
+  try {
+    const result = await applySuggestions(c.env.DB, id, ids);
+    return c.json({ message: "Suggestions applied", data: result });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ success: false, message: msg }, 400);
+  }
+});
+
+/** Apply all unapplied suggestions for the current version. */
+articlesRoute.post("/:id/suggestions/apply-all", async (c) => {
+  const id = c.req.param("id");
+  const article = await getArticleById(c.env.DB, id);
+  if (!article)
+    return c.json({ success: false, message: "Article not found" }, 404);
+  const all = await listSuggestions(c.env.DB, id, article.version);
+  const pending = all.filter((s) => !s.applied).map((s) => s.id);
+  if (pending.length === 0) {
+    return c.json({
+      message: "No pending suggestions",
+      data: { applied: [], failed: [] },
+    });
+  }
+  try {
+    const result = await applySuggestions(c.env.DB, id, pending);
+    return c.json({ message: "Suggestions applied", data: result });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ success: false, message: msg }, 400);
+  }
 });
 
 export default articlesRoute;

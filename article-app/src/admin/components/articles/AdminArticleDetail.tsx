@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import ScoringHistoryTable from "./ScoringHistoryTable";
 import ParameterResultsBox from "./ParameterResultsBox";
+import SuggestionsPanel from "./SuggestionsPanel";
 import FeedbackBlock from "./FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
 import { HistoryItem, ArticleDetail, ParameterResult } from "@/utils/types";
@@ -689,6 +690,15 @@ export default function AdminArticleDetail() {
             )}
           </div>
           <ParameterResultsBox results={parameterResults} />
+          {!effectiveSnapshot && article && (
+            <SuggestionsPanel
+              articleId={article.id}
+              version={article.version}
+              onContentUpdated={(content) =>
+                setArticle((prev) => (prev ? { ...prev, content } : prev))
+              }
+            />
+          )}
 
           <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
             <div

@@ -20,6 +20,7 @@ import "react-resizable/css/styles.css";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminHeader from "@/admin/components/AdminHeader";
 import ParameterResultsBox from "@/admin/components/articles/ParameterResultsBox";
+import SuggestionsPanel from "@/admin/components/articles/SuggestionsPanel";
 import ScoringHistoryTable from "@/admin/components/articles/ScoringHistoryTable";
 import FeedbackBlock from "@/admin/components/articles/FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
@@ -847,6 +848,16 @@ export default function ArticleDetail() {
             )}
           </div>
           <ParameterResultsBox results={parameterResults} />
+          {isAdmin && !effectiveSnapshot && article && (
+            <SuggestionsPanel
+              articleId={article.id}
+              version={article.version}
+              onContentUpdated={(next) => {
+                setContent(next);
+                setArticle((prev: any) => (prev ? { ...prev, content: next } : prev));
+              }}
+            />
+          )}
 
           {/* Content - COLLAPSIBLE */}
           <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
