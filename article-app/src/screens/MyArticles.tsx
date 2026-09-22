@@ -65,8 +65,12 @@ const STATUS_CONFIG: Record<string, { className: string; label: string }> = {
 };
 
 const POLLING_INTERVAL = 2500;
-// Matches the backend's sweepStuckEvaluations threshold (index.ts) and
-// ArticleDetail/AdminArticleDetail polling.
+// Matches STUCK_EVALUATION_THRESHOLD_MS (article-api/src/utils/evaluationTiming.ts)
+// and the same constant in ArticleDetail/AdminArticleDetail. There is no backend
+// sweep — the backend only treats a pending/processing article as stuck when a
+// rewrite/re-evaluate/apply-suggestions call is made on that specific article
+// (see isStuckPending); this local timer is what ends the "still scoring" banner
+// on this page when nothing else ever touches the article again.
 const MAX_POLL_DURATION = 120000;
 /** Fetch batch size for "View all" — an implementation detail now that the list is virtualized, not a user-facing setting. */
 const VIEW_ALL_FETCH_LIMIT = 30;

@@ -315,9 +315,9 @@ export async function createArticle(
       article.status,
       article.version,
       article.submitted_at,
-      // sweepStuckEvaluations relies on updated_at marking when this pending
-      // period started — must be set on every write that puts the article
-      // into pending, not just admin re-evaluate/change-type.
+      // isStuckPending() (utils/evaluationTiming.ts) relies on updated_at marking
+      // when this pending period started — must be set on every write that puts
+      // the article into pending, not just admin re-evaluate/change-type.
       article.submitted_at,
       article.month_year,
       article.retry_count,

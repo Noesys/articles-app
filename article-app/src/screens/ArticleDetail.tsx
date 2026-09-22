@@ -153,9 +153,11 @@ export default function ArticleDetail() {
   // Poll every 2.5s while scoring; stops on terminal status/complete/timeout
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
   const POLLING_INTERVAL = 2500;
-  // Matches the backend's sweepStuckEvaluations threshold (index.ts) and
-  // AdminArticleDetail/MyArticles polling — kept consistent so the article
-  // is actually marked "failed" (rewrite enabled) by the time this gives up.
+  // Matches STUCK_EVALUATION_THRESHOLD_MS (article-api/src/utils/evaluationTiming.ts)
+  // and the same constant in AdminArticleDetail/MyArticles. There is no backend
+  // sweep — the article's own status only flips to "failed" when a rewrite is
+  // actually attempted (isStuckPending lets that bypass a still-"pending" row).
+  // This local timer just stops polling and shows a timeout message here.
   const MAX_POLL_DURATION = 120000;
   useEffect(() => {
     if (

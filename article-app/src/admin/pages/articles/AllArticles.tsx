@@ -41,8 +41,11 @@ const FETCH_LIMIT = 30;
 const POLLING_INTERVAL = 2500;
 /**
  * Per-row cap: give up auto-refreshing a single row after this long. Matches
- * the backend's sweepStuckEvaluations threshold and the detail-page polling
- * (ArticleDetail/AdminArticleDetail/MyArticles) for consistency.
+ * STUCK_EVALUATION_THRESHOLD_MS (article-api/src/utils/evaluationTiming.ts) and
+ * the same constant in the detail pages (ArticleDetail/AdminArticleDetail/MyArticles).
+ * There is no backend sweep — the backend only treats a pending/processing row as
+ * stuck when a rewrite/re-evaluate/apply-suggestions call is made on that specific
+ * article (isStuckPending); this local timeout just stops refreshing the row here.
  */
 const ROW_TIMEOUT_MS = 120000;
 

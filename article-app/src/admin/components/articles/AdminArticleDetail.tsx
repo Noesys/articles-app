@@ -229,10 +229,11 @@ export default function AdminArticleDetail() {
 
   // Poll while an admin-triggered re-eval is in flight
   const POLLING_INTERVAL = 2500;
-  // Matches the backend's sweepStuckEvaluations threshold (index.ts) and the
-  // user-side ArticleDetail/MyArticles polling — kept consistent so the
-  // article is actually marked "failed" (rewrite/re-evaluate enabled) by the
-  // time polling here gives up.
+  // Matches STUCK_EVALUATION_THRESHOLD_MS (article-api/src/utils/evaluationTiming.ts)
+  // and the same constant in the user-side ArticleDetail/MyArticles. There is no
+  // backend sweep — the article's own status only flips to "failed" once a
+  // rewrite/re-evaluate is actually attempted (isStuckPending lets that bypass a
+  // still-"pending" row). This local timer just stops polling here.
   const MAX_POLL_DURATION = 120000;
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
 
