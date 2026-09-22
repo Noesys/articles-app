@@ -13,6 +13,7 @@ export async function getArticles(
   type?: string,
   page = 1,
   limit = 10,
+  author?: string,
 ): Promise<{ data: ArticleListResult[]; total: number }> {
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -30,6 +31,14 @@ export async function getArticles(
   if (type) {
     conditions.push("a.article_type_id = ?");
     params.push(type);
+  }
+
+  if (author) {
+    // Same expression the SELECT below uses for author_name — filtering here
+    // (not client-side on already-loaded rows) so an author whose article
+    // hasn't been paginated into view yet is still found.
+    conditions.push("COALESCE(u.name, ue.name, a.employee_email) = ?");
+    params.push(author);
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -101,7 +110,14 @@ export async function getArticles(
     ORDER BY a.submitted_at DESC
   `;
 
-  const countSql = `SELECT COUNT(DISTINCT a.id) as total FROM articles a JOIN article_types at ON at.id=a.article_type_id ${whereClause}`;
+  const countSql = `
+    SELECT COUNT(DISTINCT a.id) as total
+    FROM articles a
+    JOIN article_types at ON at.id = a.article_type_id
+    LEFT JOIN users u ON u.id = a.user_id
+    LEFT JOIN users ue ON a.employee_email IS NOT NULL AND lower(ue.email) = lower(a.employee_email)
+    ${whereClause}
+  `;
   const totalRow = await db
     .prepare(countSql)
     .bind(...params)

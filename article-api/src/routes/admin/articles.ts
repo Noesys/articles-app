@@ -58,6 +58,7 @@ articlesRoute.get("/", async (c) => {
   const month = c.req.query("month");
   const status = c.req.query("status");
   const type = c.req.query("type");
+  const author = c.req.query("author");
   const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
   const limit = Math.min(
     100,
@@ -70,6 +71,7 @@ articlesRoute.get("/", async (c) => {
     type,
     page,
     limit,
+    author,
   );
   return c.json({
     message: "Articles fetched successfully",

@@ -230,7 +230,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "article_type_name",
         header: "Type",
-        size: 115,
+        size: 145,
         cell: ({ getValue }) => {
           const typeName = getValue() as string;
           return (
@@ -246,7 +246,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "status",
         header: "Status",
-        size: 160,
+        size: 90,
         cell: ({ row }) => {
           if (timedOutIds.has(row.original.id)) {
             return (

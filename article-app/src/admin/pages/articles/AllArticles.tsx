@@ -26,6 +26,7 @@ type ArticlesPageParams = {
   month?: string;
   status: string;
   type: string;
+  author: string;
 };
 
 const STATUS_OPTIONS = [
@@ -139,6 +140,7 @@ const AllArticles = () => {
       month: fetchMonth,
       status,
       type,
+      author,
     }: { page: number; limit: number } & ArticlesPageParams) => {
       const params = new URLSearchParams();
       if (!fetchViewAll && fetchMonth) params.set("month", fetchMonth);
@@ -147,6 +149,11 @@ const AllArticles = () => {
 
       if (status !== "all") params.set("status", status);
       if (type !== "all") params.set("type", type);
+      // Server-side filter (not just filtering already-loaded rows) so an
+      // author whose article hasn't been paginated into view yet is found.
+      // Skipped on the single-user drilldown (/admin/users/:id/articles),
+      // which is already scoped to one author.
+      if (!fetchId && author !== "all") params.set("author", author);
 
       const path = fetchId
         ? `/admin/users/${fetchId}/articles?${params.toString()}`
@@ -181,6 +188,7 @@ const AllArticles = () => {
       month: viewAll ? undefined : selectedMonthKey,
       status: selectedStatus,
       type: selectedType,
+      author: selectedAuthor,
     },
     limit: FETCH_LIMIT,
   });
@@ -333,13 +341,12 @@ const AllArticles = () => {
     fetchStatusCountsRef.current();
   }, []);
 
-  const filteredByAuthor = useMemo(() => {
-    if (selectedAuthor === "all") return articles;
-    return articles.filter((a) => a.author_name === selectedAuthor);
-  }, [articles, selectedAuthor]);
-
+  // Author filtering now happens server-side (fetchArticlesPage passes
+  // `author` as a query param) so it applies across all pages, not just
+  // whatever's been paginated into view yet — see getArticles() in
+  // article-api/src/services/admin/articles.service.ts.
   const displayedArticles = useMemo(() => {
-    const sorted = [...filteredByAuthor];
+    const sorted = [...articles];
 
     switch (sortBy) {
       case "score_desc":
@@ -372,7 +379,7 @@ const AllArticles = () => {
     }
 
     return sorted;
-  }, [filteredByAuthor, sortBy]);
+  }, [articles, sortBy]);
 
   const isUserView = Boolean(id);
   return (

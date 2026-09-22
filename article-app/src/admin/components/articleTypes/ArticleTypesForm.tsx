@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, WheelEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 import { ChevronLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -230,6 +231,13 @@ export default function ArticleTypesForm() {
       Number(modalDraft.maxValue) <= Number(modalDraft.minValue)
     )
       return;
+    if (
+      modalDraft.scopeType === "option" &&
+      modalDraft.options.filter((o) => o.label.trim()).length === 0
+    ) {
+      toast.error("Add at least one option before saving.");
+      return;
+    }
     const exists = form.parameters.some((p) => p.id === modalDraft.id);
     if (exists)
       setForm((c) => ({
