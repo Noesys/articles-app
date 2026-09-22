@@ -102,12 +102,13 @@ export async function updateArticleForRewrite(
   title: string,
   content: string,
   articleTypeId: string,
-  monthYear: string,
   now: string,
   userId?: string,
 ): Promise<number | null> {
   // updated_at is bound (not CURRENT_TIMESTAMP) to stay in the same ISO
   // format as everywhere else it's written — isStuckPending compares it.
+  // month_year is NOT touched — it marks when the article was first created
+  // and stays fixed across rewrites; only submitted_at moves.
   const result = await db
     .prepare(
       `
@@ -124,7 +125,6 @@ export async function updateArticleForRewrite(
           submitted_at = CURRENT_TIMESTAMP,
           updated_at = ?,
           scored_at = NULL,
-          month_year = ?,
           retry_count = retry_count + 1,
           admin_edited_at = NULL,
           pre_edit_content = NULL
@@ -135,8 +135,8 @@ export async function updateArticleForRewrite(
     )
     .bind(
       ...(userId
-        ? [title, content, articleTypeId, now, monthYear, articleId, userId]
-        : [title, content, articleTypeId, now, monthYear, articleId]),
+        ? [title, content, articleTypeId, now, articleId, userId]
+        : [title, content, articleTypeId, now, articleId]),
     )
     .first<{ version: number }>();
   return result?.version ?? null;

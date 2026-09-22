@@ -380,7 +380,6 @@ articleRoutes.post("/", async (c) => {
     }
 
     const historyId = "hist_" + crypto.randomUUID();
-    const rewriteMonth = now.slice(0, 7);
 
     let nextVersion: number | null;
 
@@ -404,9 +403,12 @@ articleRoutes.post("/", async (c) => {
           .bind(historyId, now, requestedId),
         db
           .prepare(
-            `UPDATE articles SET title=?, content=?, article_type_id=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=?, scored_at=NULL, month_year=?, retry_count=retry_count+1, admin_edited_at=NULL, pre_edit_content=NULL WHERE id=? RETURNING version`,
+            // month_year is NOT updated here — it marks when the article was
+            // first created and stays fixed across rewrites; only submitted_at
+            // (surfaced as "Submitted" in the scoring history table) moves.
+            `UPDATE articles SET title=?, content=?, article_type_id=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=?, scored_at=NULL, retry_count=retry_count+1, admin_edited_at=NULL, pre_edit_content=NULL WHERE id=? RETURNING version`,
           )
-          .bind(title, content, article_type_id, now, rewriteMonth, requestedId),
+          .bind(title, content, article_type_id, now, requestedId),
       ]);
       nextVersion = updateResult.results[0]?.version ?? null;
     } catch {
@@ -418,7 +420,6 @@ articleRoutes.post("/", async (c) => {
         title,
         content,
         article_type_id,
-        rewriteMonth,
         now,
         user.id,
       );

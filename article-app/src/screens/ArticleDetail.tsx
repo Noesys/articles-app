@@ -293,11 +293,9 @@ export default function ArticleDetail() {
           "Article rewrite submitted! Scoring in progress...",
         );
       } catch {}
-      navigate(
-        user?.auth_role === "admin"
-          ? "/admin/articles"
-          : "/",
-      );
+      // Return to wherever the user came from (e.g. a month-filtered list)
+      // instead of a hardcoded route that would reset those filters.
+      navigateBackOrToArticles(navigate);
     } catch (err) {
       console.error("Rewrite submission failed:", err);
       setSubmitError(
