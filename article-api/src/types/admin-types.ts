@@ -177,6 +177,8 @@ export interface ArticleByUser {
   ai_score: number | null;
   version: number;
   submitted_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
   user_id: string;
   author_name: string;
   article_type_id: string;

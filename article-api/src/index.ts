@@ -70,6 +70,7 @@ app.get("/api/article-types", accessAuth, async (c) => {
       name: t.name,
       description: t.description,
       general_instructions: (t as { general_instructions?: string | null }).general_instructions ?? null,
+      min_words: (t as { min_words?: number }).min_words ?? null,
     })),
   });
 });

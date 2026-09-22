@@ -474,7 +474,7 @@ function MyArticlesTable({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="block truncate text-[13px] font-semibold text-slate-800">
+                  <span className="flex min-h-7 items-center truncate text-[13px] font-semibold text-slate-800">
                     {title}
                   </span>
                 </TooltipTrigger>
@@ -494,12 +494,14 @@ function MyArticlesTable({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge
-                    variant="outline"
-                    className="max-w-full border-transparent bg-slate-50 font-medium text-slate-700 ring-1 ring-slate-200/80"
-                  >
-                    <span className="min-w-0 truncate">{typeName}</span>
-                  </Badge>
+                  <span className="flex min-h-7 max-w-full items-center">
+                    <Badge
+                      variant="outline"
+                      className="max-w-full border-transparent bg-slate-50 font-medium text-slate-700 ring-1 ring-slate-200/80"
+                    >
+                      <span className="min-w-0 truncate">{typeName}</span>
+                    </Badge>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>{typeName}</TooltipContent>
               </Tooltip>
@@ -512,7 +514,7 @@ function MyArticlesTable({
         header: "Version",
         size: 85,
         cell: ({ getValue }) => (
-          <span className="text-[13px] text-slate-700">
+          <span className="flex min-h-7 items-center text-[13px] text-slate-700">
             v{getValue() as number}
           </span>
         ),
@@ -524,10 +526,14 @@ function MyArticlesTable({
         cell: ({ row }) => {
           const score = row.original.ai_score;
           if (score === null)
-            return <span className="text-[13px] text-slate-700">—</span>;
+            return (
+              <span className="flex min-h-7 items-center text-[13px] text-slate-700">
+                —
+              </span>
+            );
           const classes = getAiScoreClasses(row.original.status);
           return (
-            <span className="inline-flex items-center gap-2">
+            <span className="flex min-h-7 items-center gap-2">
               <Progress
                 value={Math.min(Math.max(score, 0), 10) * 10}
                 className={cn("h-1.5 w-14", classes.bar)}
@@ -552,12 +558,14 @@ function MyArticlesTable({
         cell: ({ row }) => {
           const cfg = getDisplayStatus(row.original);
           return (
-            <Badge
-              variant="outline"
-              className={cn("font-medium", cfg.className)}
-            >
-              {cfg.label}
-            </Badge>
+            <span className="flex min-h-7 items-center">
+              <Badge
+                variant="outline"
+                className={cn("font-medium", cfg.className)}
+              >
+                {cfg.label}
+              </Badge>
+            </span>
           );
         },
       },
@@ -566,7 +574,7 @@ function MyArticlesTable({
         header: "Created",
         size: 110,
         cell: ({ getValue }) => (
-          <span className="text-[13px] text-slate-700">
+          <span className="flex min-h-7 items-center text-[13px] text-slate-700">
             {dayjs(getValue() as string).format("MMM D, YYYY")}
           </span>
         ),
@@ -576,7 +584,7 @@ function MyArticlesTable({
         header: "Edited",
         size: 110,
         cell: ({ getValue }) => (
-          <span className="text-[13px] text-slate-700">
+          <span className="flex min-h-7 items-center text-[13px] text-slate-700">
             {dayjs(getValue() as string).format("MMM D, YYYY")}
           </span>
         ),
