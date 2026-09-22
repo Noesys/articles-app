@@ -375,15 +375,22 @@ export default function ArticleDetail() {
     if (!id || !selectedTypeId) return;
     setTypeBusy(true);
     try {
-      await api(`/admin/articles/${id}/type`, {
+      const result = await api<{ evaluatable?: boolean }>(`/admin/articles/${id}/type`, {
         method: "PATCH",
         body: JSON.stringify({ article_type_id: selectedTypeId, reevaluate: false }),
       });
       await refreshArticleQuietly();
-      toast.warning(
-        "Article type updated. Re-evaluate to keep the score, feedback and parameter results consistent with the new type.",
-        { duration: 10000 },
-      );
+      if (result?.evaluatable === false) {
+        toast.warning(
+          "Article type updated. This type is not evaluatable, so scoring is disabled for this article.",
+          { duration: 10000 },
+        );
+      } else {
+        toast.warning(
+          "Article type updated. Re-evaluate to keep the score, feedback and parameter results consistent with the new type.",
+          { duration: 10000 },
+        );
+      }
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {

@@ -59,7 +59,7 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
       "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
   },
   failed: {
-    label: "Rejected",
+    label: "Failed",
     className:
       "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
   },

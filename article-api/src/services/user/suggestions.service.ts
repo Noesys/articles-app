@@ -36,24 +36,25 @@ interface RawSuggestion {
   new_text: string;
 }
 
-const MAX_SUGGESTIONS = 8;
 // Longer blocks are left alone rather than truncated: the AI rewrites the
 // whole block, so a truncated view would silently drop the rest of it.
 const MAX_BLOCK_CHARS = 3000;
 
 const suggestionsSchema = z.object({
-  suggestions: z
-    .array(
-      z.object({
-        title: z.string().min(1).max(200),
-        reason: z.string().min(1).max(1000),
-        parameter_name: z.string().max(200).nullish(),
-        target_block_index: z.number().int().min(0),
-        new_text: z.string().min(1).max(8000),
-      }),
-    )
-    .max(MAX_SUGGESTIONS),
+  suggestions: z.array(
+    z.object({
+      title: z.string().min(1).max(200),
+      reason: z.string().min(1).max(1000),
+      parameter_name: z.string().max(200).nullish(),
+      target_block_index: z.number().int().min(0),
+      new_text: z.string().min(1).max(8000),
+    }),
+  ),
 });
+
+function isSeoParameter(name: string): boolean {
+  return /seo/i.test(name);
+}
 
 function buildSuggestionsPrompt(
   blocks: ContentBlock[],
@@ -62,16 +63,18 @@ function buildSuggestionsPrompt(
   parameterNotes: { name: string; feedback: string }[],
 ): string {
   const numbered = blocks.map((b) => `[block ${b.index}]\n${b.text}`).join("\n\n");
-  const notes = parameterNotes
-    .map((p) => `- ${p.name}: ${p.feedback.replace(/\s+/g, " ").slice(0, 400)}`)
-    .join("\n");
+  const seoNotes = parameterNotes.filter((p) => isSeoParameter(p.name));
+  const otherNotes = parameterNotes.filter((p) => !isSeoParameter(p.name));
+  const formatNotes = (list: { name: string; feedback: string }[]) =>
+    list.map((p) => `- ${p.name}: ${p.feedback.replace(/\s+/g, " ").slice(0, 400)}`).join("\n");
 
   return `
-An article was just evaluated. Suggest up to ${MAX_SUGGESTIONS} targeted rewrites of individual blocks that fix the problems the evaluation found, so an admin can apply them one by one.
+An article was just evaluated. Suggest targeted rewrites of individual blocks that fix the problems the evaluation found, so an admin can apply them one by one. Suggest as many blocks as genuinely need a change — there is no cap on the number of suggestions.
 
 Evaluation feedback:
 ${feedback ? feedback.slice(0, 3000) : "(none)"}
-${notes ? `\nPer-parameter feedback:\n${notes}` : ""}
+${otherNotes.length ? `\nPer-parameter feedback:\n${formatNotes(otherNotes)}` : ""}
+${seoNotes.length ? `\nSEO parameter feedback (mandatory — see rules below):\n${formatNotes(seoNotes)}` : ""}
 
 Rules:
 - The article is Markdown, split into numbered blocks (blank-line separated). Only REPLACE whole blocks. No inserts, deletes or reordering.
@@ -80,7 +83,12 @@ Rules:
 - Keep the same meaning and voice. Each replacement should be about as long as the original or longer; never make the article shorter than ${minWords} total words.
 - "reason" says in one sentence what is wrong with the original and how the rewrite fixes it.
 - "parameter_name" is the evaluation parameter the change addresses, or null.
-- Only suggest changes that clearly improve the block; if a block is fine, skip it. Do not target the same block twice.
+- For every non-SEO parameter, only suggest changes that clearly improve the block; if a block is fine, skip it.${
+    seoNotes.length
+      ? ` For EVERY SEO parameter listed above, you MUST include at least one suggestion that addresses it — pick the block(s) most relevant to that feedback and improve them, even if the fix is small. Do not skip an SEO parameter.`
+      : ""
+  }
+- Do not target the same block twice.
 - Keep language simple and direct.
 
 Blocks:
@@ -142,10 +150,7 @@ export async function generateAndStoreSuggestions(
       console.warn("suggestions: AI error:", (result as Record<string, unknown>).__error);
       return { created: 0, note: "The AI could not produce suggestions this time" };
     }
-    const raw = ((result as { suggestions?: RawSuggestion[] })?.suggestions ?? []).slice(
-      0,
-      MAX_SUGGESTIONS,
-    );
+    const raw = (result as { suggestions?: RawSuggestion[] })?.suggestions ?? [];
 
     const currentWords = countWords(content);
     const now = new Date().toISOString();
