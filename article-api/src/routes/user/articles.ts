@@ -54,6 +54,8 @@ function articleToListItem(article: {
   ai_score: number | null;
   status: string;
   submitted_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   authorName: string;
   authorId: string;
 }) {
@@ -65,7 +67,11 @@ function articleToListItem(article: {
       version: article.version,
       ai_score: article.ai_score,
       status: article.status,
-      created: article.submitted_at,
+      // Fixed at creation, never touched again — falls back to submitted_at
+      // only for rows created before created_at existed and not yet backfilled.
+      created: article.created_at ?? article.submitted_at,
+      // Moves on every rewrite / re-evaluate / type-change / apply-suggestions.
+      edited: article.updated_at ?? article.submitted_at,
     },
     author: {
       id: article.authorId,
@@ -140,6 +146,8 @@ articleRoutes.get("/mine", async (c) => {
       ai_score: article.ai_score,
       status: article.status,
       submitted_at: article.submitted_at,
+      created_at: article.created_at,
+      updated_at: article.updated_at,
       authorName: user.name,
       authorId: user.id,
     }),

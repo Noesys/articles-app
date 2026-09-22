@@ -467,7 +467,7 @@ function MyArticlesTable({
       {
         accessorKey: "title",
         header: "Title",
-        size: 340,
+        size: 280,
         cell: ({ getValue }) => {
           const title = getValue() as string;
           return (
@@ -487,7 +487,7 @@ function MyArticlesTable({
       {
         accessorKey: "type",
         header: "Type",
-        size: 130,
+        size: 115,
         cell: ({ getValue }) => {
           const typeName = getValue() as string;
           return (
@@ -520,7 +520,7 @@ function MyArticlesTable({
       {
         accessorKey: "ai_score",
         header: "AI score",
-        size: 130,
+        size: 120,
         cell: ({ row }) => {
           const score = row.original.ai_score;
           if (score === null)
@@ -564,7 +564,17 @@ function MyArticlesTable({
       {
         accessorKey: "created",
         header: "Created",
-        size: 125,
+        size: 110,
+        cell: ({ getValue }) => (
+          <span className="text-[13px] text-slate-700">
+            {dayjs(getValue() as string).format("MMM D, YYYY")}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "edited",
+        header: "Edited",
+        size: 110,
         cell: ({ getValue }) => (
           <span className="text-[13px] text-slate-700">
             {dayjs(getValue() as string).format("MMM D, YYYY")}

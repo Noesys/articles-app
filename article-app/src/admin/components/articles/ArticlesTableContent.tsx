@@ -183,7 +183,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "title",
         header: "Title",
-        size: 340,
+        size: 290,
         cell: ({ getValue }) => {
           const title = getValue() as string;
           return (
@@ -203,7 +203,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "author_name",
         header: "Author",
-        size: 160,
+        size: 140,
         cell: ({ getValue }) => {
           const name = getValue() as string;
           return (
@@ -230,7 +230,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "article_type_name",
         header: "Type",
-        size: 130,
+        size: 115,
         cell: ({ getValue }) => {
           const typeName = getValue() as string;
           return (
@@ -246,7 +246,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "status",
         header: "Status",
-        size: 170,
+        size: 160,
         cell: ({ row }) => {
           if (timedOutIds.has(row.original.id)) {
             return (
@@ -287,7 +287,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "ai_score",
         header: "AI score",
-        size: 130,
+        size: 120,
         cell: ({ row }) => {
           const score = row.original.ai_score;
           if (score === null) return <span className="text-[13px]">—</span>;
@@ -311,9 +311,19 @@ export default function ArticlesTableContent({
         },
       },
       {
-        accessorKey: "submitted_at",
+        accessorKey: "created_at",
         header: "Created",
-        size: 125,
+        size: 105,
+        cell: ({ getValue }) => (
+          <span className="text-[13px]">
+            {formatDateToUSLocale(getValue() as string)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "updated_at",
+        header: "Edited",
+        size: 105,
         cell: ({ getValue }) => (
           <span className="text-[13px]">
             {formatDateToUSLocale(getValue() as string)}
@@ -323,7 +333,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "re_evaluate",
         header: "Re-evaluate article",
-        size: 125,
+        size: 95,
         cell: ({ row }) => {
           const busy = reevaluatingIds.has(row.id);
           return (

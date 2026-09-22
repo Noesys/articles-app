@@ -42,6 +42,10 @@ export async function getArticles(
       a.ai_score,
       a.version,
       a.submitted_at,
+      -- Fall back to submitted_at for rows predating created_at/updated_at
+      -- being populated (and not yet backfilled) — never show a blank date.
+      COALESCE(a.created_at, a.submitted_at) AS created_at,
+      COALESCE(a.updated_at, a.submitted_at) AS updated_at,
 
       COALESCE(u.id, ue.id, 'emp_' || a.emp_id) AS user_id,
       COALESCE(u.name, ue.name, a.employee_email) AS author_name,

@@ -13,6 +13,7 @@ const ARTICLE_COLUMNS = `
   a.submitted_at,
   a.scored_at,
   a.updated_at,
+  a.created_at,
   a.month_year,
   a.retry_count,
   a.ai_feedback,
@@ -300,10 +301,11 @@ export async function createArticle(
           version,
           submitted_at,
           updated_at,
+          created_at,
           month_year,
           retry_count
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
     )
     .bind(
@@ -318,6 +320,11 @@ export async function createArticle(
       // isStuckPending() (utils/evaluationTiming.ts) relies on updated_at marking
       // when this pending period started — must be set on every write that puts
       // the article into pending, not just admin re-evaluate/change-type.
+      article.submitted_at,
+      // created_at is set once, here, and never touched again by any rewrite /
+      // re-evaluate / type-change / apply-suggestions path — it's the article's
+      // fixed "Created" date, distinct from submitted_at/updated_at which move
+      // with every resubmission or admin action ("Edited").
       article.submitted_at,
       article.month_year,
       article.retry_count,

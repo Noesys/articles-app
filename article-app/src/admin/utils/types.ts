@@ -26,6 +26,7 @@ export type ArticleSummary = {
   ai_score: number | null;
   status: ArticleStatus;
   created_at: string;
+  updated_at: string;
   author_name: string;
   user_id: string;
   submitted_at: string;

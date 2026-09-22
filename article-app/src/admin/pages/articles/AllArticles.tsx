@@ -357,16 +357,16 @@ const AllArticles = () => {
       case "created_asc":
         sorted.sort(
           (a, b) =>
-            new Date(a.submitted_at).getTime() -
-            new Date(b.submitted_at).getTime(),
+            new Date(a.created_at).getTime() -
+            new Date(b.created_at).getTime(),
         );
         break;
       case "created_desc":
       default:
         sorted.sort(
           (a, b) =>
-            new Date(b.submitted_at).getTime() -
-            new Date(a.submitted_at).getTime(),
+            new Date(b.created_at).getTime() -
+            new Date(a.created_at).getTime(),
         );
         break;
     }

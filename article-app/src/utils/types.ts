@@ -64,6 +64,7 @@ export interface ArticleListItem {
   ai_feedback?: string | null;
   status: string;
   created: string;
+  edited: string;
   authorName?: string;
 }
 
