@@ -26,6 +26,7 @@ export type ArticleSummary = {
   ai_score: number | null;
   status: ArticleStatus;
   created_at: string;
+  updated_at: string;
   author_name: string;
   user_id: string;
   submitted_at: string;
@@ -90,6 +91,7 @@ export type FormState = {
   scoreMin: string;
   scoreMax: string;
   passThreshold: string;
+  minWords: string;
   parameters: ParameterDraft[];
 };
 
@@ -101,6 +103,7 @@ export type ArticleTypeResponse = {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words?: number;
 };
 
 export type ParameterResponse = {
@@ -112,6 +115,11 @@ export type ParameterResponse = {
   min_value: number | null;
   max_value: number | null;
   options: ParameterOptionDraft[];
+};
+
+export type ParameterSearchResult = ParameterResponse & {
+  article_type_id: string;
+  article_type_name: string;
 };
 
 // users

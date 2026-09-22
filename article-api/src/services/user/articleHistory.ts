@@ -15,6 +15,7 @@ export async function getArticleHistory(
           h.id,
           h.article_id,
           h.article_type_id,
+          at.name AS article_type_name,
           h.title,
           h.ai_feedback,
           h.content,
@@ -25,6 +26,7 @@ export async function getArticleHistory(
           h.scored_at,
           h.snapshotted_at
         FROM article_history h
+        LEFT JOIN article_types at ON at.id = h.article_type_id
         ${userId ? "JOIN articles a ON a.id = h.article_id" : ""}
         WHERE h.article_id = ?
         ${userId ? "AND a.user_id = ?" : ""}
@@ -78,7 +80,7 @@ export async function snapshotArticle(
           article_type_id,
           title,
           CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE ai_feedback END,
-          content,
+          COALESCE(pre_edit_content, content),
           ai_score,
           pass_threshold,
           CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
@@ -99,14 +101,14 @@ export async function updateArticleForRewrite(
   articleId: string,
   title: string,
   content: string,
-  monthYear: string,
+  articleTypeId: string,
+  now: string,
   userId?: string,
 ): Promise<number | null> {
-  // Defense-in-depth: when userId is provided, the UPDATE matches no rows
-  // if the article does not belong to the user.
-  // RETURNING the post-write version so callers dispatch evaluations against
-  // the version D1 actually persisted, not a value precomputed from a
-  // pre-write read (which can drift under concurrent rewrites).
+  // updated_at is bound (not CURRENT_TIMESTAMP) to stay in the same ISO
+  // format as everywhere else it's written — isStuckPending compares it.
+  // month_year is NOT touched — it marks when the article was first created
+  // and stays fixed across rewrites; only submitted_at moves.
   const result = await db
     .prepare(
       `
@@ -114,16 +116,18 @@ export async function updateArticleForRewrite(
         SET
           title = ?,
           content = ?,
+          article_type_id = ?,
           version = version + 1,
           status = 'pending',
           ai_score = NULL,
           ai_feedback = NULL,
           pass_threshold = NULL,
           submitted_at = CURRENT_TIMESTAMP,
-          updated_at = CURRENT_TIMESTAMP,
+          updated_at = ?,
           scored_at = NULL,
-          month_year = ?,
-          retry_count = retry_count + 1
+          retry_count = retry_count + 1,
+          admin_edited_at = NULL,
+          pre_edit_content = NULL
         WHERE id = ?
         ${userId ? "AND user_id = ?" : ""}
         RETURNING version
@@ -131,8 +135,8 @@ export async function updateArticleForRewrite(
     )
     .bind(
       ...(userId
-        ? [title, content, monthYear, articleId, userId]
-        : [title, content, monthYear, articleId]),
+        ? [title, content, articleTypeId, now, articleId, userId]
+        : [title, content, articleTypeId, now, articleId]),
     )
     .first<{ version: number }>();
   return result?.version ?? null;

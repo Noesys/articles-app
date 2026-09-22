@@ -45,33 +45,40 @@ function formatAiScore(s: number) {
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   approved: {
     label: "Accepted",
-    className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 border-transparent",
+    className:
+      "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 border-transparent",
   },
   rewrite_required: {
     label: "Rejected",
-    className: "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
+    className:
+      "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
   },
   pending: {
     label: "Scoring...",
-    className: "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
+    className:
+      "bg-slate-50 text-slate-600 ring-1 ring-slate-200/80 border-transparent",
   },
   failed: {
-    label: "Rejected",
-    className: "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
+    label: "Failed",
+    className:
+      "bg-red-50 text-red-600 ring-1 ring-red-200/80 border-transparent",
   },
 };
 
 export default function ScoringHistoryTable({
   history,
   articleId,
-  isAdmin
+  isAdmin,
 }: {
   history: HistoryItem[];
   articleId: string;
   isAdmin: boolean;
 }) {
   const navigate = useNavigate();
-  const [sorting, setSorting] = useState<SortingState>([]);
+  // Default: latest first — sort by the submitted_at column descending
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "submitted_at", desc: true },
+  ]);
   const pageSize = Math.max(history.length, 1);
 
   const columns = useMemo<ColumnDef<DataGridFeatures, HistoryItem>[]>(
@@ -102,7 +109,8 @@ export default function ScoringHistoryTable({
         size: 130,
         cell: ({ row }) => {
           const s = row.original.score;
-          if (s === null) return <span className="text-slate-400 text-[13px]">—</span>;
+          if (s === null)
+            return <span className="text-slate-400 text-[13px]">—</span>;
           const classes = getAiScoreClasses(row.original.status);
           return (
             <span className="inline-flex items-center gap-2">
@@ -110,7 +118,12 @@ export default function ScoringHistoryTable({
                 value={Math.min(Math.max(s, 0), 10) * 10}
                 className={cn("w-14 h-1.5", classes.bar)}
               />
-              <span className={cn("font-semibold text-[13px] tabular-nums", classes.text)}>
+              <span
+                className={cn(
+                  "font-semibold text-[13px] tabular-nums",
+                  classes.text,
+                )}
+              >
                 {formatAiScore(s)}
               </span>
             </span>
@@ -124,7 +137,10 @@ export default function ScoringHistoryTable({
         cell: ({ row }) => {
           const cfg = STATUS_MAP[row.original.status] || STATUS_MAP.pending;
           return (
-            <Badge variant="outline" className={cn("font-medium", cfg.className)}>
+            <Badge
+              variant="outline"
+              className={cn("font-medium", cfg.className)}
+            >
               {cfg.label}
             </Badge>
           );
@@ -135,9 +151,23 @@ export default function ScoringHistoryTable({
         accessorFn: (row) => row.snapshotted_at || row.submitted_at,
         header: "Submitted",
         size: 160,
+        enableSorting: true,
+        sortingFn: (a: { original: HistoryItem }, b: { original: HistoryItem }) => {
+          const av =
+            (a.original as HistoryItem).snapshotted_at ||
+            (a.original as HistoryItem).submitted_at ||
+            "";
+          const bv =
+            (b.original as HistoryItem).snapshotted_at ||
+            (b.original as HistoryItem).submitted_at ||
+            "";
+          return dayjs(av).valueOf() - dayjs(bv).valueOf();
+        },
         cell: ({ row }) => {
-          const dateStr = row.original.snapshotted_at || row.original.submitted_at;
-          if (!dateStr) return <span className="text-slate-400 text-[13px]">—</span>;
+          const dateStr =
+            row.original.snapshotted_at || row.original.submitted_at;
+          if (!dateStr)
+            return <span className="text-slate-400 text-[13px]">—</span>;
           const normalized =
             typeof dateStr === "string" &&
             dateStr.includes("T") &&
@@ -153,7 +183,7 @@ export default function ScoringHistoryTable({
         },
       },
     ],
-    [articleId, navigate],
+    [articleId, navigate, isAdmin],
   );
 
   const table = useTable({
@@ -172,7 +202,9 @@ export default function ScoringHistoryTable({
   return (
     <div className="overflow-hidden rounded-sm border border-border bg-background shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between border-b border-border bg-muted/40 px-5 py-3.5">
-        <span className="text-sm font-semibold text-foreground">Scoring history</span>
+        <span className="text-sm font-semibold text-foreground">
+          Scoring history
+        </span>
         <span className="text-xs text-muted-foreground tabular-nums">
           {history.length} versions
         </span>

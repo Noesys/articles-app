@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, WheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, WheelEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
+import { ChevronLeft, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { markdownComponents } from "@/components/markdown/markdownComponents";
@@ -13,6 +14,7 @@ import {
   FormState,
   ParameterDraft,
   ParameterResponse,
+  ParameterSearchResult,
 } from "@/admin/utils/types";
 import ArticleTypesParameterModal from "./ArticleTypesParameterModal";
 import {
@@ -47,6 +49,7 @@ const EMPTY_FORM: FormState = {
   scoreMin: "0",
   scoreMax: "10",
   passThreshold: "10",
+  minWords: "1000",
   parameters: [],
 };
 
@@ -115,6 +118,62 @@ export default function ArticleTypesForm() {
   );
   const [instructionsPreviewOpen, setInstructionsPreviewOpen] = useState(false);
 
+  // "Copy from existing parameter" search — independent of isEditing, since
+  // it should work while creating a brand-new type too.
+  const [allParameters, setAllParameters] = useState<ParameterSearchResult[]>([]);
+  const [paramSearchQuery, setParamSearchQuery] = useState("");
+  const [paramSearchOpen, setParamSearchOpen] = useState(false);
+  const paramSearchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    api<ParameterSearchResult[]>("/admin/article-types/parameters/all")
+      .then(setAllParameters)
+      .catch((err) => console.error("Failed to load parameters for search:", err));
+  }, []);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (paramSearchRef.current && !paramSearchRef.current.contains(e.target as Node)) {
+        setParamSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  const paramSearchResults = useMemo(() => {
+    const q = paramSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return allParameters
+      .filter((p) => p.article_type_id !== id)
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.options.some((o) => o.label.toLowerCase().includes(q)),
+      )
+      .slice(0, 20);
+  }, [allParameters, paramSearchQuery, id]);
+
+  const handleCopyParameter = (p: ParameterSearchResult) => {
+    setModalDraft({
+      id: crypto.randomUUID(),
+      name: p.name,
+      description: p.description ?? "",
+      prompt: p.prompt,
+      scopeType: p.scope_type,
+      minValue: p.min_value?.toString() ?? "0",
+      maxValue: p.max_value?.toString() ?? "10",
+      // No id carried over — these must be treated as brand-new options
+      // under the new parameter, never referencing the source's option
+      // rows (which belong to a different parameter_id entirely).
+      options: p.options.map((o) => ({ label: o.label })),
+      isNew: true,
+    });
+    setModalOpen(true);
+    setParamSearchQuery("");
+    setParamSearchOpen(false);
+  };
+
   useEffect(() => {
     if (!id) return;
     async function loadArticleType() {
@@ -132,6 +191,7 @@ export default function ArticleTypesForm() {
           scoreMin: t.score_min.toString(),
           scoreMax: t.score_max.toString(),
           passThreshold: t.pass_threshold.toString(),
+          minWords: (t.min_words ?? 1000).toString(),
           parameters: params.map(parameterFromResponse),
         });
       } catch (err) {
@@ -171,6 +231,13 @@ export default function ArticleTypesForm() {
       Number(modalDraft.maxValue) <= Number(modalDraft.minValue)
     )
       return;
+    if (
+      modalDraft.scopeType === "option" &&
+      modalDraft.options.filter((o) => o.label.trim()).length === 0
+    ) {
+      toast.error("Add at least one option before saving.");
+      return;
+    }
     const exists = form.parameters.some((p) => p.id === modalDraft.id);
     if (exists)
       setForm((c) => ({
@@ -199,17 +266,23 @@ export default function ArticleTypesForm() {
   const scoreMinNum = Number(form.scoreMin);
   const scoreMaxNum = Number(form.scoreMax);
   const passThresholdNum = Number(form.passThreshold);
+  const minWordsNum = Number(form.minWords);
   const scoreRangeInvalid =
     form.scoreMin !== "" && form.scoreMax !== "" && scoreMaxNum <= scoreMinNum;
   const thresholdInvalid =
     !scoreRangeInvalid &&
     form.passThreshold !== "" &&
     (passThresholdNum < scoreMinNum || passThresholdNum > scoreMaxNum);
+  const minWordsInvalid =
+    form.minWords.trim() === "" ||
+    !Number.isInteger(minWordsNum) ||
+    minWordsNum < 1;
   const canSubmit =
     form.name.trim() &&
     form.promptContent.trim() &&
     !scoreRangeInvalid &&
     !thresholdInvalid &&
+    !minWordsInvalid &&
     !submitting;
 
   const handleSubmit = async () => {
@@ -232,6 +305,7 @@ export default function ArticleTypesForm() {
         scoreMin: scoreMinNum,
         scoreMax: scoreMaxNum,
         passThreshold: passThresholdNum,
+        minWords: minWordsNum,
       });
       let articleTypeId = id;
       if (isEditing) {
@@ -307,48 +381,78 @@ export default function ArticleTypesForm() {
             className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
           />
         </div>
+
+        {/* Description on the left (tall) + stacked Pass Threshold / Min Word Count on the right */}
         <div className="grid grid-cols-10 gap-4">
-          <div className="col-span-7">
+          <div className="col-span-7 flex flex-col">
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Description
             </label>
-            <input
-              type="text"
+            <textarea
               value={form.description}
               onChange={(e) =>
                 setForm((c) => ({ ...c, description: e.target.value }))
               }
               placeholder="Short description (optional)"
-              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+              rows={4}
+              className="w-full resize-y rounded-sm border border-border bg-white px-3 py-4 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
             />
           </div>
-          <div className="col-span-3">
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Pass Threshold
-            </label>
-            <input
-              type="number"
-              value={form.passThreshold}
-              onWheel={handleWheel}
-              // onChange={(e) =>
-              //   setForm((c) => ({ ...c, passThreshold: e.target.value }))
-              // }
-              onChange={(e) => {
-                const value = Number(e.target.value);
 
-                if (value > 10) return;
-                if (value < 1 && e.target.value !== "") return;
+          <div className="col-span-3 flex flex-col gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Pass Threshold{" "}
+                <span className="font-normal text-slate-400">(Accepts 0-10 only)</span>
+              </label>
+              <input
+                type="number"
+                value={form.passThreshold}
+                min={0}
+                max={10}
+                onWheel={handleWheel}
+                onChange={(e) => {
+                  const value = Number(e.target.value);
 
-                setForm((c) => ({
-                  ...c,
-                  passThreshold: e.target.value,
-                }));
-              }}
-              placeholder="10"
-              className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
-            />
+                  if (value > 10) return;
+                  if (value < 0 && e.target.value !== "") return;
+
+                  setForm((c) => ({
+                    ...c,
+                    passThreshold: e.target.value,
+                  }));
+                }}
+                placeholder="10"
+                className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                Minimum Word Count
+              </label>
+              <input
+                type="number"
+                value={form.minWords}
+                min={1}
+                step={1}
+                onWheel={handleWheel}
+                onChange={(e) => {
+                  if (e.target.value !== "" && Number(e.target.value) < 1) return;
+                  setForm((c) => ({ ...c, minWords: e.target.value }));
+                }}
+                placeholder="1000"
+                className="w-full rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+              />
+              {minWordsInvalid && (
+                <p className="mt-1 text-xs text-red-600">
+                  Enter a positive whole number.
+                </p>
+              )}
+            </div>
           </div>
         </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Scoring Prompt
@@ -360,7 +464,7 @@ export default function ArticleTypesForm() {
             }
             placeholder="The full AI scoring prompt for this article type..."
             rows={8}
-            className="w-full resize-y rounded-sm border border-border bg-white px-3 py-2 font-mono text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+            className="w-full resize-y rounded-sm border border-border bg-white px-3 py-2 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
           />
         </div>
 
@@ -378,6 +482,57 @@ export default function ArticleTypesForm() {
             >
               Add Parameter
             </Button>
+          </div>
+
+          <div ref={paramSearchRef} className="relative mb-3">
+            <div className="relative">
+              <Search
+                size={14}
+                className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type="text"
+                value={paramSearchQuery}
+                onChange={(e) => {
+                  setParamSearchQuery(e.target.value);
+                  setParamSearchOpen(true);
+                }}
+                onFocus={() => setParamSearchOpen(true)}
+                placeholder="Search existing parameters to reuse (e.g. Authenticity)..."
+                className="w-full rounded-sm border border-border bg-white py-2 pr-3 pl-8 text-sm outline-none focus:border-transparent focus:ring-2 focus:ring-teal-500/40"
+              />
+            </div>
+            {paramSearchOpen && paramSearchQuery.trim() && (
+              <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-sm border border-slate-200 bg-white shadow-lg">
+                {paramSearchResults.length === 0 ? (
+                  <p className="px-3 py-2.5 text-sm text-slate-400">
+                    No matching parameters found.
+                  </p>
+                ) : (
+                  paramSearchResults.map((p) => (
+                    <button
+                      key={`${p.article_type_id}:${p.id}`}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleCopyParameter(p);
+                      }}
+                      className="flex w-full flex-col items-start gap-0.5 border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
+                    >
+                      <span className="text-sm font-medium text-slate-800">
+                        {p.name}{" "}
+                        <span className="font-normal text-slate-400">
+                          - {p.article_type_name}
+                        </span>
+                      </span>
+                      <span className="line-clamp-1 text-xs text-slate-500">
+                        {p.prompt}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
 
           <ParametersTable

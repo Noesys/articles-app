@@ -7,6 +7,7 @@ import {
   updateUserAuthRole,
   updateUserStatus,
 } from "../../services/admin/users.service";
+import { getArticleStats } from "../../services/admin/articles.service";
 import {
   ALLOWED_AUTH_ROLES,
   UpdateUserBody,
@@ -90,6 +91,18 @@ usersRoute.get("/:id/articles", async (c) => {
   });
 });
 
+usersRoute.get("/:id/articles/stats", async (c) => {
+  const userId = c.req.param("id");
+  const month = c.req.query("month");
+  const status = c.req.query("status");
+  const type = c.req.query("type");
+  const data = await getArticleStats(c.env.DB, month, status, type, userId);
+  return c.json({
+    message: "Stats fetched successfully",
+    data,
+  });
+});
+
 // update a specific user's role
 usersRoute.patch("/:id/role", async (c) => {
   const id = c.req.param("id");
@@ -112,6 +125,10 @@ usersRoute.patch("/:id/role", async (c) => {
   }
 
   const currentUser = c.get("user");
+
+  if (id === currentUser.id && body.role !== "admin") {
+    return c.json({ message: "You cannot change your own role" }, 403);
+  }
 
   await updateUserAuthRole(c.env.DB, id, body.role);
   return c.json({ message: "User role updated successfully" });

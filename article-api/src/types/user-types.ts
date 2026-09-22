@@ -1,8 +1,13 @@
+export interface AIParameterEvaluation {
+  value: string | number;
+  feedback: string;
+}
+
 export interface AIEvaluationResult {
   score: number;
   feedback: string;
   suggested_title: string;
-  parameters: Record<string, string | number>;
+  parameters: Record<string, AIParameterEvaluation>;
 }
 
 export type User = {
@@ -22,6 +27,7 @@ export type ArticleHistory = {
   id: string;
   article_id: string;
   article_type_id: string;
+  article_type_name: string | null;
   title: string;
   ai_feedback: string | null;
   content: string;
@@ -46,10 +52,13 @@ export type Article = {
   submitted_at: string;
   scored_at: string | null;
   updated_at: string | null;
+  created_at: string | null;
   month_year: string;
   retry_count: number;
   ai_feedback: string | null;
   suggested_title: string | null;
+  /** Set when an admin applied AI suggestions; cleared when the author rewrites. */
+  admin_edited_at: string | null;
 };
 
 export type ArticlePagination = {
@@ -64,6 +73,8 @@ export type ArticleType = {
   id: string;
   name: string;
   description: string | null;
+  general_instructions?: string | null;
+  min_words: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -81,6 +92,17 @@ export type ArticleTypeConfig = {
   score_max: number;
   pass_threshold: number;
   is_active: number;
+};
+
+export type PreviousVersionContext = {
+  version: number;
+  title: string;
+  content: string;
+  /** True for re-evaluations / type-only changes, where the article text didn't change. */
+  content_unchanged: boolean;
+  /** Only set when that version was actually scored. */
+  ai_score: number | null;
+  ai_feedback: string | null;
 };
 
 export type ParameterConfig = {
@@ -121,6 +143,7 @@ export interface ParameterResultInput {
   value: string;
   option_id: string | null;
   numeric_value: number | null;
+  feedback: string | null;
 }
 
 export interface EvaluationOutcome {

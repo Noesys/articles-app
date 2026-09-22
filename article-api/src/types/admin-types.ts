@@ -11,6 +11,8 @@ export interface ArticleHistoryEntry {
   submitted_at: string | null;
   scored_at: string | null;
   snapshotted_at: string;
+  article_type_id: string;
+  article_type_name: string | null;
 }
 
 // article types
@@ -28,6 +30,8 @@ export interface ArticleListRawRow {
   ai_score: number | null;
   version: number;
   submitted_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   user_id: string;
   author_name: string;
   article_type_id: string;
@@ -41,6 +45,8 @@ export interface ArticleListResult {
   ai_score: number | null;
   version: number;
   submitted_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   user_id: string;
   author_name: string;
   article_type_id: string;
@@ -58,6 +64,7 @@ export interface ArticleTypeListItem {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -74,6 +81,7 @@ export interface ArticleTypeDetail {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words: number;
   is_active: number;
 }
 
@@ -108,6 +116,7 @@ export interface ArticleTypeListRow {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -125,6 +134,7 @@ export interface ArticleTypeRow {
   score_prompt: string;
   score_min: number;
   score_max: number;
+  min_words: number;
   is_active: number;
 }
 
@@ -136,6 +146,7 @@ export interface ArticleTypeInput {
   scorePrompt: string;
   scoreMin: number;
   scoreMax: number;
+  minWords?: number;
 }
 
 // users
@@ -166,6 +177,8 @@ export interface ArticleByUser {
   ai_score: number | null;
   version: number;
   submitted_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
   user_id: string;
   author_name: string;
   article_type_id: string;
@@ -265,6 +278,9 @@ export interface ParameterResultRow {
   parameter_id: string;
   name: string;
   value: string;
+  numeric_value?: number | null;
+  option_id?: string | null;
+  feedback?: string | null;
   version: number;
   scored_at: string;
 }

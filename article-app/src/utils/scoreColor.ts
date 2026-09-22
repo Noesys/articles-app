@@ -47,6 +47,24 @@ export function getScoreColor(
     barTw: "[&_[data-slot=progress-indicator]]:bg-amber-500",
   };
 }
+
+export function getDetailScoreColor(
+  score: number,
+  passThreshold: number | null,
+  status: string,
+) {
+  const passed = passThreshold != null ? score >= passThreshold : status === "approved";
+  return passed
+    ? {
+        text: "text-emerald-600",
+        barTw: "[&_[data-slot=progress-indicator]]:bg-emerald-600",
+      }
+    : {
+        text: "text-red-600",
+        barTw: "[&_[data-slot=progress-indicator]]:bg-red-600",
+      };
+}
+
 export function sanitizeFilename(title: string) {
   const base =
     title

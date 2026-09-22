@@ -43,7 +43,13 @@ import { toast } from "sonner";
 type ArticlesTableProps = {
   articles: ArticleSummary[];
   onRowClick?: (id: string) => void;
-  totalCount?: number;
+  statusCounts?: {
+    total: number;
+    approved: number;
+    pending: number;
+    rewrite_required: number;
+    failed: number;
+  } | null;
   onFetchMore?: () => void;
   isFetchingMore?: boolean;
   hasMore?: boolean;
@@ -107,7 +113,7 @@ const EMPTY_TIMED_OUT_IDS: Set<string> = new Set();
 export default function ArticlesTableContent({
   articles,
   onRowClick,
-  totalCount,
+  statusCounts,
   onFetchMore,
   isFetchingMore,
   hasMore,
@@ -116,7 +122,9 @@ export default function ArticlesTableContent({
   onCheckAgain,
 }: ArticlesTableProps) {
   const [titleFilter, setTitleFilter] = useState("");
-  const [reevaluatingIds, setReevaluatingIds] = useState<Set<string>>(new Set());
+  const [reevaluatingIds, setReevaluatingIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   const locallyFilteredArticles = useMemo(() => {
     const normalizedTitle = titleFilter.trim().toLowerCase();
@@ -126,29 +134,19 @@ export default function ArticlesTableContent({
     );
   }, [articles, titleFilter]);
 
-  const dashboard = useMemo(() => {
-    const total = titleFilter
-      ? locallyFilteredArticles.length
-      : (totalCount ?? locallyFilteredArticles.length);
-    const approved = locallyFilteredArticles.filter(
-      (a) => a.status === "approved",
-    ).length;
-    const pending = locallyFilteredArticles.filter(
-      (a) => a.status === "pending",
-    ).length;
-    const rewriteRequired = locallyFilteredArticles.filter(
-      (a) => a.status === "rewrite_required",
-    ).length;
-    const failed = locallyFilteredArticles.filter((a) => a.status === "failed").length;
-
-    const scored = locallyFilteredArticles.filter((a) => a.ai_score !== null);
-    const averageScore =
-      scored.length > 0
-        ? scored.reduce((sum, a) => sum + (a.ai_score ?? 0), 0) / scored.length
-        : null;
-
-    return { total, approved, pending, rewriteRequired, averageScore, failed };
-  }, [locallyFilteredArticles]);
+  // Server-computed, from the same month/status/type filters as the list —
+  // total is always the sum of the four below, and none of them grow just
+  // because more rows get scroll-loaded. Doesn't reflect the author/title
+  // quick filters below (those are client-side only, out of the server's
+  // view), so the cards describe the filtered dataset, not the currently
+  // visible/searched rows.
+  const dashboard = {
+    total: statusCounts?.total ?? 0,
+    approved: statusCounts?.approved ?? 0,
+    pending: statusCounts?.pending ?? 0,
+    rewriteRequired: statusCounts?.rewrite_required ?? 0,
+    failed: statusCounts?.failed ?? 0,
+  };
 
   async function handleReevaluate(id: string) {
     if (!id || reevaluatingIds.has(id)) return;
@@ -185,7 +183,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "title",
         header: "Title",
-        size: 340,
+        size: 290,
         cell: ({ getValue }) => {
           const title = getValue() as string;
           return (
@@ -205,48 +203,50 @@ export default function ArticlesTableContent({
       {
         accessorKey: "author_name",
         header: "Author",
-        size: 160,
+        size: 140,
         cell: ({ getValue }) => {
           const name = getValue() as string;
-          return (
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="size-7 shrink-0 rounded-full bg-teal-600 text-white text-[11px] font-semibold flex items-center justify-center">
-                {getNameInitials(name)}
-              </div>
-              <span className="truncate text-sm font-medium text-foreground">
-                {name}
-              </span>
-            </div>
-          );
-        },
-      },
-      {
-        accessorKey: "article_type_name",
-        header: "Type",
-        size: 130,
-        cell: ({ getValue }) => {
-          const typeName = getValue() as string;
           return (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge
-                    variant="outline"
-                    className="max-w-full bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
-                  >
-                    <span className="min-w-0 truncate">{typeName}</span>
-                  </Badge>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="size-7 shrink-0 rounded-full bg-teal-600 text-white text-[11px] font-semibold flex items-center justify-center">
+                      {getNameInitials(name)}
+                    </div>
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {name}
+                    </span>
+                  </div>
                 </TooltipTrigger>
-                <TooltipContent>{typeName}</TooltipContent>
+                <TooltipContent>
+                  <p>{name}</p>
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           );
         },
       },
       {
+        accessorKey: "article_type_name",
+        header: "Type",
+        size: 145,
+        cell: ({ getValue }) => {
+          const typeName = getValue() as string;
+          return (
+            <Badge
+              variant="outline"
+              className="max-w-full bg-slate-50 text-slate-700 font-medium border-transparent ring-1 ring-slate-200/80"
+            >
+              <span className="min-w-0 truncate">{typeName}</span>
+            </Badge>
+          );
+        },
+      },
+      {
         accessorKey: "status",
         header: "Status",
-        size: 170,
+        size: 90,
         cell: ({ row }) => {
           if (timedOutIds.has(row.original.id)) {
             return (
@@ -259,17 +259,6 @@ export default function ArticlesTableContent({
                   <Clock className="size-3" />
                   Taking longer than expected
                 </Badge>
-                {/* <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCheckAgain?.(row.original.id);
-                  }}
-                  className="rounded-sm p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                  title="Check again"
-                >
-                  <RefreshCw className="size-3.5" />
-                </button> */}
               </div>
             );
           }
@@ -298,7 +287,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "ai_score",
         header: "AI score",
-        size: 130,
+        size: 120,
         cell: ({ row }) => {
           const score = row.original.ai_score;
           if (score === null) return <span className="text-[13px]">—</span>;
@@ -322,9 +311,19 @@ export default function ArticlesTableContent({
         },
       },
       {
-        accessorKey: "submitted_at",
+        accessorKey: "created_at",
         header: "Created",
-        size: 125,
+        size: 105,
+        cell: ({ getValue }) => (
+          <span className="text-[13px]">
+            {formatDateToUSLocale(getValue() as string)}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "updated_at",
+        header: "Edited",
+        size: 105,
         cell: ({ getValue }) => (
           <span className="text-[13px]">
             {formatDateToUSLocale(getValue() as string)}
@@ -334,7 +333,7 @@ export default function ArticlesTableContent({
       {
         accessorKey: "re_evaluate",
         header: "Re-evaluate article",
-        size: 125,
+        size: 95,
         cell: ({ row }) => {
           const busy = reevaluatingIds.has(row.id);
           return (
@@ -344,7 +343,7 @@ export default function ArticlesTableContent({
                 handleReevaluate(row.id);
               }}
               disabled={busy}
-              className="rounded-md p-2 transition-all duration-200 hover:bg-gray-200 hover:text-blue-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-md p-2 transition-all duration-200 hover:bg-gray-200 hover:text-teal-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               title="Re-evaluate article"
             >
               <RotateCcw

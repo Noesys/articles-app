@@ -4,7 +4,13 @@ import ArticlesTableContent from "./ArticlesTableContent";
 type ArticlesTableProps = {
   articles: ArticleSummary[];
   onRowClick?: (id: string) => void;
-  totalCount?: number;
+  statusCounts?: {
+    total: number;
+    approved: number;
+    pending: number;
+    rewrite_required: number;
+    failed: number;
+  } | null;
   onFetchMore?: () => void;
   isFetchingMore?: boolean;
   hasMore?: boolean;

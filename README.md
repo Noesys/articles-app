@@ -36,6 +36,7 @@ Table article_types {
   score_max real [not null, default: 10]
   general_instructions text [note: 'general AI instructions applied across all parameters for this type']
   is_evaluatable int [not null, default: 1, note: '1=evaluatable, 0=not suitable for scoring (e.g. "Not Suitable" type)']
+  min_words int [not null, default: 1000, note: 'configurable minimum word count required for this article type']
   created_by text [not null, ref: > users.id]
   created_at text [not null]
   updated_at text [not null]
@@ -84,6 +85,7 @@ Table articles {
   pass_threshold real
   ai_feedback text [note: 'overall AI feedback, separate from per-parameter feedback if any']
   ai_score real [note: "the article's score against article_types.score_prompt / score_min / score_max. null until scored. sole driver of status"]
+  suggested_title text [note: 'AI-suggested title from evaluation; admin can apply without re-evaluating']
   version int [not null, default: 1, note: 'increments on every rewrite']
   submitted_at text [not null]
   scored_at text
@@ -91,6 +93,8 @@ Table articles {
   retry_count int [not null, default: 0]
   emp_id text [note: 'employee identifier linkage, no FK enforced at seed time']
   employee_email text
+  admin_edited_at text [note: 'set when an admin applies AI content suggestions; cleared when the author rewrites']
+  pre_edit_content text [note: "text that was actually scored, kept while an admin's applied suggestions edit the article in place; cleared on rewrite / re-evaluate / type change"]
   created_at text
   updated_at text
 
@@ -108,11 +112,32 @@ Table article_parameter_results {
   option_id text [ref: > parameter_options.id, note: 'set when parameter.scope_type = option']
   numeric_value real
   version int [not null, note: 'matches articles.version at time of scoring']
+  feedback text [note: 'per-parameter AI feedback (markdown), shown in the results table']
   scored_at text [not null]
 
   indexes {
     (article_id, parameter_id, version) [unique]
     (parameter_id, value)
+  }
+}
+
+Table article_suggestions {
+  id text [pk]
+  article_id text [not null, ref: > articles.id]
+  version int [not null, note: 'matches articles.version this suggestion was generated for']
+  title text [not null]
+  reason text [not null, note: 'one-sentence explanation of the rewrite']
+  parameter_name text [note: 'evaluation parameter this suggestion addresses, if any']
+  target_block_index int [not null, note: 'index of the content block this suggestion replaces']
+  old_text text [not null]
+  old_text_hash text [not null, note: 'hash of the targeted block, used to detect if content changed since generation']
+  new_text text [not null]
+  applied int [not null, default: 0, note: '1=applied to the article, 0=not yet applied']
+  created_at text [not null]
+  updated_at text [not null]
+
+  indexes {
+    (article_id, version, applied)
   }
 }
 

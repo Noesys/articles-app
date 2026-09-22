@@ -65,8 +65,12 @@ const STATUS_CONFIG: Record<string, { className: string; label: string }> = {
 };
 
 const POLLING_INTERVAL = 2500;
-// Matches the backend's sweepStuckEvaluations threshold (index.ts) and
-// ArticleDetail/AdminArticleDetail polling.
+// Matches STUCK_EVALUATION_THRESHOLD_MS (article-api/src/utils/evaluationTiming.ts)
+// and the same constant in ArticleDetail/AdminArticleDetail. There is no backend
+// sweep — the backend only treats a pending/processing article as stuck when a
+// rewrite/re-evaluate/apply-suggestions call is made on that specific article
+// (see isStuckPending); this local timer is what ends the "still scoring" banner
+// on this page when nothing else ever touches the article again.
 const MAX_POLL_DURATION = 120000;
 /** Fetch batch size for "View all" — an implementation detail now that the list is virtualized, not a user-facing setting. */
 const VIEW_ALL_FETCH_LIMIT = 30;
@@ -300,24 +304,26 @@ export default function MyArticles() {
     };
   }, []);
 
-  const [toast, setToast] = useState<string | null>(() => {
-    try {
-      const t = sessionStorage.getItem("toast");
-      const te = sessionStorage.getItem("toastError");
-      if (t) {
-        sessionStorage.removeItem("toast");
-        if (te) sessionStorage.removeItem("toastError");
-        return t;
+  const [toast, setToast] = useState<{ message: string; variant: "success" | "error" } | null>(
+    () => {
+      try {
+        const t = sessionStorage.getItem("toast");
+        const te = sessionStorage.getItem("toastError");
+        if (t) {
+          sessionStorage.removeItem("toast");
+          if (te) sessionStorage.removeItem("toastError");
+          return { message: t, variant: "success" };
+        }
+        if (te) {
+          sessionStorage.removeItem("toastError");
+          return { message: te, variant: "error" };
+        }
+        return null;
+      } catch {
+        return null;
       }
-      if (te) {
-        sessionStorage.removeItem("toastError");
-        return te;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  });
+    },
+  );
 
   useEffect(() => {
     if (toast) {
@@ -340,11 +346,7 @@ export default function MyArticles() {
               : undefined
           }
           actions={
-            <Button
-              type="button"
-              size="lg"
-              onClick={() => navigate("/articles/new")}
-            >
+            <Button type="button" size="lg" onClick={() => navigate("/articles/new")}>
               <Plus size={16} />
               New article
             </Button>
@@ -404,15 +406,8 @@ export default function MyArticles() {
 
         {typesError && <InlineAlert>{typesError}</InlineAlert>}
         {toast && (
-          <InlineAlert
-            variant={
-              toast.toLowerCase().includes("timed out") ||
-              toast.toLowerCase().includes("failed")
-                ? "error"
-                : "success"
-            }
-          >
-            {toast}
+          <InlineAlert variant={toast.variant}>
+            {toast.message}
           </InlineAlert>
         )}
         {isPolling && (
@@ -472,14 +467,14 @@ function MyArticlesTable({
       {
         accessorKey: "title",
         header: "Title",
-        size: 340,
+        size: 280,
         cell: ({ getValue }) => {
           const title = getValue() as string;
           return (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="block truncate text-[13px] font-semibold text-slate-800">
+                  <span className="flex min-h-7 items-center truncate text-[13px] font-semibold text-slate-800">
                     {title}
                   </span>
                 </TooltipTrigger>
@@ -492,19 +487,21 @@ function MyArticlesTable({
       {
         accessorKey: "type",
         header: "Type",
-        size: 130,
+        size: 115,
         cell: ({ getValue }) => {
           const typeName = getValue() as string;
           return (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge
-                    variant="outline"
-                    className="max-w-full border-transparent bg-slate-50 font-medium text-slate-700 ring-1 ring-slate-200/80"
-                  >
-                    <span className="min-w-0 truncate">{typeName}</span>
-                  </Badge>
+                  <span className="flex min-h-7 max-w-full items-center">
+                    <Badge
+                      variant="outline"
+                      className="max-w-full border-transparent bg-slate-50 font-medium text-slate-700 ring-1 ring-slate-200/80"
+                    >
+                      <span className="min-w-0 truncate">{typeName}</span>
+                    </Badge>
+                  </span>
                 </TooltipTrigger>
                 <TooltipContent>{typeName}</TooltipContent>
               </Tooltip>
@@ -517,7 +514,7 @@ function MyArticlesTable({
         header: "Version",
         size: 85,
         cell: ({ getValue }) => (
-          <span className="text-[13px] text-slate-700">
+          <span className="flex min-h-7 items-center text-[13px] text-slate-700">
             v{getValue() as number}
           </span>
         ),
@@ -525,14 +522,18 @@ function MyArticlesTable({
       {
         accessorKey: "ai_score",
         header: "AI score",
-        size: 130,
+        size: 120,
         cell: ({ row }) => {
           const score = row.original.ai_score;
           if (score === null)
-            return <span className="text-[13px] text-slate-700">—</span>;
+            return (
+              <span className="flex min-h-7 items-center text-[13px] text-slate-700">
+                —
+              </span>
+            );
           const classes = getAiScoreClasses(row.original.status);
           return (
-            <span className="inline-flex items-center gap-2">
+            <span className="flex min-h-7 items-center gap-2">
               <Progress
                 value={Math.min(Math.max(score, 0), 10) * 10}
                 className={cn("h-1.5 w-14", classes.bar)}
@@ -557,21 +558,33 @@ function MyArticlesTable({
         cell: ({ row }) => {
           const cfg = getDisplayStatus(row.original);
           return (
-            <Badge
-              variant="outline"
-              className={cn("font-medium", cfg.className)}
-            >
-              {cfg.label}
-            </Badge>
+            <span className="flex min-h-7 items-center">
+              <Badge
+                variant="outline"
+                className={cn("font-medium", cfg.className)}
+              >
+                {cfg.label}
+              </Badge>
+            </span>
           );
         },
       },
       {
         accessorKey: "created",
         header: "Created",
-        size: 125,
+        size: 110,
         cell: ({ getValue }) => (
-          <span className="text-[13px] text-slate-700">
+          <span className="flex min-h-7 items-center text-[13px] text-slate-700">
+            {dayjs(getValue() as string).format("MMM D, YYYY")}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "edited",
+        header: "Edited",
+        size: 110,
+        cell: ({ getValue }) => (
+          <span className="flex min-h-7 items-center text-[13px] text-slate-700">
             {dayjs(getValue() as string).format("MMM D, YYYY")}
           </span>
         ),

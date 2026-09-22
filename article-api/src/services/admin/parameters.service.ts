@@ -79,6 +79,69 @@ export async function getParametersByArticleType(db: D1Database, articleTypeId?:
   return results;
 }
 
+/**
+ * All active parameters (with options) across every active article type,
+ * for the "copy from an existing parameter" search in ArticleTypesForm.
+ * Read-only — mirrors getParametersByArticleType's query shape exactly,
+ * just without the article_type_id filter and with the type name joined in.
+ */
+export async function getAllParametersWithTypeNames(db: D1Database) {
+  const parameters = await db
+    .prepare(
+      `
+      SELECT
+        p.id,
+        p.article_type_id,
+        at.name AS article_type_name,
+        p.name,
+        p.description,
+        p.prompt,
+        p.scope_type,
+        p.min_value,
+        p.max_value
+      FROM parameters p
+      JOIN article_types at ON at.id = p.article_type_id
+      WHERE p.is_active = 1
+        AND at.is_active = 1
+      ORDER BY at.name, p.sort_order, p.created_at
+    `,
+    )
+    .all();
+
+  const results = [];
+
+  for (const parameter of parameters.results ?? []) {
+    let options: unknown[] = [];
+
+    if (parameter.scope_type === "option") {
+      const optionResult = await db
+        .prepare(
+          `
+          SELECT
+            id,
+            label,
+            sort_order
+          FROM parameter_options
+          WHERE parameter_id = ?
+            AND is_active = 1
+          ORDER BY sort_order
+        `,
+        )
+        .bind(parameter.id)
+        .all();
+
+      options = optionResult.results ?? [];
+    }
+
+    results.push({
+      ...parameter,
+      options,
+    });
+  }
+
+  return results;
+}
+
 export async function getParameterById(db: D1Database, parameterId: string) {
   const parameter = await db
     .prepare(
@@ -297,50 +360,86 @@ export async function createParameter(
     throw notFound("Article type");
   }
 
+  // Two ordering rules, in priority order:
+  // 1. is_active DESC — an active case-insensitive match must be the one
+  //    checked below, or an unrelated inactive case-variant could mask a
+  //    real conflict (see the is_active===1 check next).
+  // 2. exact name match first — name is unique case-sensitively, so if two
+  //    inactive case-variants both match case-insensitively (e.g. "Grammar"
+  //    and "grammar"), reactivating the wrong one and renaming it to the
+  //    input's exact casing would collide with the other's still-present
+  //    exact string. Preferring the row whose name already equals the
+  //    input exactly means that rename is a no-op, never a collision.
   const existing = await db
     .prepare(
       `
-      SELECT id
+      SELECT id, is_active
       FROM parameters
       WHERE article_type_id = ?
         AND LOWER(name) = LOWER(?)
-        AND is_active = 1
+      ORDER BY is_active DESC, (name = ?) DESC
     `,
     )
-    .bind(articleTypeId, input.name)
-    .first();
+    .bind(articleTypeId, input.name, input.name)
+    .first<{ id: string; is_active: number }>();
 
-  if (existing) {
+  if (existing?.is_active === 1) {
     throw conflict("Parameter with this name already exists for this article type");
   }
 
-  const parameterId = crypto.randomUUID();
   const now = new Date().toISOString();
 
+  // idx_parameters_type_name is a plain UNIQUE(article_type_id, name) index
+  // with no is_active qualifier, so a soft-deleted parameter still occupies
+  // this name. Reuse its row (reactivate + overwrite) instead of inserting
+  // a duplicate that would hit that constraint — same pattern already used
+  // for options in syncParameterOptions above.
+  const parameterId = existing?.id ?? crypto.randomUUID();
+
   const statements: D1PreparedStatement[] = [
-    db
-      .prepare(
-        `
-        INSERT INTO parameters (
-          id, article_type_id, name, description, prompt, scope_type,
-          min_value, max_value, created_by, created_at, updated_at
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
-      )
-      .bind(
-        parameterId,
-        articleTypeId,
-        input.name,
-        input.description ?? null,
-        input.prompt,
-        input.scopeType,
-        input.minValue ?? null,
-        input.maxValue ?? null,
-        createdBy,
-        now,
-        now,
-      ),
+    existing
+      ? db
+          .prepare(
+            `
+            UPDATE parameters
+            SET name = ?, description = ?, prompt = ?, scope_type = ?,
+                min_value = ?, max_value = ?, is_active = 1, updated_at = ?
+            WHERE id = ?
+          `,
+          )
+          .bind(
+            input.name,
+            input.description ?? null,
+            input.prompt,
+            input.scopeType,
+            input.minValue ?? null,
+            input.maxValue ?? null,
+            now,
+            parameterId,
+          )
+      : db
+          .prepare(
+            `
+            INSERT INTO parameters (
+              id, article_type_id, name, description, prompt, scope_type,
+              min_value, max_value, created_by, created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+          )
+          .bind(
+            parameterId,
+            articleTypeId,
+            input.name,
+            input.description ?? null,
+            input.prompt,
+            input.scopeType,
+            input.minValue ?? null,
+            input.maxValue ?? null,
+            createdBy,
+            now,
+            now,
+          ),
   ];
 
   const optionStatements = await syncParameterOptions(
@@ -450,11 +549,10 @@ export async function deactivateParameter(db: D1Database, parameterId: string) {
       `
     UPDATE parameter_options
     SET
-      is_active = 0,
-      updated_at = ?
-    WHERE parameter_id = ?    
+      is_active = 0
+    WHERE parameter_id = ?
   `,
     )
-    .bind(new Date().toISOString(), parameterId)
+    .bind(parameterId)
     .run();
 }

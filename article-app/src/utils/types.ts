@@ -19,6 +19,8 @@ export interface ArticleDetail {
   status: string;
   version: number;
   suggested_title?: string | null;
+  /** Set when an admin applied AI suggestions to the text; cleared on the author's next rewrite. */
+  admin_edited_at?: string | null;
 }
 
 export interface HistoryItem {
@@ -31,12 +33,17 @@ export interface HistoryItem {
   status: "approved" | "rewrite_required" | "pending" | "failed";
   submitted_at: string;
   snapshotted_at?: string;
+  article_type_id?: string;
+  article_type_name?: string | null;
 }
 
 export type ParameterResult = {
   parameter_name: string;
+  parameter_description?: string | null;
   scope_type: string;
+  max_value?: number | null;
   value: string | number | null;
+  feedback?: string | null;
 };
 export interface ArticleDetailResponse {
   article: ArticleDetail;
@@ -57,6 +64,7 @@ export interface ArticleListItem {
   ai_feedback?: string | null;
   status: string;
   created: string;
+  edited: string;
   authorName?: string;
 }
 

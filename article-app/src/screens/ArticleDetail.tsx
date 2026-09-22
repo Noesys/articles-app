@@ -20,6 +20,7 @@ import "react-resizable/css/styles.css";
 import { useAuth } from "@/contexts/AuthContext";
 import AdminHeader from "@/admin/components/AdminHeader";
 import ParameterResultsBox from "@/admin/components/articles/ParameterResultsBox";
+import SuggestionsPanel from "@/admin/components/articles/SuggestionsPanel";
 import ScoringHistoryTable from "@/admin/components/articles/ScoringHistoryTable";
 import FeedbackBlock from "@/admin/components/articles/FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
@@ -53,16 +54,12 @@ function navigateBackOrToArticles(navigate: ReturnType<typeof useNavigate>) {
   else navigate("/");
 }
 
-import { getScoreColor, sanitizeFilename } from "@/utils/scoreColor";
+import { getDetailScoreColor, sanitizeFilename } from "@/utils/scoreColor";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-function getScoreBarColor(score: number | null, status: string, passThreshold: number | null) {
-  if (score === null) return "bg-amber-500";
-  return getScoreColor(score, passThreshold, status).bar;
-}
 function getScoreTextColor(score: number | null, status: string, passThreshold: number | null) {
   if (score === null) return "text-slate-900";
-  return getScoreColor(score, passThreshold, status).text;
+  return getDetailScoreColor(score, passThreshold, status).text;
 }
 
 export default function ArticleDetail() {
@@ -117,8 +114,8 @@ export default function ArticleDetail() {
   const [titleDraft, setTitleDraft] = useState("");
   const [titleBusy, setTitleBusy] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
-  /** True once an admin explicitly (re)starts scoring — distinct from a merely-pending, not-yet-scored article. */
-  const [awaitingReeval, setAwaitingReeval] = useState(false);
+  /** Bumped when an action starts scoring, so polling restarts even if an earlier poll already timed out. */
+  const [pollEpoch, setPollEpoch] = useState(0);
 
   useEffect(() => {
     if (article) {
@@ -148,42 +145,39 @@ export default function ArticleDetail() {
   const displayStatus =
     effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
+  const displayTypeName =
+    effectiveSnapshot?.article_type_name ?? article?.article_type_name ?? "";
 
   const isFailed = displayStatus === "failed";
 
   // Poll every 2.5s while scoring; stops on terminal status/complete/timeout
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
   const POLLING_INTERVAL = 2500;
-  // Matches the backend's sweepStuckEvaluations threshold (index.ts) and
-  // AdminArticleDetail/MyArticles polling — kept consistent so the article
-  // is actually marked "failed" (rewrite enabled) by the time this gives up.
+  // Matches STUCK_EVALUATION_THRESHOLD_MS (article-api/src/utils/evaluationTiming.ts)
+  // and the same constant in AdminArticleDetail/MyArticles. There is no backend
+  // sweep — the article's own status only flips to "failed" when a rewrite is
+  // actually attempted (isStuckPending lets that bypass a still-"pending" row).
+  // This local timer just stops polling and shows a timeout message here.
   const MAX_POLL_DURATION = 120000;
   useEffect(() => {
     if (
       effectiveSnapshot ||
       !article ||
       currentScore !== null ||
-      TERMINAL_STATUSES.includes(article.status) ||
-      // Admin's "change type only" leaves the article pending+unscored
-      // without starting a background job — don't poll for that.
-      (isAdmin && !awaitingReeval)
+      TERMINAL_STATUSES.includes(article.status)
     )
       return;
     let stopped = false;
     let timer: number | null = null;
     const pollStart = Date.now();
     const isTimedOut = () => Date.now() - pollStart > MAX_POLL_DURATION;
-    // Non-admins can land here with a pending, unscored article that has no
-    // evaluation actually running (e.g. an admin changed its type without
-    // re-evaluating) — the backend has no field distinguishing that from a
-    // genuinely in-flight evaluation, so this message stays neutral instead
-    // of claiming scoring was in progress.
+    // Neutral wording: a pending article may have had its evaluation cut short,
+    // and nothing tells us that apart from one that is still running.
     const timeoutMessage = "Still pending — refresh to check for updates";
     const tick = async () => {
       if (stopped || document.visibilityState === "hidden") return;
       if (isTimedOut()) {
         if (timer) clearInterval(timer);
-        setAwaitingReeval(false);
         try {
           sessionStorage.setItem("toastError", timeoutMessage);
         } catch {}
@@ -199,7 +193,6 @@ export default function ArticleDetail() {
         setCurrentFeedback(result.current_feedback ?? "");
         setParameterResults(result.parameter_results ?? []);
         if (result.current_score !== null) {
-          setAwaitingReeval(false);
           try {
             sessionStorage.removeItem("toastError");
           } catch {}
@@ -213,7 +206,6 @@ export default function ArticleDetail() {
     timer = window.setInterval(() => {
       if (isTimedOut()) {
         if (timer) clearInterval(timer);
-        setAwaitingReeval(false);
         try {
           sessionStorage.setItem("toastError", timeoutMessage);
         } catch {}
@@ -230,23 +222,15 @@ export default function ArticleDetail() {
       if (timer) clearInterval(timer);
       document.removeEventListener("visibilitychange", onVis);
     };
-  }, [article?.id, currentScore, effectiveSnapshot, isAdmin, awaitingReeval]);
+  }, [article?.id, article?.status, currentScore, effectiveSnapshot, pollEpoch]);
 
-  // "Not scored yet" (admin's type-only change, no reeval running) is
-  // distinct from "actively scoring" — everyone else's "pending" always
-  // means the latter, since only the admin type-change flow can produce it.
-  const isPendingUnscored =
-    isAdmin &&
-    !effectiveSnapshot &&
-    !awaitingReeval &&
-    displayStatus === "pending" &&
-    displayScore === null;
-  const isPending =
-    currentScore === null && article?.status === "pending" && !isPendingUnscored;
+  const isPending = currentScore === null && article?.status === "pending";
 
+  const [typeMinWords, setTypeMinWords] = useState<number>(1000);
+  const [allTypesCache, setAllTypesCache] = useState<any[]>([]);
   const wordCount = countWords(content);
-  const isWordCountValid = wordCount >= 1000;
-  const wordCountColor = isWordCountValid ? "text-emerald-600" : wordCount >= 500 ? "text-amber-600" : "text-slate-500";
+  const isWordCountValid = wordCount >= typeMinWords;
+  const wordCountColor = isWordCountValid ? "text-emerald-600" : wordCount >= typeMinWords / 2 ? "text-amber-600" : "text-slate-500";
   const [feedbackCollapsed, setFeedbackCollapsed] = useState(true);
   const [passThreshold, setPassThreshold] = useState<number | null>(null);
   useEffect(() => {
@@ -256,19 +240,27 @@ export default function ArticleDetail() {
     const path = isAdmin ? "/admin/article-types" : "/article-types";
     api<any>(path).then((types: any) => {
       const list = Array.isArray(types) ? types : types?.data ?? [];
+      setAllTypesCache(list);
       const t = list.find((x: any) => x.id === article.article_type_id);
       if (t?.pass_threshold != null) setPassThreshold(t.pass_threshold);
+      const sel = list.find((x: any) => x.id === (selectedTypeId || article.article_type_id));
+      if (sel?.min_words != null) setTypeMinWords(Number(sel.min_words) || 1000);
+      else if (t?.min_words != null) setTypeMinWords(Number(t.min_words) || 1000);
       const instr = (t?.general_instructions as string | null | undefined)?.trim();
       setInstructionsText(instr || null);
-      if (isAdmin) {
-        setArticleTypes(
-          list
-            .map((x: any) => ({ id: x.id, name: x.name }))
-            .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)),
-        );
-      }
+      setArticleTypes(
+        list
+          .map((x: any) => ({ id: x.id, name: x.name }))
+          .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)),
+      );
     }).catch(() => {});
   }, [article?.article_type_id, isAdmin]);
+
+  useEffect(() => {
+    if (!selectedTypeId) return;
+    const sel = allTypesCache.find((x: any) => x.id === selectedTypeId);
+    if (sel?.min_words != null) setTypeMinWords(Number(sel.min_words) || 1000);
+  }, [selectedTypeId, allTypesCache]);
 
   async function handleSubmitRewrite() {
     if (!article) return;
@@ -276,8 +268,8 @@ export default function ArticleDetail() {
       setSubmitError("Title and content are required");
       return;
     }
-    if (countWords(content) < 1000) {
-      setSubmitError("Article must contain at least 1000 words");
+    if (countWords(content) < typeMinWords) {
+      setSubmitError(`Article must contain at least ${typeMinWords} words`);
       return;
     }
     if (isUploadingImages) {
@@ -292,7 +284,7 @@ export default function ArticleDetail() {
         method: "POST",
         body: JSON.stringify({
           id: article.id,
-          article_type_id: article.article_type_id,
+          article_type_id: selectedTypeId || article.article_type_id,
           title: title.trim(),
           content: serializeArticleContent(content.trim()),
         }),
@@ -303,11 +295,9 @@ export default function ArticleDetail() {
           "Article rewrite submitted! Scoring in progress...",
         );
       } catch {}
-      navigate(
-        user?.auth_role === "admin"
-          ? "/admin/my-article"
-          : "/",
-      );
+      // Return to wherever the user came from (e.g. a month-filtered list)
+      // instead of a hardcoded route that would reset those filters.
+      navigateBackOrToArticles(navigate);
     } catch (err) {
       console.error("Rewrite submission failed:", err);
       setSubmitError(
@@ -381,20 +371,26 @@ export default function ArticleDetail() {
     return result;
   }
 
-  async function handleChangeType(reevaluate: boolean) {
+  async function handleChangeType() {
     if (!id || !selectedTypeId) return;
     setTypeBusy(true);
     try {
-      const res: any = await api(`/admin/articles/${id}/type`, {
+      const result = await api<{ evaluatable?: boolean }>(`/admin/articles/${id}/type`, {
         method: "PATCH",
-        body: JSON.stringify({ article_type_id: selectedTypeId, reevaluate }),
+        body: JSON.stringify({ article_type_id: selectedTypeId, reevaluate: false }),
       });
-      const started = Boolean(res?.reevaluate);
-      toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
       await refreshArticleQuietly();
-      setCurrentScore(null);
-      setCurrentFeedback("");
-      setAwaitingReeval(started);
+      if (result?.evaluatable === false) {
+        toast.warning(
+          "Article type updated. This type is not evaluatable, so scoring is disabled for this article.",
+          { duration: 10000 },
+        );
+      } else {
+        toast.warning(
+          "Article type updated. Re-evaluate to keep the score, feedback and parameter results consistent with the new type.",
+          { duration: 10000 },
+        );
+      }
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -408,9 +404,11 @@ export default function ArticleDetail() {
     try {
       await api(`/admin/articles/${id}/reevaluate`, { method: "POST" });
       toast.success("Re-evaluation started");
+      // Reload so article.status is "pending" — the polling effect skips terminal statuses.
+      await refreshArticleQuietly();
       setCurrentScore(null);
       setCurrentFeedback("");
-      setAwaitingReeval(true);
+      setPollEpoch((n) => n + 1);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -440,7 +438,7 @@ export default function ArticleDetail() {
       toast.success("Re-evaluation started");
       setCurrentScore(null);
       setCurrentFeedback("");
-      setAwaitingReeval(true);
+      setPollEpoch((n) => n + 1);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -603,6 +601,7 @@ export default function ArticleDetail() {
                     if (article) {
                       setTitle(article.title);
                       setContent(article.content);
+                      setSelectedTypeId(article.article_type_id);
                     }
 
                     setSubmitError(null);
@@ -615,7 +614,7 @@ export default function ArticleDetail() {
 
                 <button
                   onClick={handleSubmitRewrite}
-                  disabled={submitting || isUploadingImages}
+                  disabled={submitting || isUploadingImages || !isWordCountValid}
                   title={isUploadingImages ? "Waiting for image uploads to finish…" : undefined}
                   className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-60 text-white rounded-sm px-3 py-2 transition-colors"
                 >
@@ -633,7 +632,6 @@ export default function ArticleDetail() {
                   setEditing(true);
                   setContentCollapsed(false);
                 }}
-                disabled={isPendingUnscored}
                 className="flex items-center gap-1.5 text-sm font-medium bg-teal-600 hover:bg-teal-700 disabled:opacity-40 text-white rounded-sm px-3 py-2 transition-colors shrink-0"
               >
                 <Edit3 size={14} />
@@ -641,6 +639,27 @@ export default function ArticleDetail() {
               </button>
             )}
           </div>
+
+          {editing && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-sm border border-slate-200 bg-white px-3 py-2.5">
+              <label className="text-xs font-medium text-slate-500 shrink-0">
+                Article type
+              </label>
+              <FilterSelect
+                value={selectedTypeId}
+                onValueChange={setSelectedTypeId}
+                options={articleTypes.map((t) => ({ value: t.id, label: t.name }))}
+                placeholder="Select type"
+                className="min-w-[220px] max-w-[320px]"
+                disabled={submitting}
+              />
+              {typeChanged && (
+                <span className="text-xs text-amber-700">
+                  Type will change when you submit — re-evaluated against the new type's criteria.
+                </span>
+              )}
+            </div>
+          )}
 
           {isAdmin && !effectiveSnapshot && article?.suggested_title && (
             <div className="mt-3 rounded-sm border border-slate-200 bg-white px-3 py-2.5">
@@ -664,7 +683,7 @@ export default function ArticleDetail() {
           )}
         </div>
 
-        {isAdmin && !effectiveSnapshot && (
+        {isAdmin && !effectiveSnapshot && !editing && (
           <div className="rounded-sm border border-slate-200 bg-white p-4 shadow-sm mb-6">
             <p className="text-md font-semibold uppercase tracking-wide text-slate-600 mb-3">
               Article type
@@ -681,18 +700,10 @@ export default function ArticleDetail() {
               <button
                 type="button"
                 disabled={!typeChanged || typeBusy || reevalBusy || isPending || editing}
-                onClick={() => handleChangeType(true)}
+                onClick={() => handleChangeType()}
                 className="rounded-sm bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
-                {typeBusy ? "Saving…" : "Change type & re-evaluate"}
-              </button>
-              <button
-                type="button"
-                disabled={!typeChanged || typeBusy || reevalBusy || isPending || editing}
-                onClick={() => handleChangeType(false)}
-                className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
-              >
-                Change type only
+                {typeBusy ? "Saving…" : "Change type only"}
               </button>
               <button
                 type="button"
@@ -704,7 +715,7 @@ export default function ArticleDetail() {
               </button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Changing type snapshots the prior score (if any). Not suitable skips AI scoring.
+              "Change type only" just updates the type and keeps the current score. Re-evaluate snapshots it and re-scores. Not suitable skips AI scoring.
             </p>
           </div>
         )}
@@ -727,10 +738,6 @@ export default function ArticleDetail() {
                       We couldn't evaluate this article. Please submit it again.
                     </p>
                   </div>
-                ) : isPendingUnscored ? (
-                  <p className="text-sm text-slate-500 py-1">
-                    Not scored yet — use Re-evaluate to run scoring.
-                  </p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
                     <Loader2
@@ -750,7 +757,7 @@ export default function ArticleDetail() {
                     </p>
 
                     {hasScore && (
-                      <Progress value={Math.min(Math.max(displayScore!,0),10)*10} className={cn("flex-1 h-2", getScoreColor(displayScore!, passThreshold, displayStatus).barTw)} />
+                      <Progress value={Math.min(Math.max(displayScore!,0),10)*10} className={cn("flex-1 h-2", getDetailScoreColor(displayScore!, passThreshold, displayStatus).barTw)} />
                     )}
                   </>
                 )}
@@ -784,8 +791,6 @@ export default function ArticleDetail() {
               <div className="px-4 pb-4">
                 {isFailed ? (
                   <p className="text-sm text-red-600">Evaluation failed. Please submit it again.</p>
-                ) : isPendingUnscored ? (
-                  <p className="text-sm text-slate-500">No feedback yet.</p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-sm border border-slate-200 shadow-sm">
                     <Loader2 size={16} className="animate-spin text-slate-400" />
@@ -798,7 +803,7 @@ export default function ArticleDetail() {
             )}
           </div>
           <ParameterResultsBox results={parameterResults} />
-
+          
           {/* Content - COLLAPSIBLE */}
           <div className="bg-white border border-slate-200 rounded-sm overflow-hidden shadow-sm">
             <div
@@ -811,8 +816,16 @@ export default function ArticleDetail() {
                 {article && (
                   <div className="flex items-center">
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-sm px-2.5 py-1">
-                      {article.article_type_name}
+                      {displayTypeName}
                     </span>
+                    {!effectiveSnapshot && article.admin_edited_at && (
+                      <span
+                        title={`Edited by an admin on ${dayjs(article.admin_edited_at).format("MMM D, YYYY h:mm A")}`}
+                        className="ml-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2.5 py-1"
+                      >
+                        Edited by admin
+                      </span>
+                    )}
                       <ArticleCopyButton title={title} text={content} />
                     <DownloadMarkdownButton
                       title={title}
@@ -875,7 +888,7 @@ export default function ArticleDetail() {
                       </div>
 
                       <div className="flex items-center gap-1.5 text-xs">
-                        <span className={wordCountColor}>Word count: {wordCount}</span>
+                        <span className={wordCountColor}>Word count: {wordCount} (min {typeMinWords})</span>
                         {isWordCountValid && (
                           <>
                             <CheckCircle2
@@ -920,6 +933,21 @@ export default function ArticleDetail() {
               </div>
             )}
           </div>
+
+          {isAdmin && !effectiveSnapshot && article && (
+            <SuggestionsPanel
+              articleId={article.id}
+              version={article.version}
+              scored={currentScore !== null && !isFailed}
+              onContentUpdated={(next) => {
+                setContent(next);
+                setArticle((prev: any) =>
+                  prev ? { ...prev, content: next, admin_edited_at: new Date().toISOString() } : prev,
+                );
+              }}
+            />
+          )}
+
 
           {!effectiveSnapshot && (
             <ScoringHistoryTable

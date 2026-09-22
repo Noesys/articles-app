@@ -5,6 +5,7 @@ import { ArticleTypeWithPrompt } from "@/admin/utils/types";
 
 const ArticleTypesPage = () => {
   const [types, setTypes] = useState<ArticleTypeWithPrompt[]>([]);
+  const [loading, setLoading] = useState(true);
 
   async function deleteArticleType(id: string) {
     await api(`/admin/article-types/${id}`, { method: "DELETE" });
@@ -16,9 +17,11 @@ const ArticleTypesPage = () => {
   }
 
   useEffect(() => {
-    loadArticleTypes().catch((error) => {
-      console.error(error);
-    });
+    loadArticleTypes()
+      .catch((error) => {
+        console.error(error);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const handleDeleteType = async (id: string) => {
@@ -28,7 +31,7 @@ const ArticleTypesPage = () => {
 
   return (
     <div>
-      <ArticleTypesManager articleTypes={types} onDelete={handleDeleteType} />
+      <ArticleTypesManager articleTypes={types} loading={loading} onDelete={handleDeleteType} />
     </div>
   );
 };

@@ -1,5 +1,11 @@
 import { Hono } from "hono";
-import { getArticlesByUser, getArticleById, createArticle } from "../../services/user/articles";
+import {
+  browseArticles,
+  getArticlesByUser,
+  getArticleById,
+  getBrowseArticleById,
+  createArticle,
+} from "../../services/user/articles";
 import {
   getArticleHistory,
   snapshotArticle,
@@ -20,6 +26,17 @@ function currentMonth(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
+export function countWordsServer(html: string): number {
+  if (!html || html.trim() === "" || html.trim() === "<p></p>") return 0;
+  const text = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return 0;
+  return text.split(" ").filter(Boolean).length;
+}
+
 function validateArticleSize(title: string, content: string): void {
   const MAX_TITLE_BYTES = 500;
   const MAX_CONTENT_BYTES = 500_000;
@@ -37,6 +54,8 @@ function articleToListItem(article: {
   ai_score: number | null;
   status: string;
   submitted_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   authorName: string;
   authorId: string;
 }) {
@@ -48,7 +67,11 @@ function articleToListItem(article: {
       version: article.version,
       ai_score: article.ai_score,
       status: article.status,
-      created: article.submitted_at,
+      // Fixed at creation, never touched again — falls back to submitted_at
+      // only for rows created before created_at existed and not yet backfilled.
+      created: article.created_at ?? article.submitted_at,
+      // Moves on every rewrite / re-evaluate / type-change / apply-suggestions.
+      edited: article.updated_at ?? article.submitted_at,
     },
     author: {
       id: article.authorId,
@@ -123,6 +146,8 @@ articleRoutes.get("/mine", async (c) => {
       ai_score: article.ai_score,
       status: article.status,
       submitted_at: article.submitted_at,
+      created_at: article.created_at,
+      updated_at: article.updated_at,
       authorName: user.name,
       authorId: user.id,
     }),
@@ -133,6 +158,39 @@ articleRoutes.get("/mine", async (c) => {
     data,
     ...(pagination ? { pagination } : {}),
   });
+});
+
+// Blog-style browse: accepted/current articles from all users, read-only
+// fields (no scores/feedback), always latest-first.
+articleRoutes.get("/browse", async (c) => {
+  const typeId = c.req.query("type") || undefined;
+  const q = c.req.query("q") || undefined;
+  const page = Math.max(1, parseInt(c.req.query("page") || "1", 10) || 1);
+  const limit = Math.min(50, Math.max(1, parseInt(c.req.query("limit") || "9", 10) || 9));
+
+  const { articles, pagination, typeOptions } = await browseArticles(c.env.DB, {
+    typeId,
+    q,
+    page,
+    limit,
+  });
+
+  return c.json({
+    success: true,
+    data: articles,
+    pagination,
+    meta: { typeOptions },
+  });
+});
+
+articleRoutes.get("/browse/:id", async (c) => {
+  const article = await getBrowseArticleById(c.env.DB, c.req.param("id"));
+
+  if (!article) {
+    return c.json({ success: false, message: "Article not found" }, 404);
+  }
+
+  return c.json({ success: true, data: article });
 });
 
 articleRoutes.get("/mine/:id", async (c) => {
@@ -173,11 +231,12 @@ articleRoutes.get("/mine/:id", async (c) => {
     numeric_value: number | null;
     option_id: string | null;
     option_label: string | null;
+    feedback: string | null;
   };
   const paramRows: ParamRow[] = (
     await db
       .prepare(
-        `SELECT p.name as parameter_name, p.description as parameter_description, p.scope_type, p.max_value, r.numeric_value, r.option_id, po.label as option_label FROM article_parameter_results r JOIN parameters p ON p.id=r.parameter_id LEFT JOIN parameter_options po ON po.id=r.option_id WHERE r.article_id=? AND r.version=? ORDER BY p.sort_order`,
+        `SELECT p.name as parameter_name, p.description as parameter_description, p.scope_type, p.max_value, r.numeric_value, r.option_id, r.feedback, po.label as option_label FROM article_parameter_results r JOIN parameters p ON p.id=r.parameter_id LEFT JOIN parameter_options po ON po.id=r.option_id WHERE r.article_id=? AND r.version=? ORDER BY p.sort_order`,
       )
       .bind(articleId, article.version)
       .all()
@@ -188,6 +247,7 @@ articleRoutes.get("/mine/:id", async (c) => {
     scope_type: r.scope_type,
     max_value: r.max_value,
     value: r.scope_type === "option" ? r.option_label : r.numeric_value,
+    feedback: r.feedback ?? null,
   }));
   return c.json({
     message: "Article fetched successfully",
@@ -203,6 +263,7 @@ articleRoutes.get("/mine/:id", async (c) => {
         ai_score: article.ai_score,
         ai_feedback: article.ai_feedback || null,
         suggested_title: article.suggested_title || null,
+        admin_edited_at: article.admin_edited_at ?? null,
       },
       current_feedback: currentFeedback,
       current_score: article.ai_score,
@@ -218,6 +279,8 @@ articleRoutes.get("/mine/:id", async (c) => {
           status: item.status ?? "pending",
           submitted_at: item.submitted_at,
           snapshotted_at: item.snapshotted_at,
+          article_type_id: item.article_type_id,
+          article_type_name: item.article_type_name,
         };
       }),
     },
@@ -271,6 +334,23 @@ articleRoutes.post("/", async (c) => {
 
   validateArticleSize(title, content);
 
+  const articleType = await db
+    .prepare(
+      `SELECT id, COALESCE(min_words, 1000) AS min_words FROM article_types WHERE id = ? AND is_active = 1 AND is_evaluatable = 1`,
+    )
+    .bind(article_type_id)
+    .first<{ id: string; min_words: number }>();
+  if (!articleType) {
+    return c.json({ success: false, message: "Invalid or unavailable article type" }, 400);
+  }
+  const minWords = articleType.min_words ?? 1000;
+  if (countWordsServer(content) < minWords) {
+    return c.json(
+      { success: false, message: `Article must contain at least ${minWords} words` },
+      400,
+    );
+  }
+
   title = sanitizeHtmlServer(title);
   content = sanitizeHtmlServer(content);
 
@@ -293,15 +373,7 @@ articleRoutes.post("/", async (c) => {
       );
     }
 
-    // An evaluation is already in flight for this article/version —
-    // accepting another rewrite here would race the in-flight evaluation
-    // onto an unreachable version (its target version never lands, and
-    // persistEvaluationResults' version guard silently no-ops), leaving the
-    // article stuck at "pending" forever. Reject and let the client retry
-    // once the current evaluation finishes — unless it's been stuck long
-    // enough (STUCK_EVALUATION_THRESHOLD_MS) to treat as abandoned, in which
-    // case let this rewrite proceed and supersede it (a late-arriving result
-    // from the abandoned attempt is protected by its own version guard).
+    // Already pending/processing and not stuck (< threshold old) — reject.
     if (
       (existingArticle.status === "pending" || existingArticle.status === "processing") &&
       !isStuckPending(existingArticle.updated_at)
@@ -316,7 +388,6 @@ articleRoutes.post("/", async (c) => {
     }
 
     const historyId = "hist_" + crypto.randomUUID();
-    const rewriteMonth = now.slice(0, 7);
 
     let nextVersion: number | null;
 
@@ -332,7 +403,7 @@ articleRoutes.post("/", async (c) => {
             `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
              SELECT ?, id, article_type_id, title,
                CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE ai_feedback END,
-               content, ai_score, pass_threshold,
+               COALESCE(pre_edit_content, content), ai_score, pass_threshold,
                CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
                version, submitted_at, scored_at, ?
              FROM articles WHERE id = ?`,
@@ -340,15 +411,26 @@ articleRoutes.post("/", async (c) => {
           .bind(historyId, now, requestedId),
         db
           .prepare(
-            `UPDATE articles SET title=?, content=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP, scored_at=NULL, month_year=?, retry_count=retry_count+1 WHERE id=? RETURNING version`,
+            // month_year is NOT updated here — it marks when the article was
+            // first created and stays fixed across rewrites; only submitted_at
+            // (surfaced as "Submitted" in the scoring history table) moves.
+            `UPDATE articles SET title=?, content=?, article_type_id=?, version=version+1, status='pending', ai_score=NULL, ai_feedback=NULL, pass_threshold=NULL, submitted_at=CURRENT_TIMESTAMP, updated_at=?, scored_at=NULL, retry_count=retry_count+1, admin_edited_at=NULL, pre_edit_content=NULL WHERE id=? RETURNING version`,
           )
-          .bind(title, content, rewriteMonth, requestedId),
+          .bind(title, content, article_type_id, now, requestedId),
       ]);
       nextVersion = updateResult.results[0]?.version ?? null;
     } catch {
       // Fallback to sequential if batch not supported in local D1
       await snapshotArticle(db, requestedId, historyId, now, user.id);
-      nextVersion = await updateArticleForRewrite(db, requestedId, title, content, rewriteMonth, user.id);
+      nextVersion = await updateArticleForRewrite(
+        db,
+        requestedId,
+        title,
+        content,
+        article_type_id,
+        now,
+        user.id,
+      );
     }
 
     if (nextVersion == null) {

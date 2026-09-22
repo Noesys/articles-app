@@ -1,4 +1,69 @@
-import { ArticleTypeConfig, ParameterConfig, ParameterOption } from "../../types/user-types";
+import {
+  ArticleTypeConfig,
+  ParameterConfig,
+  ParameterOption,
+  PreviousVersionContext,
+} from "../../types/user-types";
+
+const normalizeForCompare = (s: string) => s.replace(/\s+/g, " ").trim();
+
+/**
+ * Most recent earlier version worth sending as context. Walking back from the
+ * newest history row: stop (null) at the first row under a DIFFERENT article
+ * type — its feedback came from another rubric — and skip rows that are both
+ * unscored and unchanged (a failed re-evaluation adds nothing).
+ * Re-evaluations keep the same content; those are flagged `content_unchanged`
+ * so the prompt can send just the earlier score/feedback, not the article twice.
+ */
+export async function getPreviousVersionContext(
+  db: D1Database,
+  articleId: string,
+  currentVersion: number,
+  articleTypeId: string,
+  currentContent: string,
+): Promise<PreviousVersionContext | null> {
+  const rows = await db
+    .prepare(
+      `
+        SELECT version, article_type_id, title, content, ai_score, ai_feedback, status
+        FROM article_history
+        WHERE article_id = ?
+          AND version < ?
+        ORDER BY version DESC
+        LIMIT 10
+      `,
+    )
+    .bind(articleId, currentVersion)
+    .all<{
+      version: number;
+      article_type_id: string;
+      title: string;
+      content: string;
+      ai_score: number | null;
+      ai_feedback: string | null;
+      status: string | null;
+    }>();
+
+  const current = normalizeForCompare(currentContent);
+  for (const prev of rows.results ?? []) {
+    if (prev.article_type_id !== articleTypeId) return null;
+
+    const scored =
+      (prev.status === "approved" || prev.status === "rewrite_required") && prev.ai_score !== null;
+    const unchanged = normalizeForCompare(prev.content) === current;
+    if (!scored && unchanged) continue;
+
+    return {
+      version: prev.version,
+      title: prev.title,
+      content: prev.content,
+      content_unchanged: unchanged,
+      ai_score: scored ? prev.ai_score : null,
+      ai_feedback: scored ? prev.ai_feedback?.trim() || null : null,
+    };
+  }
+  return null;
+}
 
 /**
  * Fetch article type by ID with scoring configuration

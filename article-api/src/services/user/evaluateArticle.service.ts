@@ -1,4 +1,8 @@
-import { getArticleTypeConfig, getActiveParameters } from "./evaluation.service";
+import {
+  getArticleTypeConfig,
+  getActiveParameters,
+  getPreviousVersionContext,
+} from "./evaluation.service";
 import { persistEvaluationResults, handleEvaluationFailure } from "./evaluationPersistence.service";
 import {
   getScoreableParameters,
@@ -38,8 +42,20 @@ export async function evaluateArticle(
       );
     }
 
+    // Optional context — never let a failed lookup block the evaluation.
+    const previous = await getPreviousVersionContext(
+      db,
+      articleId,
+      version,
+      articleTypeId,
+      content,
+    ).catch((e) => {
+      console.warn("evaluateArticle: previous-version lookup failed:", e);
+      return null;
+    });
+
     const schema = buildEvaluationSchema(articleType, scoreable);
-    const prompt = buildEvaluationPrompt(articleType, scoreable, title, content);
+    const prompt = buildEvaluationPrompt(articleType, scoreable, title, content, previous);
 
     const aiResult = await callAI(prompt, schema, bindings, {
       min: Number(articleType.score_min),
@@ -48,7 +64,10 @@ export async function evaluateArticle(
 
     const parameterResults: ParameterResultInput[] = scoreable.map((p, i) => {
       const key = `p${i}`;
-      const rawValue = (aiResult.parameters as Record<string, number | string>)[key];
+      const entry = (aiResult.parameters as Record<string, { value: number | string; feedback: string }>)[key];
+      const rawValue = entry?.value;
+      const feedback =
+        typeof entry?.feedback === "string" ? entry.feedback.trim().slice(0, 4000) || null : null;
 
       if (p.scope_type === "numeric") {
         const numericValue = rawValue as number;
@@ -57,6 +76,7 @@ export async function evaluateArticle(
           value: String(numericValue),
           option_id: null,
           numeric_value: numericValue,
+          feedback,
         };
       }
 
@@ -71,6 +91,7 @@ export async function evaluateArticle(
         value: matchedOption.label,
         option_id: matchedOption.id,
         numeric_value: null,
+        feedback,
       };
     });
 

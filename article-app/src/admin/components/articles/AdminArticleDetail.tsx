@@ -1,16 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ChevronLeft, Loader2, ChevronDown, ChevronUp, Pencil, Check, X } from "lucide-react";
+import {
+  ChevronLeft,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Pencil,
+  Check,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { FilterSelect } from "@/components/ui/filter-select";
 import dayjs from "dayjs";
 import { api } from "../../../http-client";
 import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
-import { getScoreColor, sanitizeFilename } from "@/utils/scoreColor";
+import { getDetailScoreColor, sanitizeFilename } from "@/utils/scoreColor";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import ScoringHistoryTable from "./ScoringHistoryTable";
 import ParameterResultsBox from "./ParameterResultsBox";
+import SuggestionsPanel from "./SuggestionsPanel";
 import FeedbackBlock from "./FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
 import { HistoryItem, ArticleDetail, ParameterResult } from "@/utils/types";
@@ -26,13 +35,13 @@ function navigateBackOrToArticles(navigate: ReturnType<typeof useNavigate>) {
   else navigate("/admin/articles");
 }
 
-function getScoreBarColor(score: number | null, status: string, passThreshold: number | null) {
-  if (score === null) return "bg-amber-500";
-  return getScoreColor(score, passThreshold, status).bar;
-}
-function getScoreTextColor(score: number | null, status: string, passThreshold: number | null) {
+function getScoreTextColor(
+  score: number | null,
+  status: string,
+  passThreshold: number | null,
+) {
   if (score === null) return "text-slate-900";
-  return getScoreColor(score, passThreshold, status).text;
+  return getDetailScoreColor(score, passThreshold, status).text;
 }
 
 type ArticleTypeOption = { id: string; name: string };
@@ -50,13 +59,16 @@ export default function AdminArticleDetail() {
   const rawVersion = routeVersion ?? queryVersion;
 
   const parsedVersion = rawVersion ? parseInt(rawVersion, 10) : null;
-  const versionParam = parsedVersion !== null && !isNaN(parsedVersion) ? parsedVersion : null;
+  const versionParam =
+    parsedVersion !== null && !isNaN(parsedVersion) ? parsedVersion : null;
 
   const [article, setArticle] = useState<ArticleDetail | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [currentScore, setCurrentScore] = useState<number | null>(null);
   const [currentFeedback, setCurrentFeedback] = useState("");
-  const [parameterResults, setParameterResults] = useState<ParameterResult[]>([]);
+  const [parameterResults, setParameterResults] = useState<ParameterResult[]>(
+    [],
+  );
   const [passThreshold, setPassThreshold] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +103,8 @@ export default function AdminArticleDetail() {
       title: d.title as string,
       content: d.content as string,
       article_type_id: (d.article_type_id as string) || "",
-      article_type_name: (d.article_type_name as string) || (d.type as string) || "",
+      article_type_name:
+        (d.article_type_name as string) || (d.type as string) || "",
       status: d.status as string,
       version: d.version as number,
       suggested_title: (d.suggested_title as string | null | undefined) ?? null,
@@ -115,6 +128,8 @@ export default function AdminArticleDetail() {
         status?: string;
         submitted_at?: string;
         snapshotted_at?: string;
+        article_type_id?: string;
+        article_type_name?: string | null;
       }) => ({
         article_id: h.article_id || (h.id as string) || "",
         version: h.version,
@@ -125,6 +140,8 @@ export default function AdminArticleDetail() {
         status: h.status || "pending",
         submitted_at: (h.submitted_at || h.snapshotted_at || "") as string,
         snapshotted_at: h.snapshotted_at || "",
+        article_type_id: h.article_type_id,
+        article_type_name: h.article_type_name,
       }),
     );
     setHistory(hist as HistoryItem[]);
@@ -150,7 +167,9 @@ export default function AdminArticleDetail() {
           loadArticle(),
         ]);
         if (cancelled) return;
-        const list: any[] = Array.isArray(types) ? types : (types as any)?.data ?? [];
+        const list: any[] = Array.isArray(types)
+          ? types
+          : ((types as any)?.data ?? []);
         const t = list.find((x: any) => x.id === (art as any)?.article_type_id);
         if (t?.pass_threshold != null) setPassThreshold(t.pass_threshold);
         setArticleTypes(
@@ -177,30 +196,44 @@ export default function AdminArticleDetail() {
     versionParam !== article?.version;
 
   const snapshot =
-    versionParam !== null ? (history.find((h) => h.version === versionParam) ?? null) : null;
+    versionParam !== null
+      ? (history.find((h) => h.version === versionParam) ?? null)
+      : null;
 
   const effectiveSnapshot = isVersionSnapshot ? snapshot : null;
   const displayTitle = effectiveSnapshot?.title ?? article?.title ?? "";
   const displayContent = effectiveSnapshot?.content ?? article?.content ?? "";
-  const displayScore = effectiveSnapshot ? effectiveSnapshot.score : currentScore;
+  const displayScore = effectiveSnapshot
+    ? effectiveSnapshot.score
+    : currentScore;
   const displayFeedback = effectiveSnapshot
     ? (effectiveSnapshot.feedback ?? "")
     : (currentFeedback ?? "");
-  const displayStatus = effectiveSnapshot?.status ?? article?.status ?? "pending";
+  const displayStatus =
+    effectiveSnapshot?.status ?? article?.status ?? "pending";
   const displaySubmittedAt = effectiveSnapshot?.submitted_at ?? null;
-  const suggestedTitle = !effectiveSnapshot ? (article?.suggested_title ?? null) : null;
+  const displayTypeName =
+    effectiveSnapshot?.article_type_name ?? article?.article_type_name ?? "";
+  const suggestedTitle = !effectiveSnapshot
+    ? (article?.suggested_title ?? null)
+    : null;
 
   const isFailed = displayStatus === "failed";
-  const isScoring = scoringInFlight && !effectiveSnapshot && !isFailed && displayScore === null;
+  const isScoring =
+    scoringInFlight && !effectiveSnapshot && !isFailed && displayScore === null;
   const isPendingUnscored =
-    !effectiveSnapshot && !isScoring && displayStatus === "pending" && displayScore === null;
+    !effectiveSnapshot &&
+    !isScoring &&
+    displayStatus === "pending" &&
+    displayScore === null;
 
   // Poll while an admin-triggered re-eval is in flight
   const POLLING_INTERVAL = 2500;
-  // Matches the backend's sweepStuckEvaluations threshold (index.ts) and the
-  // user-side ArticleDetail/MyArticles polling — kept consistent so the
-  // article is actually marked "failed" (rewrite/re-evaluate enabled) by the
-  // time polling here gives up.
+  // Matches STUCK_EVALUATION_THRESHOLD_MS (article-api/src/utils/evaluationTiming.ts)
+  // and the same constant in the user-side ArticleDetail/MyArticles. There is no
+  // backend sweep — the article's own status only flips to "failed" once a
+  // rewrite/re-evaluate is actually attempted (isStuckPending lets that bypass a
+  // still-"pending" row). This local timer just stops polling here.
   const MAX_POLL_DURATION = 120000;
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
 
@@ -214,7 +247,8 @@ export default function AdminArticleDetail() {
   useEffect(() => {
     if (!article || effectiveSnapshot) return;
     const key = `${article.id}:${article.version}`;
-    const stillPending = currentScore === null && !TERMINAL_STATUSES.includes(article.status);
+    const stillPending =
+      currentScore === null && !TERMINAL_STATUSES.includes(article.status);
     if (!stillPending) {
       if (autoArmedRef.current === key) autoArmedRef.current = null;
       return;
@@ -296,7 +330,8 @@ export default function AdminArticleDetail() {
                 scope_type?: string;
                 value: string | number;
               }) => ({
-                parameter_name: r.parameterName || r.parameter_name || r.name || "",
+                parameter_name:
+                  r.parameterName || r.parameter_name || r.name || "",
                 scope_type: r.scopeType || r.scope_type || "",
                 value: r.value,
               }),
@@ -326,7 +361,8 @@ export default function AdminArticleDetail() {
         method: "PATCH",
         body: JSON.stringify({ title: trimmed }),
       });
-      const updatedTitle = (res?.article?.title as string | undefined) ?? trimmed;
+      const updatedTitle =
+        (res?.article?.title as string | undefined) ?? trimmed;
       setArticle((prev) => (prev ? { ...prev, title: updatedTitle } : prev));
       setEditingTitle(false);
       toast.success("Title updated");
@@ -361,23 +397,29 @@ export default function AdminArticleDetail() {
     setTitleDraft(article?.title ?? "");
   }
 
-  async function handleChangeType(reevaluate: boolean) {
+  async function handleChangeType() {
     if (!id || !selectedTypeId) return;
     setTypeBusy(true);
     try {
-      const res: any = await api(`/admin/articles/${id}/type`, {
+      const result = await api<{ evaluatable?: boolean }>(`/admin/articles/${id}/type`, {
         method: "PATCH",
         body: JSON.stringify({
           article_type_id: selectedTypeId,
-          reevaluate,
+          reevaluate: false,
         }),
       });
-      const started = Boolean(res?.reevaluate);
-      toast.success(started ? "Type updated — re-evaluation started" : "Article type updated");
       await loadArticle();
-      setCurrentScore(null);
-      setCurrentFeedback("");
-      setScoringInFlight(started);
+      if (result?.evaluatable === false) {
+        toast.warning(
+          "Article type updated. This type is not evaluatable, so scoring is disabled for this article.",
+          { duration: 10000 },
+        );
+      } else {
+        toast.warning(
+          "Article type updated. Re-evaluate to keep the score, feedback and parameter results consistent with the new type.",
+          { duration: 10000 },
+        );
+      }
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : String(e));
     } finally {
@@ -427,7 +469,8 @@ export default function AdminArticleDetail() {
     );
   }
 
-  const typeChanged = selectedTypeId && selectedTypeId !== article.article_type_id;
+  const typeChanged =
+    selectedTypeId && selectedTypeId !== article.article_type_id;
   const suggestionMatchesTitle =
     !!suggestedTitle && suggestedTitle.trim() === (article.title ?? "").trim();
 
@@ -459,8 +502,8 @@ export default function AdminArticleDetail() {
         {isScoring && (
           <div className="mb-4 rounded-sm bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
             <Loader2 size={14} className="animate-spin shrink-0" />
-            Processing your submission. Scoring is running in the background
-            and may take up to 2 minutes. Please wait before trying again.
+            Processing your submission. Scoring is running in the background and
+            may take up to 2 minutes. Please wait before trying again.
           </div>
         )}
 
@@ -488,7 +531,11 @@ export default function AdminArticleDetail() {
                 onClick={() => void handleSaveTitle()}
                 className="inline-flex items-center gap-1 rounded-sm bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
-                {titleBusy ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                {titleBusy ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Check size={14} />
+                )}
                 Save
               </button>
               <button
@@ -503,7 +550,9 @@ export default function AdminArticleDetail() {
             </div>
           ) : (
             <div className="flex items-start gap-2">
-              <h1 className="text-2xl font-semibold text-slate-900 leading-snug">{displayTitle}</h1>
+              <h1 className="text-2xl font-semibold text-slate-900 leading-snug">
+                {displayTitle}
+              </h1>
               {!effectiveSnapshot && (
                 <button
                   type="button"
@@ -525,7 +574,9 @@ export default function AdminArticleDetail() {
                 AI suggested title
               </p>
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm text-slate-800 flex-1 min-w-0">{suggestedTitle}</p>
+                <p className="text-sm text-slate-800 flex-1 min-w-0">
+                  {suggestedTitle}
+                </p>
                 <button
                   type="button"
                   disabled={
@@ -538,7 +589,11 @@ export default function AdminArticleDetail() {
                   onClick={() => void handleApplySuggestedTitle()}
                   className="rounded-sm border border-border px-2.5 py-1 text-xs font-medium text-slate-700 disabled:opacity-40"
                 >
-                  {applyBusy ? "Applying…" : suggestionMatchesTitle ? "Applied" : "Apply"}
+                  {applyBusy
+                    ? "Applying…"
+                    : suggestionMatchesTitle
+                      ? "Applied"
+                      : "Apply"}
                 </button>
               </div>
             </div>
@@ -554,38 +609,43 @@ export default function AdminArticleDetail() {
               <FilterSelect
                 value={selectedTypeId}
                 onValueChange={setSelectedTypeId}
-                options={articleTypes.map((t) => ({ value: t.id, label: t.name }))}
+                options={articleTypes.map((t) => ({
+                  value: t.id,
+                  label: t.name,
+                }))}
                 placeholder="Select type"
                 className="min-w-[240px] max-w-[320px]"
                 disabled={typeBusy || reevalBusy || scoringInFlight}
               />
               <button
                 type="button"
-                disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}
-                onClick={() => handleChangeType(true)}
+                disabled={
+                  !typeChanged || typeBusy || reevalBusy || scoringInFlight
+                }
+                onClick={() => handleChangeType()}
                 className="rounded-sm bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
-                {typeBusy ? "Saving…" : "Change type & re-evaluate"}
+                {typeBusy ? "Saving…" : "Change type only"}
               </button>
               <button
                 type="button"
-                disabled={!typeChanged || typeBusy || reevalBusy || scoringInFlight}
-                onClick={() => handleChangeType(false)}
-                className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
-              >
-                Change type only
-              </button>
-              <button
-                type="button"
-                disabled={typeBusy || reevalBusy || scoringInFlight || !!typeChanged}
+                disabled={
+                  typeBusy || reevalBusy || scoringInFlight || !!typeChanged
+                }
                 onClick={handleReevaluate}
                 className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
               >
-                {reevalBusy ? "Starting…" : scoringInFlight ? "Scoring…" : "Re-evaluate"}
+                {reevalBusy
+                  ? "Starting…"
+                  : scoringInFlight
+                    ? "Scoring…"
+                    : "Re-evaluate"}
               </button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              Changing type snapshots the prior score (if any). Not suitable skips AI scoring.
+              "Change type only" just updates the type and keeps the current
+              score. Re-evaluate snapshots it and re-scores. Not suitable skips
+              AI scoring.
             </p>
           </div>
         )}
@@ -600,9 +660,13 @@ export default function AdminArticleDetail() {
               <div className="flex items-center gap-3 flex-1">
                 {isFailed ? (
                   <div className="py-2">
-                    <p className="font-medium text-red-600">Evaluation failed</p>
+                    <p className="font-medium text-red-600">
+                      Evaluation failed
+                    </p>
                     {displayFeedback ? (
-                      <p className="text-sm text-slate-600 mt-1 break-words">{displayFeedback}</p>
+                      <p className="text-sm text-slate-600 mt-1 break-words">
+                        {displayFeedback}
+                      </p>
                     ) : (
                       <p className="text-sm text-slate-500 mt-1">
                         Use Re-evaluate above, or ask the user to re-submit.
@@ -611,7 +675,10 @@ export default function AdminArticleDetail() {
                   </div>
                 ) : isScoring ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
-                    <Loader2 size={16} className="animate-spin text-slate-400" />
+                    <Loader2
+                      size={16}
+                      className="animate-spin text-slate-400"
+                    />
                     <span>Scoring…</span>
                   </div>
                 ) : isPendingUnscored ? (
@@ -620,13 +687,28 @@ export default function AdminArticleDetail() {
                   </p>
                 ) : (
                   <>
-                    <p className={`text-3xl font-semibold ${hasScore ? getScoreTextColor(displayScore, displayStatus, passThreshold) : "text-slate-900"}`}>
+                    <p
+                      className={`text-3xl font-semibold ${hasScore ? getScoreTextColor(displayScore, displayStatus, passThreshold) : "text-slate-900"}`}
+                    >
                       {hasScore ? formatAiScore(displayScore!) : "—"}
-                      <span className="text-base text-slate-400 font-normal"> / 10</span>
+                      <span className="text-base text-slate-400 font-normal">
+                        {" "}
+                        / 10
+                      </span>
                     </p>
 
                     {hasScore && (
-                      <Progress value={Math.min(Math.max(displayScore!,0),10)*10} className={cn("flex-1 h-2", getScoreColor(displayScore!, passThreshold, displayStatus).barTw)} />
+                      <Progress
+                        value={Math.min(Math.max(displayScore!, 0), 10) * 10}
+                        className={cn(
+                          "flex-1 h-2",
+                          getDetailScoreColor(
+                            displayScore!,
+                            passThreshold,
+                            displayStatus,
+                          ).barTw,
+                        )}
+                      />
                     )}
                   </>
                 )}
@@ -647,11 +729,21 @@ export default function AdminArticleDetail() {
               }}
               className="w-full flex items-center justify-between px-4 py-3 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-teal-400"
             >
-              <p className="text-md font-semibold uppercase tracking-wide text-slate-600">Feedback</p>
+              <p className="text-md font-semibold uppercase tracking-wide text-slate-600">
+                Feedback
+              </p>
               <div className="flex items-center gap-2">
-                {displayFeedback && <span onClick={(e) => e.stopPropagation()}><CopyButton text={displayFeedback} /></span>}
+                {displayFeedback && (
+                  <span onClick={(e) => e.stopPropagation()}>
+                    <CopyButton text={displayFeedback} />
+                  </span>
+                )}
                 <span className="p-1 text-slate-400">
-                  {feedbackCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                  {feedbackCollapsed ? (
+                    <ChevronDown size={18} />
+                  ) : (
+                    <ChevronUp size={18} />
+                  )}
                 </span>
               </div>
             </div>
@@ -659,20 +751,30 @@ export default function AdminArticleDetail() {
               <div className="px-4 pb-4">
                 {isFailed ? (
                   <div className="space-y-2">
-                    <p className="text-sm text-red-600">Evaluation failed. Re-evaluate or ask the user to re-submit.</p>
+                    <p className="text-sm text-red-600">
+                      Evaluation failed. Re-evaluate or ask the user to
+                      re-submit.
+                    </p>
                     {displayFeedback && (
-                      <p className="text-sm text-slate-600 break-words rounded-sm border border-red-100 bg-red-50 px-3 py-2">{displayFeedback}</p>
+                      <p className="text-sm text-slate-600 break-words rounded-sm border border-red-100 bg-red-50 px-3 py-2">
+                        {displayFeedback}
+                      </p>
                     )}
                   </div>
                 ) : isScoring ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-2">
-                    <Loader2 size={16} className="animate-spin text-slate-400" />
+                    <Loader2
+                      size={16}
+                      className="animate-spin text-slate-400"
+                    />
                     <span>Scoring…</span>
                   </div>
                 ) : isPendingUnscored ? (
                   <p className="text-sm text-slate-500">No feedback yet.</p>
                 ) : (
-                  <FeedbackBlock feedback={displayFeedback || "No feedback available yet."} />
+                  <FeedbackBlock
+                    feedback={displayFeedback || "No feedback available yet."}
+                  />
                 )}
               </div>
             )}
@@ -690,9 +792,20 @@ export default function AdminArticleDetail() {
                 {article && (
                   <div className="flex items-center">
                     <span className="text-xs font-medium text-slate-600 bg-slate-100 rounded-sm px-2.5 py-1">
-                      {article.article_type_name}
+                      {displayTypeName}
                     </span>
-                    <ArticleCopyButton title={displayTitle} text={displayContent} />
+                    {!effectiveSnapshot && article.admin_edited_at && (
+                      <span
+                        title={`Edited by an admin on ${dayjs(article.admin_edited_at).format("MMM D, YYYY h:mm A")}`}
+                        className="ml-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-sm px-2.5 py-1"
+                      >
+                        Edited by admin
+                      </span>
+                    )}
+                    <ArticleCopyButton
+                      title={displayTitle}
+                      text={displayContent}
+                    />
                     <DownloadMarkdownButton
                       title={displayTitle}
                       content={displayContent}
@@ -702,7 +815,11 @@ export default function AdminArticleDetail() {
                 )}
 
                 <span className="p-1 text-slate-400">
-                  {contentCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+                  {contentCollapsed ? (
+                    <ChevronDown size={18} />
+                  ) : (
+                    <ChevronUp size={18} />
+                  )}
                 </span>
               </div>
             </div>
@@ -714,7 +831,31 @@ export default function AdminArticleDetail() {
             )}
           </div>
 
-          {!effectiveSnapshot && <ScoringHistoryTable isAdmin={true} history={history} articleId={article.id} />}
+          {!effectiveSnapshot && article && (
+            <SuggestionsPanel
+              articleId={article.id}
+              version={article.version}
+              scored={currentScore !== null && !isFailed}
+              onContentUpdated={(content) =>
+                setArticle((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        content,
+                        admin_edited_at: new Date().toISOString(),
+                      }
+                    : prev,
+                )
+              }
+            />
+          )}
+          {!effectiveSnapshot && (
+            <ScoringHistoryTable
+              isAdmin={true}
+              history={history}
+              articleId={article.id}
+            />
+          )}
         </div>
       </div>
     </div>

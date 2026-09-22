@@ -30,6 +30,7 @@ type ArticleType = {
   name: string;
   description: string | null;
   general_instructions?: string | null;
+  min_words?: number;
 };
 
 export default function ArticleCreation() {
@@ -50,11 +51,13 @@ export default function ArticleCreation() {
   >("editor");
   const [instructionsText, setInstructionsText] = useState<string | null>(null);
   const { user } = useAuth();
+  const selectedType = types.find((t) => t.id === values.article_type_id);
+  const minWords = selectedType?.min_words ?? 1000;
   const wordCount = countWords(values.content);
-  const isWordCountValid = wordCount >= 1000;
+  const isWordCountValid = wordCount >= minWords;
   const wordCountColor = isWordCountValid
     ? "text-emerald-600"
-    : wordCount >= 500
+    : wordCount >= minWords / 2
       ? "text-amber-600"
       : "text-slate-500";
   useEffect(() => {
@@ -106,8 +109,8 @@ export default function ArticleCreation() {
       return;
     }
 
-    if (countWords(values.content) < 1000) {
-      setError("Article must contain at least 1000 words");
+    if (countWords(values.content) < minWords) {
+      setError(`Article must contain at least ${minWords} words`);
       return;
     }
 
@@ -278,7 +281,7 @@ export default function ArticleCreation() {
                         </span>
                       </>
                     ) : (
-                      <span className="text-slate-400">(min 1000)</span>
+                      <span className="text-slate-400">(min {minWords})</span>
                     )}
                   </div>
                 </div>

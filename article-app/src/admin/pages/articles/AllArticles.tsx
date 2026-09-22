@@ -26,6 +26,7 @@ type ArticlesPageParams = {
   month?: string;
   status: string;
   type: string;
+  author: string;
 };
 
 const STATUS_OPTIONS = [
@@ -41,8 +42,11 @@ const FETCH_LIMIT = 30;
 const POLLING_INTERVAL = 2500;
 /**
  * Per-row cap: give up auto-refreshing a single row after this long. Matches
- * the backend's sweepStuckEvaluations threshold and the detail-page polling
- * (ArticleDetail/AdminArticleDetail/MyArticles) for consistency.
+ * STUCK_EVALUATION_THRESHOLD_MS (article-api/src/utils/evaluationTiming.ts) and
+ * the same constant in the detail pages (ArticleDetail/AdminArticleDetail/MyArticles).
+ * There is no backend sweep — the backend only treats a pending/processing row as
+ * stuck when a rewrite/re-evaluate/apply-suggestions call is made on that specific
+ * article (isStuckPending); this local timeout just stops refreshing the row here.
  */
 const ROW_TIMEOUT_MS = 120000;
 
@@ -54,6 +58,13 @@ const AllArticles = () => {
 
   const [articleTypes, setArticleTypes] = useState<ArticleTypeOption[]>([]);
   const [userName, setUserName] = useState("");
+  const [statusCounts, setStatusCounts] = useState<{
+    total: number;
+    approved: number;
+    pending: number;
+    rewrite_required: number;
+    failed: number;
+  } | null>(null);
 
   const monthParam = searchParams.get("month");
   const selectedMonthKey =
@@ -129,6 +140,7 @@ const AllArticles = () => {
       month: fetchMonth,
       status,
       type,
+      author,
     }: { page: number; limit: number } & ArticlesPageParams) => {
       const params = new URLSearchParams();
       if (!fetchViewAll && fetchMonth) params.set("month", fetchMonth);
@@ -137,6 +149,11 @@ const AllArticles = () => {
 
       if (status !== "all") params.set("status", status);
       if (type !== "all") params.set("type", type);
+      // Server-side filter (not just filtering already-loaded rows) so an
+      // author whose article hasn't been paginated into view yet is found.
+      // Skipped on the single-user drilldown (/admin/users/:id/articles),
+      // which is already scoped to one author.
+      if (!fetchId && author !== "all") params.set("author", author);
 
       const path = fetchId
         ? `/admin/users/${fetchId}/articles?${params.toString()}`
@@ -157,7 +174,6 @@ const AllArticles = () => {
 
   const {
     rows: articles,
-    total,
     isLoading: loading,
     isFetchingMore,
     hasMore,
@@ -172,9 +188,44 @@ const AllArticles = () => {
       month: viewAll ? undefined : selectedMonthKey,
       status: selectedStatus,
       type: selectedType,
+      author: selectedAuthor,
     },
     limit: FETCH_LIMIT,
   });
+
+  // Total + status counts, computed server-side from the same month/status/
+  // type filters as the list itself — always internally consistent (total
+  // is the sum of the four), and independent of how many rows are loaded.
+  const fetchStatusCounts = useCallback(async () => {
+    const params = new URLSearchParams();
+    if (!viewAll && selectedMonthKey) params.set("month", selectedMonthKey);
+    if (selectedStatus !== "all") params.set("status", selectedStatus);
+    if (selectedType !== "all") params.set("type", selectedType);
+
+    const path = id
+      ? `/admin/users/${id}/articles/stats?${params.toString()}`
+      : `/admin/articles/stats?${params.toString()}`;
+
+    try {
+      const data = await api<{
+        total: number;
+        approved: number;
+        pending: number;
+        rewrite_required: number;
+        failed: number;
+      }>(path);
+      setStatusCounts(data);
+    } catch (err) {
+      console.error("Failed to load article status counts:", err);
+    }
+  }, [id, viewAll, selectedMonthKey, selectedStatus, selectedType]);
+
+  useEffect(() => {
+    fetchStatusCounts();
+  }, [fetchStatusCounts]);
+
+  const fetchStatusCountsRef = useRef(fetchStatusCounts);
+  fetchStatusCountsRef.current = fetchStatusCounts;
 
   // Poll while any currently-loaded article is still being (re-)evaluated —
   // e.g. just triggered from the row action — so the table reflects the
@@ -261,6 +312,7 @@ const AllArticles = () => {
 
       setIsPolling(true);
       refetchLoadedRef.current({ silent: true });
+      fetchStatusCountsRef.current();
     };
 
     const interval = window.setInterval(tick, POLLING_INTERVAL);
@@ -286,15 +338,15 @@ const AllArticles = () => {
       return next;
     });
     refetchLoadedRef.current({ silent: true });
+    fetchStatusCountsRef.current();
   }, []);
 
-  const filteredByAuthor = useMemo(() => {
-    if (selectedAuthor === "all") return articles;
-    return articles.filter((a) => a.author_name === selectedAuthor);
-  }, [articles, selectedAuthor]);
-
+  // Author filtering now happens server-side (fetchArticlesPage passes
+  // `author` as a query param) so it applies across all pages, not just
+  // whatever's been paginated into view yet — see getArticles() in
+  // article-api/src/services/admin/articles.service.ts.
   const displayedArticles = useMemo(() => {
-    const sorted = [...filteredByAuthor];
+    const sorted = [...articles];
 
     switch (sortBy) {
       case "score_desc":
@@ -312,22 +364,22 @@ const AllArticles = () => {
       case "created_asc":
         sorted.sort(
           (a, b) =>
-            new Date(a.submitted_at).getTime() -
-            new Date(b.submitted_at).getTime(),
+            new Date(a.created_at).getTime() -
+            new Date(b.created_at).getTime(),
         );
         break;
       case "created_desc":
       default:
         sorted.sort(
           (a, b) =>
-            new Date(b.submitted_at).getTime() -
-            new Date(a.submitted_at).getTime(),
+            new Date(b.created_at).getTime() -
+            new Date(a.created_at).getTime(),
         );
         break;
     }
 
     return sorted;
-  }, [filteredByAuthor, sortBy]);
+  }, [articles, sortBy]);
 
   const isUserView = Boolean(id);
   return (
@@ -439,7 +491,7 @@ const AllArticles = () => {
         <InlineAlert variant="warning" role="status">
           <span className="inline-flex items-center gap-1.5">
             <Loader2 size={12} className="animate-spin" aria-hidden />
-            Re-evaluation in progress — auto-refreshing…
+            Re-evaluation in progress — auto-refreshing. Please wait for 2 minutes before re-submitting the article for re-evaluation.
           </span>
         </InlineAlert>
       )}
@@ -451,10 +503,7 @@ const AllArticles = () => {
       ) : (
         <>
           <ArticlesTable
-            // The server total ignores the author filter (client-side only) —
-            // once one's selected, fall back to the filtered count instead of
-            // showing a stale, filter-blind number.
-            totalCount={selectedAuthor === "all" ? total : undefined}
+            statusCounts={statusCounts}
             articles={displayedArticles}
             onRowClick={(articleId: string) => {
               // AdminArticleDetail has no rewrite flow — an admin viewing
@@ -469,7 +518,10 @@ const AllArticles = () => {
             onFetchMore={fetchMore}
             isFetchingMore={isFetchingMore}
             hasMore={hasMore}
-            onReevaluated={() => refetchLoaded({ silent: true })}
+            onReevaluated={() => {
+              refetchLoaded({ silent: true });
+              fetchStatusCounts();
+            }}
             timedOutIds={timedOutIds}
             onCheckAgain={handleCheckAgain}
           />

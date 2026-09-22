@@ -91,7 +91,6 @@ export default function UsersTable({
 
   const canViewArticles = (target: User) =>
     !!currentUser &&
-    currentUser.id !== target.id &&
     currentUser.auth_role === "admin" &&
     (target.auth_role === "admin" || target.auth_role === "user");
 
