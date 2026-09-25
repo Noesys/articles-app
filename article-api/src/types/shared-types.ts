@@ -10,6 +10,8 @@ export type Bindings = {
   /** Optional exact origin for CORS; same-origin SPA deploy does not need it */
   FRONTEND_URL?: string;
   AI: Ai;
+  /** Runs article evaluations outside the request (see workflows/evaluateArticle.workflow.ts) */
+  EVALUATE_WORKFLOW: Workflow;
   AI_PROVIDER: string;
   AI_MODEL: string;
   /** Static assets binding when run_worker_first serves SPA from the Worker */

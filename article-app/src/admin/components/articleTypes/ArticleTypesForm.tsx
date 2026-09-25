@@ -95,6 +95,19 @@ function parameterToBody(p: ParameterDraft) {
   };
 }
 
+function typeBodyFromForm(f: FormState) {
+  return {
+    name: f.name.trim(),
+    description: f.description.trim(),
+    general_instructions: f.generalInstructions.trim() || null,
+    scorePrompt: f.promptContent.trim(),
+    scoreMin: Number(f.scoreMin),
+    scoreMax: Number(f.scoreMax),
+    passThreshold: Number(f.passThreshold),
+    minWords: Number(f.minWords),
+  };
+}
+
 export default function ArticleTypesForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
@@ -109,6 +122,10 @@ export default function ArticleTypesForm() {
   const [loading, setLoading] = useState(isEditing);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // What the server had when the form loaded, serialized exactly as it is sent on
+  // save. Lets Save skip requests for the type and parameters that weren't edited.
+  const savedRef = useRef<{ typeBody: string; parameters: Map<string, string> } | null>(null);
 
   // modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -183,7 +200,7 @@ export default function ArticleTypesForm() {
           api<ArticleTypeResponse>(`/admin/article-types/${id}`),
           api<ParameterResponse[]>(`/admin/article-types/${id}/parameters`),
         ]);
-        setForm({
+        const loaded: FormState = {
           name: t.name,
           description: t.description ?? "",
           generalInstructions: (t as any).general_instructions ?? "",
@@ -193,7 +210,14 @@ export default function ArticleTypesForm() {
           passThreshold: t.pass_threshold.toString(),
           minWords: (t.min_words ?? 1000).toString(),
           parameters: params.map(parameterFromResponse),
-        });
+        };
+        savedRef.current = {
+          typeBody: JSON.stringify(typeBodyFromForm(loaded)),
+          parameters: new Map(
+            loaded.parameters.map((p) => [p.id, JSON.stringify(parameterToBody(p))]),
+          ),
+        };
+        setForm(loaded);
       } catch (err) {
         console.error(err);
         setError(
@@ -297,19 +321,13 @@ export default function ArticleTypesForm() {
     setSubmitting(true);
     setError(null);
     try {
-      const body = JSON.stringify({
-        name: form.name.trim(),
-        description: form.description.trim(),
-        general_instructions: form.generalInstructions.trim() || null,
-        scorePrompt: form.promptContent.trim(),
-        scoreMin: scoreMinNum,
-        scoreMax: scoreMaxNum,
-        passThreshold: passThresholdNum,
-        minWords: minWordsNum,
-      });
+      const body = JSON.stringify(typeBodyFromForm(form));
+      const saved = savedRef.current;
       let articleTypeId = id;
       if (isEditing) {
-        await api(`/admin/article-types/${id}`, { method: "PATCH", body });
+        if (!saved || saved.typeBody !== body) {
+          await api(`/admin/article-types/${id}`, { method: "PATCH", body });
+        }
       } else {
         const created: any = await apiFull(`/admin/article-types`, {
           method: "POST",
@@ -324,8 +342,13 @@ export default function ArticleTypesForm() {
           }),
         ),
       );
+      // Only new or edited parameters need a request; unchanged ones are skipped.
+      const changedParameters = form.parameters.filter(
+        (p) =>
+          p.isNew || !saved || saved.parameters.get(p.id) !== JSON.stringify(parameterToBody(p)),
+      );
       await Promise.all(
-        form.parameters.map((p) => {
+        changedParameters.map((p) => {
           const paramBody = JSON.stringify(parameterToBody(p));
           if (p.isNew)
             return api(`/admin/article-types/${articleTypeId}/parameters`, {

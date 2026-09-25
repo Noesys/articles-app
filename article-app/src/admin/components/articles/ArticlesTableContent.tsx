@@ -254,7 +254,7 @@ export default function ArticlesTableContent({
                 <Badge
                   variant="outline"
                   className="gap-1 font-medium border-transparent bg-slate-50 text-slate-600 ring-1 ring-slate-200/80"
-                  title="Still pending after 90s of auto-refreshing — the score may still land, or this article may need re-evaluating."
+                  title="Still pending after 5 minutes of auto-refreshing — the score may still land, or this article may need re-evaluating."
                 >
                   <Clock className="size-3" />
                   Taking longer than expected

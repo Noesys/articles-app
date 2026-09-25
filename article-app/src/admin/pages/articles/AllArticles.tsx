@@ -48,7 +48,7 @@ const POLLING_INTERVAL = 2500;
  * stuck when a rewrite/re-evaluate/apply-suggestions call is made on that specific
  * article (isStuckPending); this local timeout just stops refreshing the row here.
  */
-const ROW_TIMEOUT_MS = 120000;
+const ROW_TIMEOUT_MS = 300000;
 
 const AllArticles = () => {
   const { id } = useParams();
@@ -229,7 +229,7 @@ const AllArticles = () => {
 
   // Poll while any currently-loaded article is still being (re-)evaluated —
   // e.g. just triggered from the row action — so the table reflects the
-  // result without a manual refresh. Per-row cap: each row gets its own 90s
+  // result without a manual refresh. Per-row cap: each row gets its own 5-minute
   // clock from the moment it's first seen pending, tracked in a plain Map
   // rather than N separate timers (there's one list-level fetch either way,
   // so per-row "polling" really means "does this row still count towards
@@ -243,7 +243,7 @@ const AllArticles = () => {
   const [timedOutIds, setTimedOutIds] = useState<Set<string>>(new Set());
   const timedOutIdsRef = useRef(timedOutIds);
   timedOutIdsRef.current = timedOutIds;
-  // First-seen-pending timestamp per row id — each row's own 90s cap counts
+  // First-seen-pending timestamp per row id — each row's own 5-minute cap counts
   // down from here, independent of every other row's.
   const pendingStartRef = useRef<Map<string, number>>(new Map());
   const refetchLoadedRef = useRef(refetchLoaded);
@@ -327,7 +327,7 @@ const AllArticles = () => {
     };
   }, []);
 
-  // Manual "check again" for a row that gave up — restarts its own 90s
+  // Manual "check again" for a row that gave up — restarts its own 5-minute
   // clock and checks current server state right away.
   const handleCheckAgain = useCallback((articleId: string) => {
     pendingStartRef.current.set(articleId, Date.now());
@@ -491,7 +491,7 @@ const AllArticles = () => {
         <InlineAlert variant="warning" role="status">
           <span className="inline-flex items-center gap-1.5">
             <Loader2 size={12} className="animate-spin" aria-hidden />
-            Re-evaluation in progress — auto-refreshing. Please wait for 2 minutes before re-submitting the article for re-evaluation.
+            Re-evaluation in progress — auto-refreshing. Please wait for up to 5 minutes before re-submitting the article for re-evaluation.
           </span>
         </InlineAlert>
       )}
