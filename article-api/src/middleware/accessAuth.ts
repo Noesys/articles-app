@@ -4,6 +4,22 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { AppEnv, ResolveResult } from "../types/shared-types";
 import { findUserByEmail, createUser } from "../services/user/users";
 
+// createRemoteJWKSet caches the downloaded keys inside the object it returns, so it must
+// outlive a single request. Building one per request re-downloaded Cloudflare's signing
+// keys on every API call. These are public keys shared by all users, so reuse is safe;
+// jose re-fetches on its own if Cloudflare rotates them.
+let cachedJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+let cachedJwksUrl = "";
+
+function getJwks(teamDomain: string) {
+  const url = `${teamDomain}/cdn-cgi/access/certs`;
+  if (!cachedJwks || cachedJwksUrl !== url) {
+    cachedJwks = createRemoteJWKSet(new URL(url));
+    cachedJwksUrl = url;
+  }
+  return cachedJwks;
+}
+
 function nameFromEmail(email: string): string {
   return email.split("@")[0] || "User";
 }
@@ -39,7 +55,7 @@ async function resolveAccessIdentity(c: Context<AppEnv>): Promise<AccessIdentity
 
   if (assertion && teamDomain && aud) {
     try {
-      const JWKS = createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`));
+      const JWKS = getJwks(teamDomain);
       const { payload } = await jwtVerify(assertion, JWKS, {
         issuer: teamDomain,
         audience: aud,
