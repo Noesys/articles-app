@@ -4,6 +4,7 @@ import type { z } from "zod";
 import { AIEvaluationResult } from "../../types/user-types";
 import { Bindings } from "../../types/shared-types";
 import { createWorkersAI } from "workers-ai-provider";
+import { EVALUATION_AI_TIMEOUT_MS } from "../../utils/evaluationTiming";
 
 // helps in keeping the provider swappable.
 function getLanguageModel(env: Bindings) {
@@ -28,9 +29,8 @@ function getLanguageModel(env: Bindings) {
   }
 }
 
-// Keep well under STUCK_EVALUATION_THRESHOLD_MS so a hanging provider call
-// resolves into a normal "failed" write instead of the isolate getting
-// killed mid-flight.
+// Suggestion pass only. It runs inside an HTTP request the admin is waiting on,
+// so it stays short. Evaluation uses EVALUATION_AI_TIMEOUT_MS (utils/evaluationTiming.ts).
 const AI_CALL_TIMEOUT_MS = 90_000;
 
 /**
@@ -68,7 +68,38 @@ function describeScoreOutOfRange(
   );
 }
 
+/** Stored as ai_feedback when the provider is overloaded/rate-limited; the UI shows it as-is to admins. */
+export const AI_BUSY_MESSAGE =
+  "The AI model is experiencing high demand right now. Please try again in a few minutes.";
+
+/**
+ * True when the provider rejected the call for capacity reasons (overload, rate
+ * limit, quota) — a transient condition that is not a bug in our code. The AI SDK
+ * wraps these in a RetryError (`lastError`), so walk the error chain.
+ */
+function isProviderBusy(error: unknown): boolean {
+  const seen = new Set<unknown>();
+  let cur: unknown = error;
+  while (cur && typeof cur === "object" && !seen.has(cur)) {
+    seen.add(cur);
+    const e = cur as { statusCode?: unknown; message?: unknown; lastError?: unknown; cause?: unknown };
+    if (e.statusCode === 429 || e.statusCode === 503 || e.statusCode === 529) return true;
+    if (
+      typeof e.message === "string" &&
+      /high demand|overloaded|rate.?limit|quota|resource.?exhausted/i.test(e.message)
+    ) {
+      return true;
+    }
+    cur = e.lastError ?? e.cause;
+  }
+  return false;
+}
+
 function formatAiError(error: unknown, scoreRange: { min: number; max: number }): Error {
+  if (isProviderBusy(error)) {
+    console.warn("AI provider busy:", error instanceof Error ? error.message : String(error));
+    return new Error(AI_BUSY_MESSAGE);
+  }
   if (NoObjectGeneratedError.isInstance(error)) {
     const scoreRangeMessage = describeScoreOutOfRange(error.text, scoreRange);
     if (scoreRangeMessage) return new Error(scoreRangeMessage);
@@ -82,7 +113,7 @@ function formatAiError(error: unknown, scoreRange: { min: number; max: number })
     return new Error(`${error.message}${cause ? ` (${cause})` : ""}${textSnippet}`.slice(0, 500));
   }
   if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
-    return new Error(`AI evaluation timed out after ${AI_CALL_TIMEOUT_MS / 1000}s`);
+    return new Error(`AI evaluation timed out after ${EVALUATION_AI_TIMEOUT_MS / 1000}s`);
   }
   return error instanceof Error ? error : new Error(String(error));
 }
@@ -108,7 +139,7 @@ export async function evaluateArticle(
     Follow the scoring instructions exactly and only return values allowed by the schema. Evaluate article's score strictly between ${scoreRange.min}-${scoreRange.max}, regardless of any other scale mentioned in the scoring instructions below.
     Keep all feedback as simple as possible: use simple, direct sentences and avoid overly complex wording.`,
       prompt,
-      abortSignal: AbortSignal.timeout(AI_CALL_TIMEOUT_MS),
+      abortSignal: AbortSignal.timeout(EVALUATION_AI_TIMEOUT_MS),
       // Keep thinking minimal so structured JSON is not crowded out by reasoning tokens.
       ...(isGoogle
         ? {

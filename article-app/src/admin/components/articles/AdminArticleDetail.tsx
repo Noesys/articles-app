@@ -234,7 +234,7 @@ export default function AdminArticleDetail() {
   // backend sweep — the article's own status only flips to "failed" once a
   // rewrite/re-evaluate is actually attempted (isStuckPending lets that bypass a
   // still-"pending" row). This local timer just stops polling here.
-  const MAX_POLL_DURATION = 120000;
+  const MAX_POLL_DURATION = 300000;
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
 
   // Auto-arm polling for a pending/unscored article even when re-evaluation
@@ -503,7 +503,7 @@ export default function AdminArticleDetail() {
           <div className="mb-4 rounded-sm bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
             <Loader2 size={14} className="animate-spin shrink-0" />
             Processing your submission. Scoring is running in the background and
-            may take up to 2 minutes. Please wait before trying again.
+            may take up to 5 minutes. Please wait before trying again.
           </div>
         )}
 

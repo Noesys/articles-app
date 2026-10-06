@@ -8,10 +8,9 @@ import {
   getArticleTypes,
 } from "../../services/admin/articleTypes.service";
 import { AppEnv } from "../../types/shared-types";
-import { requireRole } from "../../middleware/requireRole";
 
+// Admin auth for this router and parametersRoute (same prefix) is applied once in index.ts.
 const articleTypesRoute = new Hono<AppEnv>();
-articleTypesRoute.use("*", requireRole("admin"));
 
 function parseArticleTypeBody(
   body: unknown,

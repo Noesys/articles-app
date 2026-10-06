@@ -21,8 +21,12 @@ import insightsRoute from "./routes/admin/insights";
 
 import { AppError } from "./utils/errors";
 import { accessAuth } from "./middleware/accessAuth";
+import { requireRole } from "./middleware/requireRole";
 
 import { secureHeaders } from "hono/secure-headers";
+
+// Workflow classes must be exported from the Worker entry point for the binding to find them.
+export { EvaluateArticleWorkflow } from "./workflows/evaluateArticle.workflow";
 
 const app = new Hono<AppEnv>();
 
@@ -82,6 +86,10 @@ app.route("/api/admin/users", usersRoute);
 
 // article routes (distinct from user /api/articles)
 app.route("/api/admin/articles", articlesRoute);
+
+// article types + parameters share this prefix. Auth runs once here: when each router
+// carried its own requireRole, every parameter request ran the identity check twice.
+app.use("/api/admin/article-types/*", requireRole("admin"));
 
 // article types route
 app.route("/api/admin/article-types", articleTypesRoute);

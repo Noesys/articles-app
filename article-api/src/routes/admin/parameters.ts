@@ -9,10 +9,9 @@ import {
   updateParameter,
 } from "../../services/admin/parameters.service";
 import { AppEnv } from "../../types/shared-types";
-import { requireRole } from "../../middleware/requireRole";
 
+// Admin auth for this router and articleTypesRoute (same prefix) is applied once in index.ts.
 const parametersRoute = new Hono<AppEnv>();
-parametersRoute.use("*", requireRole("admin"));
 
 function parseParameterBody(body: unknown): ParameterInput | { error: string } {
   const b = body as Record<string, unknown>;

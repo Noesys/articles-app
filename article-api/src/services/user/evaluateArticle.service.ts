@@ -21,6 +21,7 @@ export async function evaluateArticle(
   content: string,
   version: number,
   bindings: Bindings,
+  options: { recordFailure?: boolean } = {},
 ): Promise<void> {
   try {
     const articleType = await getArticleTypeConfig(db, articleTypeId);
@@ -114,7 +115,9 @@ export async function evaluateArticle(
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error("Article evaluation failed:", msg, error);
-    await handleEvaluationFailure(db, articleId, version, msg);
+    if (options.recordFailure !== false) {
+      await handleEvaluationFailure(db, articleId, version, msg);
+    }
     throw error;
   }
 }

@@ -11,8 +11,8 @@ import {
   snapshotArticle,
   updateArticleForRewrite,
 } from "../../services/user/articleHistory";
-import type { AppEnv, Bindings } from "../../types/shared-types";
-import { evaluateArticle } from "../../services/user/evaluateArticle.service";
+import type { AppEnv } from "../../types/shared-types";
+import { startEvaluation } from "../../services/user/startEvaluation.service";
 import { AppError } from "../../utils/errors";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
 import { accessAuth } from "../../middleware/accessAuth";
@@ -78,24 +78,6 @@ function articleToListItem(article: {
       name: article.authorName,
     },
   };
-}
-
-// Background evaluation - single attempt via waitUntil; durable retry via Queue/cron
-async function backgroundEvaluateArticle(
-  db: D1Database,
-  articleId: string,
-  articleTypeId: string,
-  title: string,
-  content: string,
-  version: number,
-  bindings: Bindings,
-) {
-  try {
-    await evaluateArticle(db, articleId, articleTypeId, title, content, version, bindings);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("Background evaluation failed:", msg, err);
-  }
 }
 
 articleRoutes.get("/mine", async (c) => {
@@ -445,11 +427,7 @@ articleRoutes.post("/", async (c) => {
 
     articleId = requestedId;
 
-    // ❌ REMOVED: Synchronous evaluation (was blocking)
-    // ✅ ADDED: Background evaluation via waitUntil
-    c.executionCtx.waitUntil(
-      backgroundEvaluateArticle(db, articleId, article_type_id, title, content, nextVersion, c.env),
-    );
+    await startEvaluation(c.env, { articleId, articleTypeId: article_type_id, version: nextVersion });
 
     // Return immediately with pending status
     return c.json({
@@ -480,19 +458,8 @@ articleRoutes.post("/", async (c) => {
 
     articleId = newId;
 
-    // ❌ REMOVED: Synchronous evaluation (was blocking 10-30s)
-    // ✅ ADDED: Background evaluation via waitUntil
-    c.executionCtx.waitUntil(
-      backgroundEvaluateArticle(
-        db,
-        articleId,
-        article_type_id,
-        title,
-        content,
-        1, // New articles start at version 1
-        c.env,
-      ),
-    );
+    // New articles start at version 1
+    await startEvaluation(c.env, { articleId, articleTypeId: article_type_id, version: 1 });
 
     // Return immediately with pending status (don't wait for AI)
     return c.json({

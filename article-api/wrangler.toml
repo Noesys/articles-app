@@ -16,6 +16,11 @@ bucket_name = "contiq-article-images"
 [ai]
 binding = "AI"
 
+[[workflows]]
+name = "evaluate-article"
+binding = "EVALUATE_WORKFLOW"
+class_name = "EvaluateArticleWorkflow"
+
 [assets]
 directory = "../article-app/dist"
 not_found_handling = "single-page-application"

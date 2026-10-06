@@ -71,7 +71,7 @@ const POLLING_INTERVAL = 2500;
 // rewrite/re-evaluate/apply-suggestions call is made on that specific article
 // (see isStuckPending); this local timer is what ends the "still scoring" banner
 // on this page when nothing else ever touches the article again.
-const MAX_POLL_DURATION = 120000;
+const MAX_POLL_DURATION = 300000;
 /** Fetch batch size for "View all" — an implementation detail now that the list is virtualized, not a user-facing setting. */
 const VIEW_ALL_FETCH_LIMIT = 30;
 

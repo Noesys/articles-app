@@ -149,6 +149,9 @@ export default function ArticleDetail() {
     effectiveSnapshot?.article_type_name ?? article?.article_type_name ?? "";
 
   const isFailed = displayStatus === "failed";
+  // Raw failure text is never shown to authors; only this known transient cause is
+  // recognised (matches AI_BUSY_MESSAGE in article-api ai.service.ts) and shown as a fixed message.
+  const aiBusyFailure = isFailed && /high demand/i.test(displayFeedback);
 
   // Poll every 2.5s while scoring; stops on terminal status/complete/timeout
   const TERMINAL_STATUSES = ["approved", "failed", "rewrite_required"];
@@ -158,7 +161,7 @@ export default function ArticleDetail() {
   // sweep — the article's own status only flips to "failed" when a rewrite is
   // actually attempted (isStuckPending lets that bypass a still-"pending" row).
   // This local timer just stops polling and shows a timeout message here.
-  const MAX_POLL_DURATION = 120000;
+  const MAX_POLL_DURATION = 300000;
   useEffect(() => {
     if (
       effectiveSnapshot ||
@@ -506,7 +509,7 @@ export default function ArticleDetail() {
             <span className="flex items-center gap-2">
               <Loader2 size={14} className="animate-spin shrink-0" />
               Processing your submission. Scoring is running in the
-              background and may take up to 2 minutes. Please wait before
+              background and may take up to 5 minutes. Please wait before
               trying again.
             </span>
             {!isAdmin && (
@@ -735,7 +738,9 @@ export default function ArticleDetail() {
                       Evaluation failed
                     </p>
                     <p className="text-sm text-slate-500 mt-1">
-                      We couldn't evaluate this article. Please submit it again.
+                      {aiBusyFailure
+                        ? "The AI model is experiencing high demand right now. Please submit it again in a few minutes."
+                        : "We couldn't evaluate this article. Please submit it again."}
                     </p>
                   </div>
                 ) : displayScore === null ? (
@@ -790,7 +795,11 @@ export default function ArticleDetail() {
             {!feedbackCollapsed && (
               <div className="px-4 pb-4">
                 {isFailed ? (
-                  <p className="text-sm text-red-600">Evaluation failed. Please submit it again.</p>
+                  <p className="text-sm text-red-600">
+                    {aiBusyFailure
+                      ? "Evaluation failed. The AI model is experiencing high demand right now. Please submit it again in a few minutes."
+                      : "Evaluation failed. Please submit it again."}
+                  </p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-sm border border-slate-200 shadow-sm">
                     <Loader2 size={16} className="animate-spin text-slate-400" />

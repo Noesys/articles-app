@@ -16,9 +16,9 @@ import {
   getParameterResults,
   storeParameterResults,
 } from "../../services/admin/articleParameterResults.service";
-import { AppEnv, Bindings } from "../../types/shared-types";
+import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
-import { evaluateArticle } from "../../services/user/evaluateArticle.service";
+import { startEvaluation } from "../../services/user/startEvaluation.service";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
 import {
   listSuggestions,
@@ -28,31 +28,6 @@ import {
 
 const articlesRoute = new Hono<AppEnv>();
 articlesRoute.use("*", requireRole("admin"));
-
-async function backgroundEvaluateArticle(
-  db: D1Database,
-  articleId: string,
-  articleTypeId: string,
-  title: string,
-  content: string,
-  version: number,
-  bindings: Bindings,
-) {
-  try {
-    await evaluateArticle(
-      db,
-      articleId,
-      articleTypeId,
-      title,
-      content,
-      version,
-      bindings,
-    );
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("Admin background evaluation failed:", msg, err);
-  }
-}
 
 articlesRoute.get("/", async (c) => {
   const month = c.req.query("month");
@@ -294,17 +269,11 @@ articlesRoute.patch("/:id/type", async (c) => {
 
   const shouldReevaluate = result.evaluatable;
   if (shouldReevaluate) {
-    c.executionCtx.waitUntil(
-      backgroundEvaluateArticle(
-        c.env.DB,
-        id,
-        body.article_type_id,
-        result.title,
-        result.content,
-        result.version,
-        c.env,
-      ),
-    );
+    await startEvaluation(c.env, {
+      articleId: id,
+      articleTypeId: body.article_type_id,
+      version: result.version,
+    });
   }
 
   const article = await getArticleById(c.env.DB, id);
@@ -347,17 +316,11 @@ articlesRoute.post("/:id/reevaluate", async (c) => {
     );
   }
 
-  c.executionCtx.waitUntil(
-    backgroundEvaluateArticle(
-      c.env.DB,
-      id,
-      result.article_type_id,
-      result.title,
-      result.content,
-      result.version,
-      c.env,
-    ),
-  );
+  await startEvaluation(c.env, {
+    articleId: id,
+    articleTypeId: result.article_type_id,
+    version: result.version,
+  });
 
   const article = await getArticleById(c.env.DB, id);
   return c.json({
