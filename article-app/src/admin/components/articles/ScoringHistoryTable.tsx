@@ -65,6 +65,31 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   },
 };
 
+/**
+ * History dates arrive in two shapes: ISO strings (`2026-10-09T14:03:22.481Z`)
+ * and SQLite's CURRENT_TIMESTAMP (`2026-10-09 14:03:22`, UTC, no zone marker —
+ * submitted_at is written that way on a user rewrite). Both are UTC; without a
+ * zone dayjs would read them as local time and show the wrong hour.
+ */
+function parseHistoryDate(value: string) {
+  const hasZone = /(Z|[+-]\d{2}:\d{2})$/.test(value);
+  if (hasZone) return dayjs(value);
+  return dayjs(`${value.replace(" ", "T")}Z`);
+}
+
+function historyDateValue(value?: string | null) {
+  return value ? parseHistoryDate(value).valueOf() : 0;
+}
+
+function HistoryDateCell({ value }: { value?: string | null }) {
+  if (!value) return <span className="text-slate-400 text-[13px]">—</span>;
+  return (
+    <span className="text-slate-700 text-[13px]">
+      {parseHistoryDate(value).format("MMM D, YYYY h:mm A")}
+    </span>
+  );
+}
+
 export default function ScoringHistoryTable({
   history,
   articleId,
@@ -75,9 +100,9 @@ export default function ScoringHistoryTable({
   isAdmin: boolean;
 }) {
   const navigate = useNavigate();
-  // Default: latest first — sort by the submitted_at column descending
+  // Default: latest first — sort by the "Replaced on" column descending
   const [sorting, setSorting] = useState<SortingState>([
-    { id: "submitted_at", desc: true },
+    { id: "snapshotted_at", desc: true },
   ]);
   const pageSize = Math.max(history.length, 1);
 
@@ -147,40 +172,34 @@ export default function ScoringHistoryTable({
         },
       },
       {
+        // When this version was originally submitted for evaluation.
         id: "submitted_at",
-        accessorFn: (row) => row.snapshotted_at || row.submitted_at,
-        header: "Submitted",
-        size: 160,
+        accessorFn: (row) => row.submitted_at,
+        header: "Version submitted on",
+        size: 170,
         enableSorting: true,
-        sortingFn: (a: { original: HistoryItem }, b: { original: HistoryItem }) => {
-          const av =
-            (a.original as HistoryItem).snapshotted_at ||
-            (a.original as HistoryItem).submitted_at ||
-            "";
-          const bv =
-            (b.original as HistoryItem).snapshotted_at ||
-            (b.original as HistoryItem).submitted_at ||
-            "";
-          return dayjs(av).valueOf() - dayjs(bv).valueOf();
-        },
-        cell: ({ row }) => {
-          const dateStr =
-            row.original.snapshotted_at || row.original.submitted_at;
-          if (!dateStr)
-            return <span className="text-slate-400 text-[13px]">—</span>;
-          const normalized =
-            typeof dateStr === "string" &&
-            dateStr.includes("T") &&
-            !dateStr.endsWith("Z") &&
-            !/[+-]\d{2}:\d{2}$/.test(dateStr)
-              ? `${dateStr}Z`
-              : dateStr;
-          return (
-            <span className="text-slate-700 text-[13px]">
-              {dayjs(normalized).format("MMM D, YYYY h:mm A")}
-            </span>
-          );
-        },
+        sortingFn: (a: { original: HistoryItem }, b: { original: HistoryItem }) =>
+          historyDateValue(a.original.submitted_at) -
+          historyDateValue(b.original.submitted_at),
+        cell: ({ row }) => <HistoryDateCell value={row.original.submitted_at} />,
+      },
+      {
+        // When this version was archived, i.e. replaced by a newer version
+        // (rewrite, re-evaluation or type change). Unique per row, so it's
+        // also the default sort key.
+        id: "snapshotted_at",
+        accessorFn: (row) => row.snapshotted_at || row.submitted_at,
+        header: "Replaced on",
+        size: 170,
+        enableSorting: true,
+        sortingFn: (a: { original: HistoryItem }, b: { original: HistoryItem }) =>
+          historyDateValue(a.original.snapshotted_at || a.original.submitted_at) -
+          historyDateValue(b.original.snapshotted_at || b.original.submitted_at),
+        cell: ({ row }) => (
+          <HistoryDateCell
+            value={row.original.snapshotted_at || row.original.submitted_at}
+          />
+        ),
       },
     ],
     [articleId, navigate, isAdmin],

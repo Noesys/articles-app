@@ -333,7 +333,6 @@ interface VirtualBodyProps<TData extends object> {
   isFetchingMore: boolean
   hasMore?: boolean
   loadingMoreMessage: ReactNode
-  allRowsLoadedMessage: ReactNode
   measureRowRef?: (element: HTMLTableRowElement | null) => void
   centerColumnWindow?: { start: number; end: number }
 }
@@ -500,7 +499,6 @@ function DataGridTableVirtualBody<TData extends object>({
   isFetchingMore,
   hasMore,
   loadingMoreMessage,
-  allRowsLoadedMessage,
   measureRowRef,
   centerColumnWindow,
 }: VirtualBodyProps<TData>) {
@@ -526,8 +524,7 @@ function DataGridTableVirtualBody<TData extends object>({
 
   const hasCenterRows = centerRows.length > 0
   const showFetchingRow = isInfiniteMode && isFetchingMore
-  const showCompleteRow = isInfiniteMode && hasMore === false && totalRows > 0
-  const hasMiddleSection = hasCenterRows || showFetchingRow || showCompleteRow
+  const hasMiddleSection = hasCenterRows || showFetchingRow
   const leadingSpacerHeight =
     isVirtualizationEnabled && hasCenterRows && virtualItems.length > 0
       ? (virtualItems[0]?.start ?? 0)
@@ -611,18 +608,6 @@ function DataGridTableVirtualBody<TData extends object>({
           <Spinner className="size-4 opacity-60" />
           {loadingMoreMessage}
         </div>
-      </DataGridTableVirtualStatusRow>
-    )
-  }
-
-  if (showCompleteRow) {
-    renderedRows.push(
-      <DataGridTableVirtualStatusRow
-        key="virtual-status-complete"
-        table={table}
-        className="py-3 text-xs"
-      >
-        {allRowsLoadedMessage}
       </DataGridTableVirtualStatusRow>
     )
   }
@@ -717,8 +702,6 @@ function DataGridTableVirtual<TData extends object>({
   const isVirtualizationEnabled = virtualizerOptions?.enabled !== false
   const loadingMoreMessage =
     props.fetchingMoreMessage || props.loadingMessage || i18n.labels.loading
-  const allRowsLoadedMessage =
-    props.allRowsLoadedMessage || i18n.labels.allRowsLoaded
 
   const handleViewportRef = useCallback((node: HTMLDivElement | null) => {
     setViewportElements({
@@ -1220,7 +1203,6 @@ function DataGridTableVirtual<TData extends object>({
             isFetchingMore={isFetchingMore}
             hasMore={hasMore}
             loadingMoreMessage={loadingMoreMessage}
-            allRowsLoadedMessage={allRowsLoadedMessage}
             measureRowRef={measureRowRef}
             centerColumnWindow={centerColumnWindow}
           />

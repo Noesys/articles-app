@@ -35,6 +35,9 @@ interface DataGridVirtualScrollAreaProps {
  * message, which is taller than one virtualized row. `emptyStateHeight` is
  * the floor for that case, so the message has room instead of being clipped
  * by a container sized as if there were zero rows to show.
+ *
+ * `minHeight` (optional CSS length, e.g. "30vh") is a floor on the result, so a
+ * table with only a few rows still keeps a usable viewport-relative height.
  */
 function fitRowsHeight(
   rowCount: number,
@@ -42,10 +45,12 @@ function fitRowsHeight(
   rowHeight = 45,
   headerHeight = 44,
   emptyStateHeight = 96,
+  minHeight?: string,
 ): string {
   const bodyHeight = rowCount > 0 ? rowCount * rowHeight : emptyStateHeight;
   const contentHeight = bodyHeight + headerHeight;
-  return `min(${contentHeight}px, ${maxHeight})`;
+  const fitted = `min(${contentHeight}px, ${maxHeight})`;
+  return minHeight ? `max(${minHeight}, ${fitted})` : fitted;
 }
 
 function DataGridVirtualScrollArea({

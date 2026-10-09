@@ -1100,3 +1100,14 @@ Authorization: Bearer <JWT_TOKEN>
 ```
 
 Only users with `admin`  roles can access Admin APIs.
+
+
+# Note on DBML
+| Action             | `submitted_at`      | `updated_at`       | Equal after?                                    |
+| ------------------ | ------------------- | ------------------ | ----------------------------------------------- |
+| Create article     | `now`               | `now` (same value) | Yes                                             |
+| User rewrite       | `CURRENT_TIMESTAMP` | `now` (ISO)        | Same moment, but not the same value (see below) |
+| Admin re-evaluate  | not touched         | `now`              | No                                              |
+| Admin type change  | not touched         | `now`              | No                                              |
+| Admin title rename | not touched         | `now`              | No                                              |
+| Apply suggestions  | not touched         | `now`              | No                                              |

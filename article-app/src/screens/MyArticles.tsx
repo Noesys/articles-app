@@ -34,7 +34,7 @@ import { api, apiFull } from "@/http-client";
 import { ArticleListItem, ArticleRow } from "@/utils/types";
 import {
   contiqTableContainerClassName,
-  contiqTableClassNames,
+  contiqTableClassNamesWithClosedRows,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
@@ -581,8 +581,8 @@ function MyArticlesTable({
       },
       {
         accessorKey: "edited",
-        header: "Edited",
-        size: 110,
+        header: "Last evaluated at",
+        size: 135,
         cell: ({ getValue }) => (
           <span className="flex min-h-7 items-center text-[13px] text-slate-700">
             {dayjs(getValue() as string).format("MMM D, YYYY")}
@@ -637,12 +637,12 @@ function MyArticlesTable({
           : `No articles for ${dayjs(month).format("MMMM YYYY")}.`
       }
       tableLayout={{ ...contiqTableLayout, headerSticky: true }}
-      tableClassNames={contiqTableClassNames}
+      tableClassNames={contiqTableClassNamesWithClosedRows}
     >
       <div className="w-full space-y-2.5">
         <DataGridContainer className={contiqTableContainerClassName}>
           <DataGridVirtualScrollArea
-            height={fitRowsHeight(articles.length, "57vh")}
+            height={fitRowsHeight(articles.length, "57vh", 45, 44, 96, "30vh")}
             onFetchMore={onFetchMore}
             isFetchingMore={isFetchingMore}
             hasMore={hasMore}

@@ -23,7 +23,7 @@ import {
 import { ColumnDef, useTable } from "@tanstack/react-table";
 import {
   contiqTableContainerClassName,
-  contiqTableClassNames,
+  contiqTableClassNamesWithClosedRows,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
@@ -322,8 +322,8 @@ export default function ArticlesTableContent({
       },
       {
         accessorKey: "updated_at",
-        header: "Edited",
-        size: 105,
+        header: "Last evaluated at",
+        size: 130,
         cell: ({ getValue }) => (
           <span className="text-[13px]">
             {formatDateToUSLocale(getValue() as string)}
@@ -451,12 +451,12 @@ export default function ArticlesTableContent({
         emptyMessage="No articles found"
         loadingMode="skeleton"
         tableLayout={{ ...contiqTableLayout, headerSticky: true }}
-        tableClassNames={contiqTableClassNames}
+        tableClassNames={contiqTableClassNamesWithClosedRows}
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
             <DataGridVirtualScrollArea
-              height={fitRowsHeight(locallyFilteredArticles.length, "49.7vh")}
+              height={fitRowsHeight(locallyFilteredArticles.length, "49.7vh", 45, 44, 96, "30vh")}
               onFetchMore={onFetchMore}
               isFetchingMore={isFetchingMore}
               hasMore={hasMore}
