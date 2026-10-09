@@ -2,7 +2,15 @@ import Header from "../components/Header";
 import AdminHeader from "@/admin/components/AdminHeader";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { BookOpen, CalendarDays, ChevronLeft, Loader2, Search, User } from "lucide-react";
+import {
+  BookOpen,
+  CalendarDays,
+  ChevronLeft,
+  ExternalLink,
+  Loader2,
+  Search,
+  User,
+} from "lucide-react";
 import dayjs from "dayjs";
 import { useAuth } from "../contexts/AuthContext";
 import { FilterSelect } from "@/components/ui/filter-select";
@@ -14,6 +22,7 @@ import ArticleViewer from "@/components/shadcnEditor/ArticleViewer";
 import { api, apiFull } from "@/http-client";
 import { useInfiniteTableData } from "@/hooks/useInfiniteTableData";
 import { getSavedScrollPosition } from "@/utils/ScrollManager";
+import { getSafePublishedUrl, publishedLinkHost } from "@/components/PublishedLink";
 
 type BrowseItem = {
   id: string;
@@ -22,6 +31,7 @@ type BrowseItem = {
   article_type_name: string;
   author_name: string;
   submitted_at: string;
+  published_url?: string | null;
 };
 
 type ArticleTypeOption = { id: string; name: string };
@@ -40,6 +50,7 @@ type BrowseDetail = {
   article_type_name: string;
   author_name: string;
   submitted_at: string;
+  published_url?: string | null;
 };
 
 const LIMIT = 9;
@@ -272,30 +283,57 @@ export default function ExploreArticles() {
         ) : (
           <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {rows.map((a) => (
-                <button
-                  key={a.id}
-                  type="button"
-                  onClick={() => navigate(`/explore/${a.id}`)}
-                  className="flex flex-col rounded-sm border border-slate-200 bg-white p-5 text-left shadow-[var(--shadow-card)] transition-[box-shadow,border-color] duration-[var(--duration-fast)] hover:border-teal-200 hover:shadow-[var(--shadow-overlay)] outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
-                >
-                  <Badge
-                    variant="outline"
-                    className="mb-3 self-start border-transparent bg-teal-50 font-medium text-teal-700 ring-1 ring-teal-200/60"
+              {rows.map((a) => {
+                const publishedUrl = getSafePublishedUrl(a.published_url);
+                return (
+                  // The card is a wrapper (not one big <button>) so the
+                  // published link can be its own anchor — interactive
+                  // elements can't be nested inside a button.
+                  <div
+                    key={a.id}
+                    className="flex flex-col rounded-sm border border-slate-200 bg-white shadow-[var(--shadow-card)] transition-[box-shadow,border-color] duration-[var(--duration-fast)] hover:border-teal-200 hover:shadow-[var(--shadow-overlay)]"
                   >
-                    {a.article_type_name}
-                  </Badge>
-                  <span className="min-h-[2.75rem] text-base font-semibold leading-snug text-slate-900 line-clamp-2">
-                    {a.title}
-                  </span>
-                  <span className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-slate-100 pt-3">
-                    <MetaLine icon={<User size={13} />}>{a.author_name}</MetaLine>
-                    <MetaLine icon={<CalendarDays size={13} />}>
-                      {formatDate(a.submitted_at)}
-                    </MetaLine>
-                  </span>
-                </button>
-              ))}
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/explore/${a.id}`)}
+                      className="flex flex-1 cursor-pointer flex-col rounded-sm p-5 text-left outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40"
+                    >
+                      <Badge
+                        variant="outline"
+                        className="mb-3 self-start border-transparent bg-teal-50 font-medium text-teal-700 ring-1 ring-teal-200/60"
+                      >
+                        {a.article_type_name}
+                      </Badge>
+                      <span className="min-h-[2.75rem] text-base font-semibold leading-snug text-slate-900 line-clamp-2">
+                        {a.title}
+                      </span>
+                      <span className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-slate-100 pt-3">
+                        <MetaLine icon={<User size={13} />}>{a.author_name}</MetaLine>
+                        <MetaLine icon={<CalendarDays size={13} />}>
+                          {formatDate(a.submitted_at)}
+                        </MetaLine>
+                      </span>
+                    </button>
+                    {publishedUrl && (
+                      <div className="border-t border-slate-100 px-5 py-2.5">
+                        <a
+                          href={publishedUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={publishedUrl}
+                          className="inline-flex max-w-full items-center gap-1.5 text-xs font-medium text-teal-700 hover:underline"
+                        >
+                          <ExternalLink size={13} className="shrink-0" aria-hidden />
+                          <span>View published</span>
+                          <span className="truncate font-normal text-slate-500">
+                            {publishedLinkHost(publishedUrl)}
+                          </span>
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             {hasMore && <div ref={loadMoreSentinelRef} aria-hidden className="h-px" />}
             {isFetchingMore && (
@@ -378,6 +416,21 @@ export function ExploreArticleView() {
               <MetaLine icon={<CalendarDays size={14} />}>
                 {formatDate(article.submitted_at)}
               </MetaLine>
+              {getSafePublishedUrl(article.published_url) && (
+                <a
+                  href={getSafePublishedUrl(article.published_url)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={getSafePublishedUrl(article.published_url)!}
+                  className="inline-flex items-center gap-1.5 rounded-sm border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100"
+                >
+                  <ExternalLink size={13} aria-hidden />
+                  View published article
+                  <span className="font-normal text-teal-700/70">
+                    {publishedLinkHost(getSafePublishedUrl(article.published_url)!)}
+                  </span>
+                </a>
+              )}
             </div>
             <div className="pt-5">
               <ArticleViewer content={article.content} />

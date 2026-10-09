@@ -9,6 +9,7 @@ import {
   getArticleStats,
   getArticleTypeMeta,
   prepareArticleReevaluate,
+  setArticlePublishedUrl,
   updateArticleTitle,
   updateArticleTypeOnly,
 } from "../../services/admin/articles.service";
@@ -20,6 +21,10 @@ import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 import { startEvaluation } from "../../services/user/startEvaluation.service";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
+import {
+  InvalidPublishedUrlError,
+  normalizePublishedUrl,
+} from "../../utils/publishedUrl";
 import {
   listSuggestions,
   applySuggestions,
@@ -184,6 +189,35 @@ articlesRoute.patch("/:id", async (c) => {
         updated_at: article.updated_at,
       },
     },
+  });
+});
+
+/**
+ * Set (or clear, with an empty/null url) the external published link. Does not
+ * bump updated_at, version or status — see setArticlePublishedUrl.
+ */
+articlesRoute.put("/:id/published-url", async (c) => {
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => ({}))) as { url?: unknown };
+
+  let publishedUrl: string | null;
+  try {
+    publishedUrl = normalizePublishedUrl(body.url);
+  } catch (e) {
+    if (e instanceof InvalidPublishedUrlError) {
+      return c.json({ success: false, message: e.message }, 400);
+    }
+    throw e;
+  }
+
+  const result = await setArticlePublishedUrl(c.env.DB, id, publishedUrl);
+  if (!result) {
+    return c.json({ success: false, message: "Article not found" }, 404);
+  }
+
+  return c.json({
+    message: publishedUrl ? "Published link updated" : "Published link removed",
+    data: { article: { id: result.id, published_url: result.published_url } },
   });
 });
 

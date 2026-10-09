@@ -18,7 +18,8 @@ const ARTICLE_COLUMNS = `
   a.retry_count,
   a.ai_feedback,
   a.suggested_title,
-  a.admin_edited_at
+  a.admin_edited_at,
+  a.published_url
 `;
 
 export async function getArticlesByUser(
@@ -113,6 +114,7 @@ export type BrowseArticleItem = {
   article_type_name: string;
   author_name: string;
   submitted_at: string;
+  published_url: string | null;
 };
 
 export type ArticleTypeOption = {
@@ -180,7 +182,8 @@ export async function browseArticles(
         SELECT a.id, a.title, a.article_type_id,
                at.name AS article_type_name,
                COALESCE(u.name, ue.name, a.employee_email, 'Unknown') AS author_name,
-               a.submitted_at
+               a.submitted_at,
+               a.published_url
         ${joins}
         ${where}
         ORDER BY a.submitted_at DESC, a.id DESC
@@ -229,7 +232,8 @@ export async function getBrowseArticleById(db: D1Database, articleId: string) {
       SELECT a.id, a.title, a.content, a.article_type_id,
              at.name AS article_type_name,
              COALESCE(u.name, ue.name, a.employee_email, 'Unknown') AS author_name,
-             a.submitted_at
+             a.submitted_at,
+             a.published_url
       FROM articles a
       INNER JOIN article_types at ON at.id = a.article_type_id
       LEFT JOIN users u ON u.id = a.user_id
@@ -250,6 +254,7 @@ export async function getBrowseArticleById(db: D1Database, articleId: string) {
       article_type_name: string;
       author_name: string;
       submitted_at: string;
+      published_url: string | null;
     }>();
 }
 

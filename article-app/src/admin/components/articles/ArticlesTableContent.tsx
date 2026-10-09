@@ -29,6 +29,11 @@ import {
 import { cn } from "@/lib/utils";
 import { getScoreColor } from "@/utils/scoreColor";
 import {
+  AdminPublishedLinkCell,
+  PublishedLinkDeleteDialog,
+  PublishedLinkEditDialog,
+} from "./PublishedLinkDialogs";
+import {
   Autocomplete,
   AutocompleteContent,
   AutocompleteEmpty,
@@ -54,6 +59,8 @@ type ArticlesTableProps = {
   isFetchingMore?: boolean;
   hasMore?: boolean;
   onReevaluated?: (articleId: string) => void;
+  /** Called after an admin adds / edits / removes a published link, so the list can refresh. */
+  onPublishedLinkChanged?: () => void;
   timedOutIds?: Set<string>;
   onCheckAgain?: (articleId: string) => void;
 };
@@ -118,10 +125,13 @@ export default function ArticlesTableContent({
   isFetchingMore,
   hasMore,
   onReevaluated,
+  onPublishedLinkChanged,
   timedOutIds = EMPTY_TIMED_OUT_IDS,
   onCheckAgain,
 }: ArticlesTableProps) {
   const [titleFilter, setTitleFilter] = useState("");
+  const [linkEditTarget, setLinkEditTarget] = useState<ArticleSummary | null>(null);
+  const [linkDeleteTarget, setLinkDeleteTarget] = useState<ArticleSummary | null>(null);
   const [reevaluatingIds, setReevaluatingIds] = useState<Set<string>>(
     new Set(),
   );
@@ -331,6 +341,19 @@ export default function ArticlesTableContent({
         ),
       },
       {
+        accessorKey: "published_url",
+        header: "Published",
+        size: 125,
+        cell: ({ row }) => (
+          <AdminPublishedLinkCell
+            url={row.original.published_url}
+            onAdd={() => setLinkEditTarget(row.original)}
+            onEdit={() => setLinkEditTarget(row.original)}
+            onDelete={() => setLinkDeleteTarget(row.original)}
+          />
+        ),
+      },
+      {
         accessorKey: "re_evaluate",
         header: "Re-evaluate article",
         size: 95,
@@ -464,6 +487,17 @@ export default function ArticlesTableContent({
           </DataGridContainer>
         </div>
       </DataGrid>
+
+      <PublishedLinkEditDialog
+        article={linkEditTarget}
+        onClose={() => setLinkEditTarget(null)}
+        onSaved={() => onPublishedLinkChanged?.()}
+      />
+      <PublishedLinkDeleteDialog
+        article={linkDeleteTarget}
+        onClose={() => setLinkDeleteTarget(null)}
+        onDeleted={() => onPublishedLinkChanged?.()}
+      />
     </div>
   );
 }

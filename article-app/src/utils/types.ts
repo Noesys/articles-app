@@ -65,6 +65,7 @@ export interface ArticleListItem {
   status: string;
   created: string;
   edited: string;
+  published_url?: string | null;
   authorName?: string;
 }
 

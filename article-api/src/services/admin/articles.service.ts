@@ -55,6 +55,7 @@ export async function getArticles(
       -- being populated (and not yet backfilled) — never show a blank date.
       COALESCE(a.created_at, a.submitted_at) AS created_at,
       COALESCE(a.updated_at, a.submitted_at) AS updated_at,
+      a.published_url,
 
       COALESCE(u.id, ue.id, 'emp_' || a.emp_id) AS user_id,
       COALESCE(u.name, ue.name, a.employee_email) AS author_name,
@@ -268,6 +269,22 @@ export async function updateArticleTitle(
     .run();
 
   return getArticleById(db, articleId);
+}
+
+/**
+ * Sets (or, with null, clears) the article's external published link.
+ * Deliberately a bare UPDATE: it must not touch updated_at (the "Last
+ * evaluated at" date and the isStuckPending clock), version or status.
+ */
+export async function setArticlePublishedUrl(
+  db: D1Database,
+  articleId: string,
+  publishedUrl: string | null,
+): Promise<{ id: string; published_url: string | null } | null> {
+  return db
+    .prepare(`UPDATE articles SET published_url = ? WHERE id = ? RETURNING id, published_url`)
+    .bind(publishedUrl, articleId)
+    .first<{ id: string; published_url: string | null }>();
 }
 
 // ---------- getArticleStats ----------

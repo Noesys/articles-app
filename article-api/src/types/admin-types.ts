@@ -32,6 +32,7 @@ export interface ArticleListRawRow {
   submitted_at: string;
   created_at: string | null;
   updated_at: string | null;
+  published_url: string | null;
   user_id: string;
   author_name: string;
   article_type_id: string;
@@ -47,6 +48,7 @@ export interface ArticleListResult {
   submitted_at: string;
   created_at: string | null;
   updated_at: string | null;
+  published_url: string | null;
   user_id: string;
   author_name: string;
   article_type_id: string;
@@ -179,6 +181,7 @@ export interface ArticleByUser {
   submitted_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  published_url: string | null;
   user_id: string;
   author_name: string;
   article_type_id: string;

@@ -38,6 +38,7 @@ import {
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
+import { PublishedLinkCell } from "@/components/PublishedLink";
 import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
 import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -588,6 +589,12 @@ function MyArticlesTable({
             {dayjs(getValue() as string).format("MMM D, YYYY")}
           </span>
         ),
+      },
+      {
+        accessorKey: "published_url",
+        header: "Published",
+        size: 95,
+        cell: ({ row }) => <PublishedLinkCell url={row.original.published_url} />,
       },
     ],
     [],

@@ -205,6 +205,7 @@ export async function getArticlesByUser(
       -- being populated (and not yet backfilled) — never show a blank date.
       COALESCE(a.created_at, a.submitted_at) AS created_at,
       COALESCE(a.updated_at, a.submitted_at) AS updated_at,
+      a.published_url,
 
       a.user_id,
 

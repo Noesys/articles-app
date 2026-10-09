@@ -522,6 +522,7 @@ const AllArticles = () => {
               refetchLoaded({ silent: true });
               fetchStatusCounts();
             }}
+            onPublishedLinkChanged={() => refetchLoaded({ silent: true })}
             timedOutIds={timedOutIds}
             onCheckAgain={handleCheckAgain}
           />

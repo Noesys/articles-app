@@ -56,6 +56,7 @@ function articleToListItem(article: {
   submitted_at: string;
   created_at: string | null;
   updated_at: string | null;
+  published_url: string | null;
   authorName: string;
   authorId: string;
 }) {
@@ -72,6 +73,7 @@ function articleToListItem(article: {
       created: article.created_at ?? article.submitted_at,
       // Moves on every rewrite / re-evaluate / type-change / apply-suggestions.
       edited: article.updated_at ?? article.submitted_at,
+      published_url: article.published_url ?? null,
     },
     author: {
       id: article.authorId,
@@ -130,6 +132,7 @@ articleRoutes.get("/mine", async (c) => {
       submitted_at: article.submitted_at,
       created_at: article.created_at,
       updated_at: article.updated_at,
+      published_url: article.published_url,
       authorName: user.name,
       authorId: user.id,
     }),
