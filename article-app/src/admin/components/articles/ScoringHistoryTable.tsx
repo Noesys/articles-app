@@ -14,6 +14,7 @@ import {
   contiqTableLayout,
   contiqTableClassNames,
 } from "@/admin/utils/contiq-data-grid";
+import { parseUtcDate } from "@/admin/utils/date";
 import dayjs from "dayjs";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -65,27 +66,15 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   },
 };
 
-/**
- * History dates arrive in two shapes: ISO strings (`2026-10-09T14:03:22.481Z`)
- * and SQLite's CURRENT_TIMESTAMP (`2026-10-09 14:03:22`, UTC, no zone marker —
- * submitted_at is written that way on a user rewrite). Both are UTC; without a
- * zone dayjs would read them as local time and show the wrong hour.
- */
-function parseHistoryDate(value: string) {
-  const hasZone = /(Z|[+-]\d{2}:\d{2})$/.test(value);
-  if (hasZone) return dayjs(value);
-  return dayjs(`${value.replace(" ", "T")}Z`);
-}
-
 function historyDateValue(value?: string | null) {
-  return value ? parseHistoryDate(value).valueOf() : 0;
+  return value ? parseUtcDate(value).valueOf() : 0;
 }
 
 function HistoryDateCell({ value }: { value?: string | null }) {
   if (!value) return <span className="text-slate-400 text-[13px]">—</span>;
   return (
     <span className="text-slate-700 text-[13px]">
-      {parseHistoryDate(value).format("MMM D, YYYY h:mm A")}
+      {dayjs(parseUtcDate(value)).format("MMM D, YYYY h:mm A")}
     </span>
   );
 }

@@ -1,6 +1,6 @@
 import { ArticleStatus, ArticleSummary } from "@/admin/utils/types";
-import { Clock, RefreshCw, RotateCcw, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Clock, RotateCcw, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { formatDateToUSLocale } from "@/admin/utils/date";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -41,7 +41,6 @@ import {
   AutocompleteItem,
   AutocompleteList,
 } from "@/components/reui/autocomplete";
-import { Button } from "@/components/ui/button";
 import { api } from "@/http-client";
 import { toast } from "sonner";
 
@@ -331,14 +330,16 @@ export default function ArticlesTableContent({
         ),
       },
       {
-        accessorKey: "updated_at",
+        accessorKey: "scored_at",
         header: "Last evaluated at",
         size: 130,
-        cell: ({ getValue }) => (
-          <span className="text-[13px]">
-            {formatDateToUSLocale(getValue() as string)}
-          </span>
-        ),
+        cell: ({ getValue }) => {
+          const scoredAt = getValue() as string | null;
+          if (!scoredAt) return <span className="text-[13px] text-slate-400">—</span>;
+          return (
+            <span className="text-[13px]">{formatDateToUSLocale(scoredAt)}</span>
+          );
+        },
       },
       {
         accessorKey: "published_url",
@@ -479,7 +480,7 @@ export default function ArticlesTableContent({
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
             <DataGridVirtualScrollArea
-              height={fitRowsHeight(locallyFilteredArticles.length, "49.7vh", 45, 44, 96, "30vh")}
+              height={fitRowsHeight(locallyFilteredArticles.length, "49.7vh", { minHeight: "30vh" })}
               onFetchMore={onFetchMore}
               isFetchingMore={isFetchingMore}
               hasMore={hasMore}

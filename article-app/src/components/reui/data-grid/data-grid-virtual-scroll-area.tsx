@@ -39,13 +39,22 @@ interface DataGridVirtualScrollAreaProps {
  * `minHeight` (optional CSS length, e.g. "30vh") is a floor on the result, so a
  * table with only a few rows still keeps a usable viewport-relative height.
  */
+type FitRowsHeightOptions = {
+  rowHeight?: number;
+  headerHeight?: number;
+  emptyStateHeight?: number;
+  minHeight?: string;
+};
+
 function fitRowsHeight(
   rowCount: number,
   maxHeight: string,
-  rowHeight = 45,
-  headerHeight = 44,
-  emptyStateHeight = 96,
-  minHeight?: string,
+  {
+    rowHeight = 45,
+    headerHeight = 44,
+    emptyStateHeight = 96,
+    minHeight,
+  }: FitRowsHeightOptions = {},
 ): string {
   const bodyHeight = rowCount > 0 ? rowCount * rowHeight : emptyStateHeight;
   const contentHeight = bodyHeight + headerHeight;

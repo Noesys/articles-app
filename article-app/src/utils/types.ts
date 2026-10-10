@@ -64,8 +64,9 @@ export interface ArticleListItem {
   ai_feedback?: string | null;
   status: string;
   created: string;
-  edited: string;
-  published_url?: string | null;
+  /** When the AI last scored it; null until the first evaluation completes. */
+  evaluated: string | null;
+  published_url: string | null;
   authorName?: string;
 }
 

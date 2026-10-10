@@ -31,7 +31,7 @@ type BrowseItem = {
   article_type_name: string;
   author_name: string;
   submitted_at: string;
-  published_url?: string | null;
+  published_url: string | null;
 };
 
 type ArticleTypeOption = { id: string; name: string };
@@ -50,7 +50,7 @@ type BrowseDetail = {
   article_type_name: string;
   author_name: string;
   submitted_at: string;
-  published_url?: string | null;
+  published_url: string | null;
 };
 
 const LIMIT = 9;
@@ -376,6 +376,8 @@ export function ExploreArticleView() {
     };
   }, [id]);
 
+  const publishedUrl = getSafePublishedUrl(article?.published_url);
+
   return (
     <div className="h-full bg-[#f3f4f6]">
       {user?.auth_role === "user" ? <Header /> : <AdminHeader />}
@@ -416,18 +418,18 @@ export function ExploreArticleView() {
               <MetaLine icon={<CalendarDays size={14} />}>
                 {formatDate(article.submitted_at)}
               </MetaLine>
-              {getSafePublishedUrl(article.published_url) && (
+              {publishedUrl && (
                 <a
-                  href={getSafePublishedUrl(article.published_url)!}
+                  href={publishedUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  title={getSafePublishedUrl(article.published_url)!}
+                  title={publishedUrl}
                   className="inline-flex items-center gap-1.5 rounded-sm border border-teal-200 bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100"
                 >
                   <ExternalLink size={13} aria-hidden />
                   View published article
                   <span className="font-normal text-teal-700/70">
-                    {publishedLinkHost(getSafePublishedUrl(article.published_url)!)}
+                    {publishedLinkHost(publishedUrl)}
                   </span>
                 </a>
               )}

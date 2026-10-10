@@ -768,7 +768,6 @@ export interface DataGridProps<
   loadingMode?: "skeleton" | "spinner"
   loadingMessage?: ReactNode | string
   fetchingMoreMessage?: ReactNode | string
-  allRowsLoadedMessage?: ReactNode | string
   emptyMessage?: ReactNode | string
   tableLayout?: {
     dense?: boolean

@@ -27,7 +27,9 @@ export type ArticleSummary = {
   status: ArticleStatus;
   created_at: string;
   updated_at: string;
-  published_url?: string | null;
+  /** When the AI last scored it; null until the first evaluation completes. */
+  scored_at: string | null;
+  published_url: string | null;
   author_name: string;
   user_id: string;
   submitted_at: string;

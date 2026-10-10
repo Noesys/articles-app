@@ -427,7 +427,7 @@ const AllArticles = () => {
           className="h-9 border-border bg-white text-slate-600"
           onClick={() => setViewAll(!viewAll)}
         >
-          {viewAll ? "Current month" : "View all"}
+          {viewAll ? "This month" : "All articles"}
         </Button>
         <MonthYearPicker
           label="Month"

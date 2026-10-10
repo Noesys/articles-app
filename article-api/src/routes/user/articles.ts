@@ -55,7 +55,7 @@ function articleToListItem(article: {
   status: string;
   submitted_at: string;
   created_at: string | null;
-  updated_at: string | null;
+  scored_at: string | null;
   published_url: string | null;
   authorName: string;
   authorId: string;
@@ -71,8 +71,8 @@ function articleToListItem(article: {
       // Fixed at creation, never touched again — falls back to submitted_at
       // only for rows created before created_at existed and not yet backfilled.
       created: article.created_at ?? article.submitted_at,
-      // Moves on every rewrite / re-evaluate / type-change / apply-suggestions.
-      edited: article.updated_at ?? article.submitted_at,
+      // When the AI last scored it; null until the first evaluation completes.
+      evaluated: article.scored_at,
       published_url: article.published_url ?? null,
     },
     author: {
@@ -131,7 +131,7 @@ articleRoutes.get("/mine", async (c) => {
       status: article.status,
       submitted_at: article.submitted_at,
       created_at: article.created_at,
-      updated_at: article.updated_at,
+      scored_at: article.scored_at,
       published_url: article.published_url,
       authorName: user.name,
       authorId: user.id,

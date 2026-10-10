@@ -29,7 +29,7 @@ import {
   hasDataGridTableRightPinnedColumns,
 } from "@/components/reui/data-grid/data-grid-table"
 import { flexRender } from "@tanstack/react-table"
-import type { Column, Row, Table } from "@tanstack/react-table"
+import type { Column, Row } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type {
   PartialKeys,
@@ -331,7 +331,6 @@ interface VirtualBodyProps<TData extends object> {
   isVirtualizationEnabled: boolean
   isInfiniteMode: boolean
   isFetchingMore: boolean
-  hasMore?: boolean
   loadingMoreMessage: ReactNode
   measureRowRef?: (element: HTMLTableRowElement | null) => void
   centerColumnWindow?: { start: number; end: number }
@@ -497,7 +496,6 @@ function DataGridTableVirtualBody<TData extends object>({
   isVirtualizationEnabled,
   isInfiniteMode,
   isFetchingMore,
-  hasMore,
   loadingMoreMessage,
   measureRowRef,
   centerColumnWindow,
@@ -1201,7 +1199,6 @@ function DataGridTableVirtual<TData extends object>({
             isVirtualizationEnabled={isVirtualizationEnabled}
             isInfiniteMode={isInfiniteMode}
             isFetchingMore={isFetchingMore}
-            hasMore={hasMore}
             loadingMoreMessage={loadingMoreMessage}
             measureRowRef={measureRowRef}
             centerColumnWindow={centerColumnWindow}

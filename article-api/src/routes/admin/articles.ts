@@ -198,11 +198,20 @@ articlesRoute.patch("/:id", async (c) => {
  */
 articlesRoute.put("/:id/published-url", async (c) => {
   const id = c.req.param("id");
-  const body = (await c.req.json().catch(() => ({}))) as { url?: unknown };
+
+  // A body that fails to parse is a bad request, never a "clear the link" —
+  // mapping it to {} would silently delete stored data.
+  const body: unknown = await c.req.json().catch(() => null);
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return c.json({ success: false, message: "Invalid JSON body" }, 400);
+  }
+  if (!("url" in body)) {
+    return c.json({ success: false, message: "Missing 'url' field" }, 400);
+  }
 
   let publishedUrl: string | null;
   try {
-    publishedUrl = normalizePublishedUrl(body.url);
+    publishedUrl = normalizePublishedUrl((body as { url?: unknown }).url);
   } catch (e) {
     if (e instanceof InvalidPublishedUrlError) {
       return c.json({ success: false, message: e.message }, 400);

@@ -37,6 +37,7 @@ import {
   contiqTableClassNamesWithClosedRows,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
+import { parseUtcDate } from "@/admin/utils/date";
 import { cn } from "@/lib/utils";
 import { PublishedLinkCell } from "@/components/PublishedLink";
 import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
@@ -376,7 +377,7 @@ export default function MyArticles() {
               });
             }}
           >
-            {viewAll ? "Current month" : "View all"}
+            {viewAll ? "This month" : "All articles"}
           </Button>
 
           <FilterSelect
@@ -576,19 +577,28 @@ function MyArticlesTable({
         size: 110,
         cell: ({ getValue }) => (
           <span className="flex min-h-7 items-center text-[13px] text-slate-700">
-            {dayjs(getValue() as string).format("MMM D, YYYY")}
+            {dayjs(parseUtcDate(getValue() as string)).format("MMM D, YYYY")}
           </span>
         ),
       },
       {
-        accessorKey: "edited",
+        accessorKey: "evaluated",
         header: "Last evaluated at",
         size: 135,
-        cell: ({ getValue }) => (
-          <span className="flex min-h-7 items-center text-[13px] text-slate-700">
-            {dayjs(getValue() as string).format("MMM D, YYYY")}
-          </span>
-        ),
+        cell: ({ getValue }) => {
+          const evaluated = getValue() as string | null;
+          if (!evaluated)
+            return (
+              <span className="flex min-h-7 items-center text-[13px] text-slate-400">
+                —
+              </span>
+            );
+          return (
+            <span className="flex min-h-7 items-center text-[13px] text-slate-700">
+              {dayjs(parseUtcDate(evaluated)).format("MMM D, YYYY")}
+            </span>
+          );
+        },
       },
       {
         accessorKey: "published_url",
@@ -649,7 +659,7 @@ function MyArticlesTable({
       <div className="w-full space-y-2.5">
         <DataGridContainer className={contiqTableContainerClassName}>
           <DataGridVirtualScrollArea
-            height={fitRowsHeight(articles.length, "57vh", 45, 44, 96, "30vh")}
+            height={fitRowsHeight(articles.length, "57vh", { minHeight: "30vh" })}
             onFetchMore={onFetchMore}
             isFetchingMore={isFetchingMore}
             hasMore={hasMore}

@@ -23,7 +23,7 @@ import {
   truncateUrl,
 } from "@/components/PublishedLink";
 
-type TargetArticle = { id: string; title: string; published_url?: string | null };
+type TargetArticle = { id: string; title: string; published_url: string | null };
 
 /** Sets (or, with null, clears) the link. Never touches version/status/"Last evaluated at". */
 function savePublishedUrl(articleId: string, url: string | null) {
@@ -148,10 +148,6 @@ export function PublishedLinkEditDialog({
     const trimmed = draft.trim();
     if (!trimmed) {
       setError("Enter a link, or use the delete button to remove it.");
-      return;
-    }
-    if (!/^https?:\/\//i.test(trimmed)) {
-      setError("Link must start with http:// or https://");
       return;
     }
     setBusy(true);
