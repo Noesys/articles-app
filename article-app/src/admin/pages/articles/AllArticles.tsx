@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ChevronLeft, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/ui/filter-select";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ArticleSummary } from "@/admin/utils/types";
 import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
 import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
@@ -177,6 +178,7 @@ const AllArticles = () => {
     isLoading: loading,
     isFetchingMore,
     hasMore,
+    total,
     error,
     fetchMore,
     refetchLoaded,
@@ -382,6 +384,14 @@ const AllArticles = () => {
   }, [articles, sortBy]);
 
   const isUserView = Boolean(id);
+
+  // The title states what's actually listed, so it never says "All articles"
+  // while the list is scoped to one month.
+  const baseTitle = isUserView ? `${userName || "User"}'s articles` : "All articles";
+  const pageTitle = viewAll
+    ? baseTitle
+    : `${isUserView ? baseTitle : "Articles"} · ${dayjs(`${selectedMonthKey}-01`).format("MMMM YYYY")}`;
+
   return (
     <PageShell>
       {isUserView && (
@@ -398,7 +408,12 @@ const AllArticles = () => {
 
       <div className="flex justify-between">
         <PageHeader
-          title={id ? `${userName || "User"}'s articles` : "All articles"}
+          title={pageTitle}
+          subtitle={
+            !loading && !error
+              ? `${total} ${total === 1 ? "article" : "articles"}`
+              : "loading..."
+          }
         />
 
         <Button
@@ -419,24 +434,24 @@ const AllArticles = () => {
         }
       >
 
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          aria-pressed={viewAll}
-          className="h-9 border-border bg-white text-slate-600"
-          onClick={() => setViewAll(!viewAll)}
-        >
-          {viewAll ? "This month" : "All articles"}
-        </Button>
+        <SegmentedControl
+          aria-label="Articles shown"
+          value={viewAll ? "all" : "month"}
+          onValueChange={(next) => setViewAll(next === "all")}
+          options={[
+            { value: "month", label: "Month" },
+            { value: "all", label: "All time" },
+          ]}
+        />
         <MonthYearPicker
           label="Month"
           value={selectedMonthKey}
           onChange={(ym) => setFilterParam("month", ym)}
           triggerClassName="w-full"
           disabled={viewAll}
+          displayLabel={viewAll ? "All months" : undefined}
         />
-        
+
         <FilterSelect
           value={selectedType}
           onValueChange={(value) => setFilterParam("type", value, "all")}

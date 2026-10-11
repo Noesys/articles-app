@@ -40,6 +40,7 @@ import {
 import { parseUtcDate } from "@/admin/utils/date";
 import { cn } from "@/lib/utils";
 import { PublishedLinkCell } from "@/components/PublishedLink";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
 import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -345,7 +346,7 @@ export default function MyArticles() {
           subtitle={
             !loading
               ? `${filteredArticles.length} ${filteredArticles.length === 1 ? "article" : "articles"}`
-              : undefined
+              : "loading..."
           }
           actions={
             <Button type="button" size="lg" onClick={() => navigate("/articles/new")}>
@@ -356,29 +357,29 @@ export default function MyArticles() {
         />
 
         <FilterToolbar>
+          <SegmentedControl
+            aria-label="Articles shown"
+            value={viewAll ? "all" : "month"}
+            onValueChange={(next) => {
+              setSearchParams((current) => {
+                const params = new URLSearchParams(current);
+                if (next === "all") params.set("viewAll", "true");
+                else params.delete("viewAll");
+                return params;
+              });
+            }}
+            options={[
+              { value: "month", label: "Month" },
+              { value: "all", label: "All time" },
+            ]}
+          />
           <MonthYearPicker
             label="Month"
             value={month}
             onChange={(ym) => setFilterParam("month", ym, currentMonth)}
             disabled={viewAll}
+            displayLabel={viewAll ? "All months" : undefined}
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            aria-pressed={viewAll}
-            className="h-9 border-border bg-white text-slate-600"
-            onClick={() => {
-              setSearchParams((current) => {
-                const next = new URLSearchParams(current);
-                if (viewAll) next.delete("viewAll");
-                else next.set("viewAll", "true");
-                return next;
-              });
-            }}
-          >
-            {viewAll ? "This month" : "All articles"}
-          </Button>
 
           <FilterSelect
             value={typeFilter}
