@@ -25,6 +25,7 @@ import ScoringHistoryTable from "@/admin/components/articles/ScoringHistoryTable
 import FeedbackBlock from "@/admin/components/articles/FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
 import { ArticleDetailResponse } from "@/utils/types";
+import { isArticleEvaluatable } from "@/utils/evaluatable";
 import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
 import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
 import { serializeArticleContent } from "@/utils/serializeArticleContent";
@@ -167,7 +168,8 @@ export default function ArticleDetail() {
       effectiveSnapshot ||
       !article ||
       currentScore !== null ||
-      TERMINAL_STATUSES.includes(article.status)
+      TERMINAL_STATUSES.includes(article.status) ||
+      !isArticleEvaluatable(article.is_evaluatable, article.article_type_name)
     )
       return;
     let stopped = false;
@@ -227,7 +229,16 @@ export default function ArticleDetail() {
     };
   }, [article?.id, article?.status, currentScore, effectiveSnapshot, pollEpoch]);
 
-  const isPending = currentScore === null && article?.status === "pending";
+  const typeIsEvaluatable = isArticleEvaluatable(
+    article?.is_evaluatable,
+    article?.article_type_name,
+  );
+  const isPending =
+    currentScore === null &&
+    article?.status === "pending" &&
+    typeIsEvaluatable;
+  const isSkippedUnscored =
+    currentScore === null && !typeIsEvaluatable && !isFailed;
 
   const [typeMinWords, setTypeMinWords] = useState<number>(1000);
   const [allTypesCache, setAllTypesCache] = useState<any[]>([]);
@@ -378,12 +389,20 @@ export default function ArticleDetail() {
     if (!id || !selectedTypeId) return;
     setTypeBusy(true);
     try {
-      const result = await api<{ evaluatable?: boolean }>(`/admin/articles/${id}/type`, {
+      const result = await api<{
+        evaluatable?: boolean;
+        reevaluate?: boolean;
+      }>(`/admin/articles/${id}/type`, {
         method: "PATCH",
         body: JSON.stringify({ article_type_id: selectedTypeId, reevaluate: false }),
       });
       await refreshArticleQuietly();
-      if (result?.evaluatable === false) {
+      if (result?.reevaluate) {
+        setCurrentScore(null);
+        setCurrentFeedback("");
+        setPollEpoch((n) => n + 1);
+        toast.success("Article type updated; re-evaluation started");
+      } else if (result?.evaluatable === false) {
         toast.warning(
           "Article type updated. This type is not evaluatable, so scoring is disabled for this article.",
           { duration: 10000 },
@@ -502,6 +521,12 @@ export default function ArticleDetail() {
                 {dayjs(displaySubmittedAt).format("MMM D, YYYY h:mm A")}
               </span>
             )}
+          </div>
+        )}
+        {isSkippedUnscored && isAdmin && !effectiveSnapshot && (
+          <div className="mb-4 rounded-sm bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-700">
+            Not suitable — scoring skipped. Change the article type to a scorable
+            type to evaluate it.
           </div>
         )}
         {isPending && !effectiveSnapshot && (
@@ -706,11 +731,27 @@ export default function ArticleDetail() {
                 onClick={() => handleChangeType()}
                 className="rounded-sm bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
-                {typeBusy ? "Saving…" : "Change type only"}
+                {typeBusy
+                  ? "Saving…"
+                  : !typeIsEvaluatable && typeChanged
+                    ? "Change type and evaluate"
+                    : "Change type only"}
               </button>
               <button
                 type="button"
-                disabled={typeBusy || reevalBusy || isPending || editing || !!typeChanged}
+                disabled={
+                  typeBusy ||
+                  reevalBusy ||
+                  isPending ||
+                  editing ||
+                  !!typeChanged ||
+                  !typeIsEvaluatable
+                }
+                title={
+                  !typeIsEvaluatable
+                    ? "Change to a scorable type first"
+                    : undefined
+                }
                 onClick={handleReevaluate}
                 className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
               >
@@ -718,7 +759,9 @@ export default function ArticleDetail() {
               </button>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              "Change type only" just updates the type and keeps the current score. Re-evaluate snapshots it and re-scores. Not suitable skips AI scoring.
+              "Change type only" just updates the type and keeps the current score.
+              Leaving Not suitable starts scoring because there is no score to keep.
+              Re-evaluate snapshots it and re-scores.
             </p>
           </div>
         )}
@@ -743,6 +786,11 @@ export default function ArticleDetail() {
                         : "We couldn't evaluate this article. Please submit it again."}
                     </p>
                   </div>
+                ) : isSkippedUnscored ? (
+                  <p className="text-sm text-slate-500 py-1">
+                    Not scored — this type skips AI scoring. Change the type to
+                    evaluate.
+                  </p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-1">
                     <Loader2
@@ -799,6 +847,10 @@ export default function ArticleDetail() {
                     {aiBusyFailure
                       ? "Evaluation failed. The AI model is experiencing high demand right now. Please submit it again in a few minutes."
                       : "Evaluation failed. Please submit it again."}
+                  </p>
+                ) : isSkippedUnscored ? (
+                  <p className="text-sm text-slate-500">
+                    No feedback — scoring is skipped for this type.
                   </p>
                 ) : displayScore === null ? (
                   <div className="flex items-center gap-2 text-sm text-slate-500 py-2 bg-white p-4 rounded-sm border border-slate-200 shadow-sm">

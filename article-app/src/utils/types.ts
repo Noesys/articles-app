@@ -16,6 +16,8 @@ export interface ArticleDetail {
   content: string;
   article_type_id: string;
   article_type_name: string;
+  /** 1 = scorable; 0 = skipped (e.g. Not suitable). Missing → treat as scorable. */
+  is_evaluatable?: number;
   status: string;
   version: number;
   suggested_title?: string | null;

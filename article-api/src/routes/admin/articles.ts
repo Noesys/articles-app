@@ -120,6 +120,7 @@ articlesRoute.get("/:id", async (c) => {
         content: article.content,
         article_type_id: article.article_type_id,
         article_type_name: article.article_type_name,
+        is_evaluatable: Number(article.is_evaluatable) === 1 ? 1 : 0,
         status: article.status,
         version: article.version,
         ai_score: article.ai_score,
@@ -277,10 +278,21 @@ articlesRoute.patch("/:id/type", async (c) => {
     );
   }
 
-  const targetType = await getArticleTypeMeta(c.env.DB, body.article_type_id);
-  const evaluatable = Number(targetType?.is_evaluatable) === 1;
+  const existing = await getArticleById(c.env.DB, id);
+  if (!existing) {
+    return c.json({ success: false, message: "Article not found" }, 404);
+  }
 
-  if (body.reevaluate === false || (targetType && !evaluatable)) {
+  const targetType = await getArticleTypeMeta(c.env.DB, body.article_type_id);
+  const currentType = await getArticleTypeMeta(c.env.DB, existing.article_type_id);
+  const evaluatable = Number(targetType?.is_evaluatable) === 1;
+  const currentEvaluatable = Number(currentType?.is_evaluatable) === 1;
+  // Type-only would leave these rows pending with no job, and the next
+  // re-evaluate would then hit the real in-flight lock. There is no score
+  // to preserve, so leaving a skipped type always starts scoring.
+  const mustStartEval = !currentEvaluatable && evaluatable;
+
+  if (!mustStartEval && (body.reevaluate === false || (targetType && !evaluatable))) {
     let found: boolean;
     try {
       found = await updateArticleTypeOnly(c.env.DB, id, body.article_type_id);

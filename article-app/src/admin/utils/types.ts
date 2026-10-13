@@ -34,6 +34,10 @@ export type ArticleSummary = {
   user_id: string;
   submitted_at: string;
   month_year: string;
+  article_type_id?: string;
+  article_type_name?: string;
+  /** 1 = scorable; 0 = skipped (e.g. Not suitable). Missing → treat as scorable. */
+  is_evaluatable?: number;
   parameters: ArticleParameterResult[];
 };
 
@@ -59,6 +63,7 @@ export type ArticleType = {
   description: string | null;
   general_instructions?: string | null;
   is_active: number;
+  is_evaluatable?: number;
   pass_threshold: number;
   created_by: string;
   created_at: string;

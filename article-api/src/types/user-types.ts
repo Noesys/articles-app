@@ -44,6 +44,7 @@ export type Article = {
   user_id: string;
   article_type_id: string;
   article_type_name: string;
+  is_evaluatable: number;
   title: string;
   content: string;
   status: string;

@@ -28,6 +28,7 @@ import {
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
 import { getScoreColor } from "@/utils/scoreColor";
+import { isArticleEvaluatable } from "@/utils/evaluatable";
 import {
   AdminPublishedLinkCell,
   PublishedLinkDeleteDialog,
@@ -273,6 +274,25 @@ export default function ArticlesTableContent({
           }
 
           const status = row.original.status;
+          if (
+            !isArticleEvaluatable(
+              row.original.is_evaluatable,
+              row.original.article_type_name,
+            ) &&
+            (status === "pending" || row.original.ai_score === null) &&
+            status !== "failed" &&
+            status !== "approved" &&
+            status !== "rewrite_required"
+          ) {
+            return (
+              <Badge
+                variant="outline"
+                className="font-medium border-transparent bg-slate-50 text-slate-600 ring-1 ring-slate-200/80"
+              >
+                Not scored
+              </Badge>
+            );
+          }
           const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.unknown;
           return (
             <Badge
@@ -360,15 +380,24 @@ export default function ArticlesTableContent({
         size: 95,
         cell: ({ row }) => {
           const busy = reevaluatingIds.has(row.id);
+          const canReevaluate = isArticleEvaluatable(
+            row.original.is_evaluatable,
+            row.original.article_type_name,
+          );
           return (
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (!canReevaluate) return;
                 handleReevaluate(row.id);
               }}
-              disabled={busy}
+              disabled={busy || !canReevaluate}
               className="rounded-md p-2 transition-all duration-200 hover:bg-gray-200 hover:text-teal-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-              title="Re-evaluate article"
+              title={
+                canReevaluate
+                  ? "Re-evaluate article"
+                  : "Change to a scorable type first"
+              }
             >
               <RotateCcw
                 className={cn(

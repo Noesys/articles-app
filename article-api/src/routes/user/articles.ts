@@ -16,7 +16,7 @@ import { startEvaluation } from "../../services/user/startEvaluation.service";
 import { AppError } from "../../utils/errors";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
 import { accessAuth } from "../../middleware/accessAuth";
-import { isStuckPending } from "../../utils/evaluationTiming";
+import { isEvaluationInFlight } from "../../utils/evaluationTiming";
 
 const articleRoutes = new Hono<AppEnv>();
 
@@ -360,9 +360,13 @@ articleRoutes.post("/", async (c) => {
 
     // Already pending/processing and not stuck (< threshold old) — reject.
     if (
-      (existingArticle.status === "pending" || existingArticle.status === "processing") &&
-      !isStuckPending(existingArticle.updated_at)
-    ) {
+    // Non-evaluatable leftover pending (e.g. seeded Not suitable) has no job.
+    if (
+      isEvaluationInFlight(
+        existingArticle.status,
+        existingArticle.updated_at,
+        Number(existingArticle.is_evaluatable) === 1,
+      )
       return c.json(
         {
           success: false,
@@ -384,7 +388,7 @@ articleRoutes.post("/", async (c) => {
             // A row still "pending"/"processing" at snapshot time was never
             // actually resolved (stuck evaluation being superseded — see
             // isStuckPending above) — record it as failed, not a frozen
-            // "pending" that looks like it's still running.
+            // isEvaluationInFlight / isStuckPending above) — record it as failed, not a frozen
             `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
              SELECT ?, id, article_type_id, title,
                CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE ai_feedback END,

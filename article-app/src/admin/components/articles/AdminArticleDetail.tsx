@@ -23,6 +23,10 @@ import SuggestionsPanel from "./SuggestionsPanel";
 import FeedbackBlock from "./FeedbackBlock";
 import CopyButton from "@/admin/utils/CopyButton";
 import { HistoryItem, ArticleDetail, ParameterResult } from "@/utils/types";
+import {
+  isAdminTypeChangeLocked,
+  isArticleEvaluatable,
+} from "@/utils/evaluatable";
 import { DownloadMarkdownButton } from "@/admin/utils/DownloadMarkdown";
 import ArticleCopyButton from "@/admin/utils/ArticleCopyButton";
 
@@ -44,7 +48,7 @@ function getScoreTextColor(
   return getDetailScoreColor(score, passThreshold, status).text;
 }
 
-type ArticleTypeOption = { id: string; name: string };
+type ArticleTypeOption = { id: string; name: string; is_evaluatable?: number };
 
 export default function AdminArticleDetail() {
   const { id, version: routeVersion } = useParams<{
@@ -105,6 +109,7 @@ export default function AdminArticleDetail() {
       article_type_id: (d.article_type_id as string) || "",
       article_type_name:
         (d.article_type_name as string) || (d.type as string) || "",
+      is_evaluatable: d.is_evaluatable as number | undefined,
       status: d.status as string,
       version: d.version as number,
       suggested_title: (d.suggested_title as string | null | undefined) ?? null,
@@ -174,7 +179,11 @@ export default function AdminArticleDetail() {
         if (t?.pass_threshold != null) setPassThreshold(t.pass_threshold);
         setArticleTypes(
           list
-            .map((t) => ({ id: t.id, name: t.name }))
+            .map((t) => ({
+              id: t.id,
+              name: t.name,
+              is_evaluatable: t.is_evaluatable as number | undefined,
+            }))
             .sort((a, b) => a.name.localeCompare(b.name)),
         );
       } catch (e: unknown) {
@@ -218,12 +227,35 @@ export default function AdminArticleDetail() {
     ? (article?.suggested_title ?? null)
     : null;
 
+  const typeMeta = articleTypes.find((t) => t.id === article?.article_type_id);
+  const typeIsEvaluatable = isArticleEvaluatable(
+    article?.is_evaluatable ?? typeMeta?.is_evaluatable,
+    article?.article_type_name ?? typeMeta?.name,
+  );
+  const typeControlsLocked = isAdminTypeChangeLocked({
+    scoringInFlight,
+    isPendingStatus:
+      article?.status === "pending" || article?.status === "processing",
+    score: currentScore,
+    is_evaluatable: article?.is_evaluatable ?? typeMeta?.is_evaluatable,
+    article_type_name: article?.article_type_name ?? typeMeta?.name,
+  });
   const isFailed = displayStatus === "failed";
   const isScoring =
-    scoringInFlight && !effectiveSnapshot && !isFailed && displayScore === null;
+    scoringInFlight &&
+    typeIsEvaluatable &&
+    !effectiveSnapshot &&
+    !isFailed &&
+    displayScore === null;
+  const isSkippedUnscored =
+    !effectiveSnapshot &&
+    !typeIsEvaluatable &&
+    displayScore === null &&
+    !isFailed;
   const isPendingUnscored =
     !effectiveSnapshot &&
     !isScoring &&
+    !isSkippedUnscored &&
     displayStatus === "pending" &&
     displayScore === null;
 
@@ -248,15 +280,21 @@ export default function AdminArticleDetail() {
     if (!article || effectiveSnapshot) return;
     const key = `${article.id}:${article.version}`;
     const stillPending =
-      currentScore === null && !TERMINAL_STATUSES.includes(article.status);
+      isArticleEvaluatable(
+        article.is_evaluatable ?? typeMeta?.is_evaluatable,
+        article.article_type_name ?? typeMeta?.name,
+      ) &&
+      currentScore === null &&
+      !TERMINAL_STATUSES.includes(article.status);
     if (!stillPending) {
       if (autoArmedRef.current === key) autoArmedRef.current = null;
+      setScoringInFlight(false);
       return;
     }
     if (autoArmedRef.current === key) return;
     autoArmedRef.current = key;
     setScoringInFlight(true);
-  }, [article, currentScore, effectiveSnapshot]);
+  }, [article, currentScore, effectiveSnapshot, typeMeta?.is_evaluatable, typeMeta?.name]);
 
   useEffect(() => {
     if (!scoringInFlight || !id || effectiveSnapshot) return;
@@ -401,7 +439,10 @@ export default function AdminArticleDetail() {
     if (!id || !selectedTypeId) return;
     setTypeBusy(true);
     try {
-      const result = await api<{ evaluatable?: boolean }>(`/admin/articles/${id}/type`, {
+      const result = await api<{
+        evaluatable?: boolean;
+        reevaluate?: boolean;
+      }>(`/admin/articles/${id}/type`, {
         method: "PATCH",
         body: JSON.stringify({
           article_type_id: selectedTypeId,
@@ -409,7 +450,12 @@ export default function AdminArticleDetail() {
         }),
       });
       await loadArticle();
-      if (result?.evaluatable === false) {
+      if (result?.reevaluate) {
+        setCurrentScore(null);
+        setCurrentFeedback("");
+        setScoringInFlight(true);
+        toast.success("Article type updated; re-evaluation started");
+      } else if (result?.evaluatable === false) {
         toast.warning(
           "Article type updated. This type is not evaluatable, so scoring is disabled for this article.",
           { duration: 10000 },
@@ -507,6 +553,13 @@ export default function AdminArticleDetail() {
           </div>
         )}
 
+        {isSkippedUnscored && (
+          <div className="mb-4 rounded-sm bg-slate-50 border border-slate-200 px-4 py-3 text-sm text-slate-700">
+            Not suitable — scoring skipped. Change the article type to a scorable
+            type to evaluate it.
+          </div>
+        )}
+
         <div className="mb-6">
           {!effectiveSnapshot && editingTitle ? (
             <div className="flex flex-wrap items-start gap-2">
@@ -557,7 +610,7 @@ export default function AdminArticleDetail() {
                 <button
                   type="button"
                   onClick={startEditTitle}
-                  disabled={titleBusy || applyBusy || scoringInFlight}
+                  disabled={titleBusy || applyBusy || (scoringInFlight && typeIsEvaluatable)}
                   className="mt-1 inline-flex items-center gap-1 rounded-sm border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
                   title="Edit title"
                 >
@@ -615,24 +668,40 @@ export default function AdminArticleDetail() {
                 }))}
                 placeholder="Select type"
                 className="min-w-[240px] max-w-[320px]"
-                disabled={typeBusy || reevalBusy || scoringInFlight}
+                disabled={typeBusy || reevalBusy || typeControlsLocked}
               />
               <button
                 type="button"
                 disabled={
-                  !typeChanged || typeBusy || reevalBusy || scoringInFlight
+                  !typeChanged ||
+                  typeBusy ||
+                  reevalBusy ||
+                  typeControlsLocked
                 }
                 onClick={() => handleChangeType()}
                 className="rounded-sm bg-teal-600 hover:bg-teal-700 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-40"
               >
-                {typeBusy ? "Saving…" : "Change type only"}
+                {typeBusy
+                  ? "Saving…"
+                  : !typeIsEvaluatable && typeChanged
+                    ? "Change type and evaluate"
+                    : "Change type only"}
               </button>
               <button
                 type="button"
                 disabled={
-                  typeBusy || reevalBusy || scoringInFlight || !!typeChanged
+                  typeBusy ||
+                  reevalBusy ||
+                  !typeIsEvaluatable ||
+                  scoringInFlight ||
+                  !!typeChanged
                 }
                 onClick={handleReevaluate}
+                title={
+                  !typeIsEvaluatable
+                    ? "Change to a scorable type first"
+                    : undefined
+                }
                 className="rounded-sm border border-border px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-40"
               >
                 {reevalBusy
@@ -644,8 +713,8 @@ export default function AdminArticleDetail() {
             </div>
             <p className="mt-2 text-xs text-slate-500">
               "Change type only" just updates the type and keeps the current
-              score. Re-evaluate snapshots it and re-scores. Not suitable skips
-              AI scoring.
+              score. Leaving Not suitable starts scoring because there is no
+              score to keep. Re-evaluate snapshots it and re-scores.
             </p>
           </div>
         )}
@@ -681,6 +750,11 @@ export default function AdminArticleDetail() {
                     />
                     <span>Scoring…</span>
                   </div>
+                ) : isSkippedUnscored ? (
+                  <p className="text-sm text-slate-500 py-1">
+                    Not scored — this type skips AI scoring. Change the type to
+                    evaluate.
+                  </p>
                 ) : isPendingUnscored ? (
                   <p className="text-sm text-slate-500 py-1">
                     Not scored yet — use Re-evaluate to run scoring.
@@ -769,6 +843,10 @@ export default function AdminArticleDetail() {
                     />
                     <span>Scoring…</span>
                   </div>
+                ) : isSkippedUnscored ? (
+                  <p className="text-sm text-slate-500">
+                    No feedback — scoring is skipped for this type.
+                  </p>
                 ) : isPendingUnscored ? (
                   <p className="text-sm text-slate-500">No feedback yet.</p>
                 ) : (

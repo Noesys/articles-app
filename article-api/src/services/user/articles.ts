@@ -5,6 +5,7 @@ const ARTICLE_COLUMNS = `
   a.user_id,
   a.article_type_id,
   at.name AS article_type_name,
+  at.is_evaluatable,
   a.title,
   a.content,
   a.status,

@@ -38,6 +38,7 @@ export interface ArticleListRawRow {
   author_name: string;
   article_type_id: string;
   article_type_name: string;
+  is_evaluatable: number;
   parameters: string;
 }
 export interface ArticleListResult {
@@ -55,6 +56,7 @@ export interface ArticleListResult {
   author_name: string;
   article_type_id: string;
   article_type_name: string;
+  is_evaluatable: number;
   parameters: ArticleParameterResult[];
 }
 
@@ -64,6 +66,7 @@ export interface ArticleTypeListItem {
   description: string | null;
   general_instructions: string | null;
   is_active: number;
+  is_evaluatable: number;
   pass_threshold: number;
   score_prompt: string;
   score_min: number;
@@ -116,6 +119,7 @@ export interface ArticleTypeListRow {
   description: string | null;
   general_instructions: string | null;
   is_active: number;
+  is_evaluatable: number;
   pass_threshold: number;
   score_prompt: string;
   score_min: number;

@@ -15,6 +15,7 @@ import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
 import { useInfiniteTableData } from "@/hooks/useInfiniteTableData";
+import { isArticleEvaluatable } from "@/utils/evaluatable";
 
 type ArticleTypeOption = {
   id: string;
@@ -238,8 +239,12 @@ const AllArticles = () => {
   // the shared refetch"). A single mount-long interval reads that bookkeeping
   // fresh each tick, so there's no dependency-driven teardown/rebuild that
   // could leave a stale interval running or miss a resolution.
-  const isRowPending = (a: ArticleSummary) =>
-    a.status === "pending" || (a.ai_score === null && a.status !== "failed");
+  const isRowPending = (a: ArticleSummary) => {
+    if (!isArticleEvaluatable(a.is_evaluatable, a.article_type_name)) {
+      return false;
+    }
+    return a.status === "pending" || (a.ai_score === null && a.status !== "failed");
+  };
 
   const [isPolling, setIsPolling] = useState(false);
   const [timedOutIds, setTimedOutIds] = useState<Set<string>>(new Set());
