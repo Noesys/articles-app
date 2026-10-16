@@ -2,6 +2,10 @@ export type Bindings = {
   DB: D1Database;
   /** Article image blobs (TipTap uploads) */
   IMAGES: R2Bucket;
+  /** Contiq MCP OAuth grants/tokens (workers-oauth-provider) */
+  OAUTH_KV: KVNamespace;
+  /** Injected by @cloudflare/workers-oauth-provider on authorize routes */
+  OAUTH_PROVIDER?: import("@cloudflare/workers-oauth-provider").OAuthHelpers;
   DEV_USER_MAIL?: string;
   ENVIRONMENT?: string;
   /** Required when AI_PROVIDER=google; unused for workers-ai */
@@ -20,6 +24,14 @@ export type Bindings = {
   CF_ACCESS_TEAM_DOMAIN?: string;
   /** Access application AUD tag — for JWT fallback with assets */
   CF_ACCESS_AUD?: string;
+};
+
+/** Props encrypted into Contiq MCP OAuth access tokens */
+export type ContiqMcpProps = {
+  userId: string;
+  email: string;
+  name: string;
+  authRole: "admin" | "user";
 };
 
 export type AuthenticatedUser = {

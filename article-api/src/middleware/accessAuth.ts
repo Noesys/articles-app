@@ -1,7 +1,7 @@
 // middleware/accessAuth.ts
 import type { Context, Next } from "hono";
 import { createRemoteJWKSet, jwtVerify } from "jose";
-import type { AppEnv, ResolveResult } from "../types/shared-types";
+import type { AppEnv, Bindings, ResolveResult } from "../types/shared-types";
 import { findUserByEmail, createUser } from "../services/user/users";
 
 // createRemoteJWKSet caches the downloaded keys inside the object it returns, so it must
@@ -24,23 +24,27 @@ function nameFromEmail(email: string): string {
   return email.split("@")[0] || "User";
 }
 
-/**
- * Resolve email, name, and job_role from Cloudflare Access.
- * Prefer ctx.access (Worker Access without static-asset router gap).
- * Fall back to Cf-Access-Jwt-Assertion — required when Static Assets sit
- * behind Cloudflare's internal router, which does not forward ctx.access.
- */
 type AccessIdentity = {
   email: string;
   name: string | null;
   jobTitle: string | null;
 };
 
-async function resolveAccessIdentity(c: Context<AppEnv>): Promise<AccessIdentity | null> {
-  if (c.executionCtx.access) {
-    const identity = await c.executionCtx.access.getIdentity();
+/**
+ * Resolve email, name, and job_role from Cloudflare Access.
+ * Prefer ctx.access (Worker Access without static-asset router gap).
+ * Fall back to Cf-Access-Jwt-Assertion — required when Static Assets sit
+ * behind Cloudflare's internal router, which does not forward ctx.access.
+ */
+async function resolveAccessIdentity(
+  request: Request,
+  env: Bindings,
+  executionCtx: ExecutionContext,
+): Promise<AccessIdentity | null> {
+  if (executionCtx.access) {
+    const identity = await executionCtx.access.getIdentity();
     if (identity?.email) {
-      const oidc = (identity as any)?.oidc_fields;
+      const oidc = (identity as { oidc_fields?: { job_title?: unknown } })?.oidc_fields;
       return {
         email: identity.email.trim().toLowerCase(),
         name: identity.name?.trim() || null,
@@ -49,9 +53,9 @@ async function resolveAccessIdentity(c: Context<AppEnv>): Promise<AccessIdentity
     }
   }
 
-  const assertion = c.req.header("Cf-Access-Jwt-Assertion");
-  const teamDomain = (c.env.CF_ACCESS_TEAM_DOMAIN ?? "").replace(/\/$/, "");
-  const aud = c.env.CF_ACCESS_AUD;
+  const assertion = request.headers.get("Cf-Access-Jwt-Assertion");
+  const teamDomain = (env.CF_ACCESS_TEAM_DOMAIN ?? "").replace(/\/$/, "");
+  const aud = env.CF_ACCESS_AUD;
 
   if (assertion && teamDomain && aud) {
     try {
@@ -82,7 +86,7 @@ async function resolveAccessIdentity(c: Context<AppEnv>): Promise<AccessIdentity
     }
   }
 
-  const headerEmail = c.req.header("Cf-Access-Authenticated-User-Email");
+  const headerEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
   if (headerEmail && assertion) {
     return {
       email: headerEmail.trim().toLowerCase(),
@@ -91,9 +95,9 @@ async function resolveAccessIdentity(c: Context<AppEnv>): Promise<AccessIdentity
     };
   }
 
-  if (c.env.ENVIRONMENT === "development" && c.env.DEV_USER_MAIL) {
+  if (env.ENVIRONMENT === "development" && env.DEV_USER_MAIL) {
     return {
-      email: c.env.DEV_USER_MAIL.trim().toLowerCase(),
+      email: env.DEV_USER_MAIL.trim().toLowerCase(),
       name: null,
       jobTitle: null,
     };
@@ -102,21 +106,23 @@ async function resolveAccessIdentity(c: Context<AppEnv>): Promise<AccessIdentity
   return null;
 }
 
-export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResult> {
-  const hasAccessContext = Boolean(c.executionCtx.access);
-  const hasAssertion = Boolean(c.req.header("Cf-Access-Jwt-Assertion"));
+/** Resolve Contiq user from Access identity (Hono or raw Request). */
+export async function resolveAccessUserFromRequest(
+  request: Request,
+  env: Bindings,
+  executionCtx: ExecutionContext,
+): Promise<ResolveResult> {
+  const hasAccessContext = Boolean(executionCtx.access);
+  const hasAssertion = Boolean(request.headers.get("Cf-Access-Jwt-Assertion"));
 
   if (!hasAccessContext && !hasAssertion) {
-    // Local wrangler access.dev injects ctx.access; without it and without JWT → deny
-    if (c.env.ENVIRONMENT === "development" && c.env.DEV_USER_MAIL) {
-      // allow resolveAccessEmail to use DEV_USER_MAIL below
-    } else {
+    if (!(env.ENVIRONMENT === "development" && env.DEV_USER_MAIL)) {
       return { ok: false, status: 403, message: "Access required" };
     }
   }
 
-  const identity = await resolveAccessIdentity(c);
-  if (!identity) {
+  const identity = await resolveAccessIdentity(request, env, executionCtx);
+  if (!identity?.email) {
     return {
       ok: false,
       status: 401,
@@ -125,18 +131,10 @@ export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResu
   }
   const { email, name, jobTitle } = identity;
 
-  if (!email) {
-    return {
-      ok: false,
-      status: 401,
-      message: "Unauthorized: No Access identity",
-    };
-  }
-
-  let user = await findUserByEmail(c.env.DB, email);
+  let user = await findUserByEmail(env.DB, email);
 
   if (!user) {
-    const allowedDomain = c.env.ALLOWED_EMAIL_DOMAIN;
+    const allowedDomain = env.ALLOWED_EMAIL_DOMAIN;
     if (allowedDomain && !email.endsWith(`@${allowedDomain}`)) {
       return {
         ok: false,
@@ -144,7 +142,7 @@ export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResu
         message: "Forbidden: Domain not allowlisted",
       };
     }
-    await createUser(c.env.DB, {
+    await createUser(env.DB, {
       id: "usr_" + crypto.randomUUID(),
       email,
       name: name || nameFromEmail(email),
@@ -154,41 +152,37 @@ export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResu
       created_by: null,
       is_active: 1,
     });
-    user = await findUserByEmail(c.env.DB, email);
+    user = await findUserByEmail(env.DB, email);
   }
 
-  // update old user names
   if (user) {
     const resolvedName = name?.trim();
     const resolvedJobTitle = jobTitle?.trim();
 
     const shouldUpdateName =
-      resolvedName &&
-      (
-        !user.name ||
-        user.name === nameFromEmail(user.email)
-      );
+      resolvedName && (!user.name || user.name === nameFromEmail(user.email));
 
     const shouldUpdateJobRole =
-      resolvedJobTitle &&
-      (!user.job_role || user.job_role.trim() === "");
+      resolvedJobTitle && (!user.job_role || user.job_role.trim() === "");
 
     if (shouldUpdateName || shouldUpdateJobRole) {
-      await c.env.DB.prepare(`
+      await env.DB.prepare(
+        `
         UPDATE users
         SET
           name = COALESCE(?, name),
           job_role = COALESCE(?, job_role)
         WHERE id = ?
-      `)
+      `,
+      )
         .bind(
           shouldUpdateName ? resolvedName : null,
           shouldUpdateJobRole ? resolvedJobTitle : null,
-          user.id
+          user.id,
         )
         .run();
 
-      user = await findUserByEmail(c.env.DB, email);
+      user = await findUserByEmail(env.DB, email);
     }
   }
 
@@ -196,13 +190,8 @@ export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResu
     return { ok: false, status: 403, message: "Forbidden: Account inactive" };
   }
 
-  // Legacy compatibility: "super_admin" predates the current admin/user role
-  // model. Treat those accounts as "admin" instead of rejecting them below,
-  // and self-heal the row so future requests skip this branch entirely.
   if ((user.auth_role as string) === "super_admin") {
-    await c.env.DB.prepare(`UPDATE users SET auth_role = 'admin' WHERE id = ?`)
-      .bind(user.id)
-      .run();
+    await env.DB.prepare(`UPDATE users SET auth_role = 'admin' WHERE id = ?`).bind(user.id).run();
     user = { ...user, auth_role: "admin" };
   }
 
@@ -211,6 +200,10 @@ export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResu
   }
 
   return { ok: true, user };
+}
+
+export async function resolveAccessUser(c: Context<AppEnv>): Promise<ResolveResult> {
+  return resolveAccessUserFromRequest(c.req.raw, c.env, c.executionCtx);
 }
 
 export async function accessAuth(c: Context<AppEnv>, next: Next) {
