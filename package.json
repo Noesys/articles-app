@@ -5,7 +5,8 @@
   "description": "Monorepo for the article platform",
   "workspaces": [
     "article-app",
-    "article-api"
+    "article-api",
+    "articles-admin-mcp"
   ],
   "type": "module",
   "scripts": {

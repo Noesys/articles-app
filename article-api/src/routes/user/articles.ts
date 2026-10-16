@@ -359,7 +359,6 @@ articleRoutes.post("/", async (c) => {
     }
 
     // Already pending/processing and not stuck (< threshold old) — reject.
-    if (
     // Non-evaluatable leftover pending (e.g. seeded Not suitable) has no job.
     if (
       isEvaluationInFlight(
@@ -367,6 +366,7 @@ articleRoutes.post("/", async (c) => {
         existingArticle.updated_at,
         Number(existingArticle.is_evaluatable) === 1,
       )
+    ) {
       return c.json(
         {
           success: false,
