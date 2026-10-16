@@ -8,12 +8,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ChevronLeft, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FilterSelect } from "@/components/ui/filter-select";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ArticleSummary } from "@/admin/utils/types";
 import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
 import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { DataGridSkeleton } from "@/components/ui/data-grid-skeleton";
 import { useInfiniteTableData } from "@/hooks/useInfiniteTableData";
+import { isArticleEvaluatable } from "@/utils/evaluatable";
 
 type ArticleTypeOption = {
   id: string;
@@ -177,6 +179,7 @@ const AllArticles = () => {
     isLoading: loading,
     isFetchingMore,
     hasMore,
+    total,
     error,
     fetchMore,
     refetchLoaded,
@@ -236,8 +239,12 @@ const AllArticles = () => {
   // the shared refetch"). A single mount-long interval reads that bookkeeping
   // fresh each tick, so there's no dependency-driven teardown/rebuild that
   // could leave a stale interval running or miss a resolution.
-  const isRowPending = (a: ArticleSummary) =>
-    a.status === "pending" || (a.ai_score === null && a.status !== "failed");
+  const isRowPending = (a: ArticleSummary) => {
+    if (!isArticleEvaluatable(a.is_evaluatable, a.article_type_name)) {
+      return false;
+    }
+    return a.status === "pending" || (a.ai_score === null && a.status !== "failed");
+  };
 
   const [isPolling, setIsPolling] = useState(false);
   const [timedOutIds, setTimedOutIds] = useState<Set<string>>(new Set());
@@ -382,6 +389,14 @@ const AllArticles = () => {
   }, [articles, sortBy]);
 
   const isUserView = Boolean(id);
+
+  // The title states what's actually listed, so it never says "All articles"
+  // while the list is scoped to one month.
+  const baseTitle = isUserView ? `${userName || "User"}'s articles` : "All articles";
+  const pageTitle = viewAll
+    ? baseTitle
+    : `${isUserView ? baseTitle : "Articles"} · ${dayjs(`${selectedMonthKey}-01`).format("MMMM YYYY")}`;
+
   return (
     <PageShell>
       {isUserView && (
@@ -398,7 +413,12 @@ const AllArticles = () => {
 
       <div className="flex justify-between">
         <PageHeader
-          title={id ? `${userName || "User"}'s articles` : "All articles"}
+          title={pageTitle}
+          subtitle={
+            !loading && !error
+              ? `${total} ${total === 1 ? "article" : "articles"}`
+              : "loading..."
+          }
         />
 
         <Button
@@ -419,24 +439,24 @@ const AllArticles = () => {
         }
       >
 
-        <Button
-          type="button"
-          variant="outline"
-          size="lg"
-          aria-pressed={viewAll}
-          className="h-9 border-border bg-white text-slate-600"
-          onClick={() => setViewAll(!viewAll)}
-        >
-          {viewAll ? "Current month" : "View all"}
-        </Button>
+        <SegmentedControl
+          aria-label="Articles shown"
+          value={viewAll ? "all" : "month"}
+          onValueChange={(next) => setViewAll(next === "all")}
+          options={[
+            { value: "month", label: "Month" },
+            { value: "all", label: "All time" },
+          ]}
+        />
         <MonthYearPicker
           label="Month"
           value={selectedMonthKey}
           onChange={(ym) => setFilterParam("month", ym)}
           triggerClassName="w-full"
           disabled={viewAll}
+          displayLabel={viewAll ? "All months" : undefined}
         />
-        
+
         <FilterSelect
           value={selectedType}
           onValueChange={(value) => setFilterParam("type", value, "all")}
@@ -522,6 +542,7 @@ const AllArticles = () => {
               refetchLoaded({ silent: true });
               fetchStatusCounts();
             }}
+            onPublishedLinkChanged={() => refetchLoaded({ silent: true })}
             timedOutIds={timedOutIds}
             onCheckAgain={handleCheckAgain}
           />

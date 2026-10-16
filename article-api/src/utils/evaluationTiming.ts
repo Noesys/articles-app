@@ -23,3 +23,19 @@ export function isStuckPending(updatedAt: string | null | undefined): boolean {
   if (Number.isNaN(ts)) return true;
   return Date.now() - ts > STUCK_EVALUATION_THRESHOLD_MS;
 }
+
+/**
+ * True only when a scoring job may actually be running.
+ * `pending` on a non-evaluatable type (e.g. Not suitable) is a seed/UI leftover —
+ * no workflow is started for those rows, so type-change and re-evaluate must not
+ * wait for isStuckPending.
+ */
+export function isEvaluationInFlight(
+  status: string | null | undefined,
+  updatedAt: string | null | undefined,
+  isEvaluatable: boolean,
+): boolean {
+  if (!isEvaluatable) return false;
+  if (status !== "pending" && status !== "processing") return false;
+  return !isStuckPending(updatedAt);
+}

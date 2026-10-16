@@ -34,10 +34,13 @@ import { api, apiFull } from "@/http-client";
 import { ArticleListItem, ArticleRow } from "@/utils/types";
 import {
   contiqTableContainerClassName,
-  contiqTableClassNames,
+  contiqTableClassNamesWithClosedRows,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
+import { parseUtcDate } from "@/admin/utils/date";
 import { cn } from "@/lib/utils";
+import { PublishedLinkCell } from "@/components/PublishedLink";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { PageHeader, PageShell, FilterToolbar } from "@/components/page-chrome";
 import { MonthYearPicker } from "@/admin/components/ui/MonthYearPicker";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -343,7 +346,7 @@ export default function MyArticles() {
           subtitle={
             !loading
               ? `${filteredArticles.length} ${filteredArticles.length === 1 ? "article" : "articles"}`
-              : undefined
+              : "loading..."
           }
           actions={
             <Button type="button" size="lg" onClick={() => navigate("/articles/new")}>
@@ -354,29 +357,29 @@ export default function MyArticles() {
         />
 
         <FilterToolbar>
+          <SegmentedControl
+            aria-label="Articles shown"
+            value={viewAll ? "all" : "month"}
+            onValueChange={(next) => {
+              setSearchParams((current) => {
+                const params = new URLSearchParams(current);
+                if (next === "all") params.set("viewAll", "true");
+                else params.delete("viewAll");
+                return params;
+              });
+            }}
+            options={[
+              { value: "month", label: "Month" },
+              { value: "all", label: "All time" },
+            ]}
+          />
           <MonthYearPicker
             label="Month"
             value={month}
             onChange={(ym) => setFilterParam("month", ym, currentMonth)}
             disabled={viewAll}
+            displayLabel={viewAll ? "All months" : undefined}
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            aria-pressed={viewAll}
-            className="h-9 border-border bg-white text-slate-600"
-            onClick={() => {
-              setSearchParams((current) => {
-                const next = new URLSearchParams(current);
-                if (viewAll) next.delete("viewAll");
-                else next.set("viewAll", "true");
-                return next;
-              });
-            }}
-          >
-            {viewAll ? "Current month" : "View all"}
-          </Button>
 
           <FilterSelect
             value={typeFilter}
@@ -575,19 +578,34 @@ function MyArticlesTable({
         size: 110,
         cell: ({ getValue }) => (
           <span className="flex min-h-7 items-center text-[13px] text-slate-700">
-            {dayjs(getValue() as string).format("MMM D, YYYY")}
+            {dayjs(parseUtcDate(getValue() as string)).format("MMM D, YYYY")}
           </span>
         ),
       },
       {
-        accessorKey: "edited",
-        header: "Edited",
-        size: 110,
-        cell: ({ getValue }) => (
-          <span className="flex min-h-7 items-center text-[13px] text-slate-700">
-            {dayjs(getValue() as string).format("MMM D, YYYY")}
-          </span>
-        ),
+        accessorKey: "evaluated",
+        header: "Last evaluated at",
+        size: 135,
+        cell: ({ getValue }) => {
+          const evaluated = getValue() as string | null;
+          if (!evaluated)
+            return (
+              <span className="flex min-h-7 items-center text-[13px] text-slate-400">
+                —
+              </span>
+            );
+          return (
+            <span className="flex min-h-7 items-center text-[13px] text-slate-700">
+              {dayjs(parseUtcDate(evaluated)).format("MMM D, YYYY")}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "published_url",
+        header: "Published",
+        size: 95,
+        cell: ({ row }) => <PublishedLinkCell url={row.original.published_url} />,
       },
     ],
     [],
@@ -637,12 +655,12 @@ function MyArticlesTable({
           : `No articles for ${dayjs(month).format("MMMM YYYY")}.`
       }
       tableLayout={{ ...contiqTableLayout, headerSticky: true }}
-      tableClassNames={contiqTableClassNames}
+      tableClassNames={contiqTableClassNamesWithClosedRows}
     >
       <div className="w-full space-y-2.5">
         <DataGridContainer className={contiqTableContainerClassName}>
           <DataGridVirtualScrollArea
-            height={fitRowsHeight(articles.length, "57vh")}
+            height={fitRowsHeight(articles.length, "57vh", { minHeight: "30vh" })}
             onFetchMore={onFetchMore}
             isFetchingMore={isFetchingMore}
             hasMore={hasMore}

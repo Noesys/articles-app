@@ -1,6 +1,6 @@
 import { ArticleStatus, ArticleSummary } from "@/admin/utils/types";
-import { Clock, RefreshCw, RotateCcw, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Clock, RotateCcw, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { formatDateToUSLocale } from "@/admin/utils/date";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -23,11 +23,17 @@ import {
 import { ColumnDef, useTable } from "@tanstack/react-table";
 import {
   contiqTableContainerClassName,
-  contiqTableClassNames,
+  contiqTableClassNamesWithClosedRows,
   contiqTableLayout,
 } from "@/admin/utils/contiq-data-grid";
 import { cn } from "@/lib/utils";
 import { getScoreColor } from "@/utils/scoreColor";
+import { isArticleEvaluatable } from "@/utils/evaluatable";
+import {
+  AdminPublishedLinkCell,
+  PublishedLinkDeleteDialog,
+  PublishedLinkEditDialog,
+} from "./PublishedLinkDialogs";
 import {
   Autocomplete,
   AutocompleteContent,
@@ -36,7 +42,6 @@ import {
   AutocompleteItem,
   AutocompleteList,
 } from "@/components/reui/autocomplete";
-import { Button } from "@/components/ui/button";
 import { api } from "@/http-client";
 import { toast } from "sonner";
 
@@ -54,6 +59,8 @@ type ArticlesTableProps = {
   isFetchingMore?: boolean;
   hasMore?: boolean;
   onReevaluated?: (articleId: string) => void;
+  /** Called after an admin adds / edits / removes a published link, so the list can refresh. */
+  onPublishedLinkChanged?: () => void;
   timedOutIds?: Set<string>;
   onCheckAgain?: (articleId: string) => void;
 };
@@ -118,10 +125,13 @@ export default function ArticlesTableContent({
   isFetchingMore,
   hasMore,
   onReevaluated,
+  onPublishedLinkChanged,
   timedOutIds = EMPTY_TIMED_OUT_IDS,
   onCheckAgain,
 }: ArticlesTableProps) {
   const [titleFilter, setTitleFilter] = useState("");
+  const [linkEditTarget, setLinkEditTarget] = useState<ArticleSummary | null>(null);
+  const [linkDeleteTarget, setLinkDeleteTarget] = useState<ArticleSummary | null>(null);
   const [reevaluatingIds, setReevaluatingIds] = useState<Set<string>>(
     new Set(),
   );
@@ -264,6 +274,25 @@ export default function ArticlesTableContent({
           }
 
           const status = row.original.status;
+          if (
+            !isArticleEvaluatable(
+              row.original.is_evaluatable,
+              row.original.article_type_name,
+            ) &&
+            (status === "pending" || row.original.ai_score === null) &&
+            status !== "failed" &&
+            status !== "approved" &&
+            status !== "rewrite_required"
+          ) {
+            return (
+              <Badge
+                variant="outline"
+                className="font-medium border-transparent bg-slate-50 text-slate-600 ring-1 ring-slate-200/80"
+              >
+                Not scored
+              </Badge>
+            );
+          }
           const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.unknown;
           return (
             <Badge
@@ -321,13 +350,28 @@ export default function ArticlesTableContent({
         ),
       },
       {
-        accessorKey: "updated_at",
-        header: "Edited",
-        size: 105,
-        cell: ({ getValue }) => (
-          <span className="text-[13px]">
-            {formatDateToUSLocale(getValue() as string)}
-          </span>
+        accessorKey: "scored_at",
+        header: "Last evaluated at",
+        size: 130,
+        cell: ({ getValue }) => {
+          const scoredAt = getValue() as string | null;
+          if (!scoredAt) return <span className="text-[13px] text-slate-400">—</span>;
+          return (
+            <span className="text-[13px]">{formatDateToUSLocale(scoredAt)}</span>
+          );
+        },
+      },
+      {
+        accessorKey: "published_url",
+        header: "Published",
+        size: 125,
+        cell: ({ row }) => (
+          <AdminPublishedLinkCell
+            url={row.original.published_url}
+            onAdd={() => setLinkEditTarget(row.original)}
+            onEdit={() => setLinkEditTarget(row.original)}
+            onDelete={() => setLinkDeleteTarget(row.original)}
+          />
         ),
       },
       {
@@ -336,15 +380,24 @@ export default function ArticlesTableContent({
         size: 95,
         cell: ({ row }) => {
           const busy = reevaluatingIds.has(row.id);
+          const canReevaluate = isArticleEvaluatable(
+            row.original.is_evaluatable,
+            row.original.article_type_name,
+          );
           return (
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (!canReevaluate) return;
                 handleReevaluate(row.id);
               }}
-              disabled={busy}
+              disabled={busy || !canReevaluate}
               className="rounded-md p-2 transition-all duration-200 hover:bg-gray-200 hover:text-teal-600 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-              title="Re-evaluate article"
+              title={
+                canReevaluate
+                  ? "Re-evaluate article"
+                  : "Change to a scorable type first"
+              }
             >
               <RotateCcw
                 className={cn(
@@ -451,12 +504,12 @@ export default function ArticlesTableContent({
         emptyMessage="No articles found"
         loadingMode="skeleton"
         tableLayout={{ ...contiqTableLayout, headerSticky: true }}
-        tableClassNames={contiqTableClassNames}
+        tableClassNames={contiqTableClassNamesWithClosedRows}
       >
         <div className="w-full space-y-2.5">
           <DataGridContainer className={contiqTableContainerClassName}>
             <DataGridVirtualScrollArea
-              height={fitRowsHeight(locallyFilteredArticles.length, "49.7vh")}
+              height={fitRowsHeight(locallyFilteredArticles.length, "49.7vh", { minHeight: "30vh" })}
               onFetchMore={onFetchMore}
               isFetchingMore={isFetchingMore}
               hasMore={hasMore}
@@ -464,6 +517,17 @@ export default function ArticlesTableContent({
           </DataGridContainer>
         </div>
       </DataGrid>
+
+      <PublishedLinkEditDialog
+        article={linkEditTarget}
+        onClose={() => setLinkEditTarget(null)}
+        onSaved={() => onPublishedLinkChanged?.()}
+      />
+      <PublishedLinkDeleteDialog
+        article={linkDeleteTarget}
+        onClose={() => setLinkDeleteTarget(null)}
+        onDeleted={() => onPublishedLinkChanged?.()}
+      />
     </div>
   );
 }

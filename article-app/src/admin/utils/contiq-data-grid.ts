@@ -27,5 +27,16 @@ export const contiqTableClassNames = {
   headerSticky: "sticky top-0 z-40 bg-slate-50 shadow-[var(--shadow-card)]",
 } as const;
 
+/**
+ * The default body-row styling skips the last row's bottom border, relying on
+ * the container's own border to close the table. That only works while the
+ * table is exactly as tall as its rows. For tables with a minimum height there's
+ * empty space under a short list, so the last row needs its own line.
+ */
+export const contiqTableClassNamesWithClosedRows = {
+  ...contiqTableClassNames,
+  bodyRow: `${contiqTableClassNames.bodyRow} [&>td]:border-b`,
+} as const;
+
 /** Prefer skeleton loading so tables don't jump. */
 export const contiqLoadingMode = "skeleton" as const;

@@ -4,7 +4,7 @@ import {
   ArticleListResult,
   ArticleParameterResult,
 } from "../../types/admin-types";
-import { isStuckPending } from "../../utils/evaluationTiming";
+import { isEvaluationInFlight } from "../../utils/evaluationTiming";
 
 export async function getArticles(
   db: D1Database,
@@ -55,6 +55,8 @@ export async function getArticles(
       -- being populated (and not yet backfilled) — never show a blank date.
       COALESCE(a.created_at, a.submitted_at) AS created_at,
       COALESCE(a.updated_at, a.submitted_at) AS updated_at,
+      a.published_url,
+      a.scored_at,
 
       COALESCE(u.id, ue.id, 'emp_' || a.emp_id) AS user_id,
       COALESCE(u.name, ue.name, a.employee_email) AS author_name,
@@ -63,6 +65,7 @@ export async function getArticles(
 
       at.id AS article_type_id,
       at.name AS article_type_name,
+      at.is_evaluatable,
 
       json_group_array(
         CASE
@@ -172,6 +175,7 @@ export interface ArticleDetail {
   created_at: string;
   updated_at: string;
   article_type_name: string;
+  is_evaluatable: number;
   author_name: string;
   author_email: string;
   job_role: string;
@@ -186,6 +190,7 @@ export async function getArticleById(db: D1Database, id: string): Promise<Articl
       SELECT
   a.*,
   at.name AS article_type_name,
+  CAST(at.is_evaluatable AS INTEGER) AS is_evaluatable,
   COALESCE(u.name, ue.name, a.employee_email) AS author_name,
   COALESCE(u.email, ue.email, a.employee_email) AS author_email,
   COALESCE(u.job_role, ue.job_role) AS job_role
@@ -268,6 +273,22 @@ export async function updateArticleTitle(
     .run();
 
   return getArticleById(db, articleId);
+}
+
+/**
+ * Sets (or, with null, clears) the article's external published link.
+ * Deliberately a bare UPDATE: it must not touch updated_at (the "Last
+ * evaluated at" date and the isStuckPending clock), version or status.
+ */
+export async function setArticlePublishedUrl(
+  db: D1Database,
+  articleId: string,
+  publishedUrl: string | null,
+): Promise<{ id: string; published_url: string | null } | null> {
+  return db
+    .prepare(`UPDATE articles SET published_url = ? WHERE id = ? RETURNING id, published_url`)
+    .bind(publishedUrl, articleId)
+    .first<{ id: string; published_url: string | null }>();
 }
 
 // ---------- getArticleStats ----------
@@ -359,10 +380,15 @@ export async function updateArticleTypeOnly(
 
   // An in-flight evaluation was started under the old type and will write
   // its result to this row — changing the type underneath it would leave a
-  // score that doesn't match the article's type.
+  // score that doesn't match the article's type. Non-evaluatable types never
+  // start a job, so their leftover "pending" must not block this.
+  const currentType = await getArticleTypeMeta(db, article.article_type_id);
   if (
-    (article.status === "pending" || article.status === "processing") &&
-    !isStuckPending(article.updated_at)
+    isEvaluationInFlight(
+      article.status,
+      article.updated_at,
+      Number(currentType?.is_evaluatable) === 1,
+    )
   ) {
     throw new Error("Article is currently being evaluated; please wait for it to finish");
   }
@@ -391,11 +417,12 @@ export async function changeArticleType(
   const article = await getArticleById(db, articleId);
   if (!article) return null;
 
+  const currentType = await getArticleTypeMeta(db, article.article_type_id);
+  const currentEvaluatable = Number(currentType?.is_evaluatable) === 1;
+
   // Already pending/processing and not stuck (< threshold old) — reject.
-  if (
-    (article.status === "pending" || article.status === "processing") &&
-    !isStuckPending(article.updated_at)
-  ) {
+  // Skip when the current type is not evaluatable: no job was started.
+  if (isEvaluationInFlight(article.status, article.updated_at, currentEvaluatable)) {
     throw new Error("Article is currently being evaluated; please wait for it to finish");
   }
 
@@ -407,24 +434,30 @@ export async function changeArticleType(
   const now = new Date().toISOString();
   const statements: D1PreparedStatement[] = [];
 
-  // Always snapshot + bump version here; a row still pending/processing was
-  // superseded via the stale-pending bypass, so record it as failed.
-  const historyId = "hist_" + crypto.randomUUID();
-  statements.push(
-    db
-      .prepare(
-        `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
-         SELECT ?, id, article_type_id, title,
-           CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE COALESCE(ai_feedback,'') END,
-           COALESCE(pre_edit_content, content), ai_score, pass_threshold,
-           CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
-           version, submitted_at, scored_at, ?
-         FROM articles WHERE id = ?`,
-      )
-      .bind(historyId, now, articleId),
-  );
+  // Seeded / type-only Not suitable rows sit at pending with no score and no
+  // job. Snapshotting them as "Evaluation timed out" would invent a failure
+  // that never happened — keep version and skip history for that case only.
+  const neverScoredSkip = !currentEvaluatable && article.ai_score == null;
+  const nextVersion = neverScoredSkip ? article.version : article.version + 1;
 
-  const nextVersion = article.version + 1;
+  if (!neverScoredSkip) {
+    // Always snapshot + bump version here; a row still pending/processing was
+    // superseded via the stale-pending bypass, so record it as failed.
+    const historyId = "hist_" + crypto.randomUUID();
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
+           SELECT ?, id, article_type_id, title,
+             CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE COALESCE(ai_feedback,'') END,
+             COALESCE(pre_edit_content, content), ai_score, pass_threshold,
+             CASE WHEN status IN ('pending','processing') THEN 'failed' ELSE status END,
+             version, submitted_at, scored_at, ?
+           FROM articles WHERE id = ?`,
+        )
+        .bind(historyId, now, articleId),
+    );
+  }
 
   const evaluatable = Number(typeMeta.is_evaluatable) === 1;
   statements.push(
@@ -476,15 +509,14 @@ export async function prepareArticleReevaluate(
   const article = await getArticleById(db, articleId);
   if (!article) return null;
 
+  const typeMeta = await getArticleTypeMeta(db, article.article_type_id);
+  const currentEvaluatable = Number(typeMeta?.is_evaluatable) === 1;
+
   // Already pending/processing and not stuck (< threshold old) — reject.
-  if (
-    (article.status === "pending" || article.status === "processing") &&
-    !isStuckPending(article.updated_at)
-  ) {
+  if (isEvaluationInFlight(article.status, article.updated_at, currentEvaluatable)) {
     throw new Error("Article is currently being evaluated; please wait for it to finish");
   }
 
-  const typeMeta = await getArticleTypeMeta(db, article.article_type_id);
   if (!typeMeta || !typeMeta.is_active) {
     throw new Error("Article type not found or inactive");
   }

@@ -44,6 +44,8 @@ interface MonthYearPickerProps {
   onChange: (value: string) => void;
   minValue?: string;
   disabled?: boolean;
+  /** Shown in the trigger instead of the month, e.g. "All months" while the picker is inactive. */
+  displayLabel?: string;
   className?: string;
   triggerClassName?: string;
 }
@@ -55,6 +57,7 @@ export function MonthYearPicker({
   onChange,
   minValue,
   disabled,
+  displayLabel,
   className,
   triggerClassName,
 }: MonthYearPickerProps) {
@@ -74,14 +77,18 @@ export function MonthYearPicker({
           type="button"
           variant="outline"
           disabled={disabled}
-          aria-label={label ? `${label}: ${MONTHS_FULL[month - 1]} ${year}` : undefined}
+          aria-label={
+            label
+              ? `${label}: ${displayLabel ?? `${MONTHS_FULL[month - 1]} ${year}`}`
+              : undefined
+          }
           className={cn(
             "h-9 w-[180px] justify-between border-border bg-white text-sm font-normal shadow-none rounded-sm",
             triggerClassName,
             className,
           )}
         >
-          {MONTHS_FULL[month - 1]} {year}
+          {displayLabel ?? `${MONTHS_FULL[month - 1]} ${year}`}
           <Calendar className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

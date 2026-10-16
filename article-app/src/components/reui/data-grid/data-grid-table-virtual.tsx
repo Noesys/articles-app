@@ -29,7 +29,7 @@ import {
   hasDataGridTableRightPinnedColumns,
 } from "@/components/reui/data-grid/data-grid-table"
 import { flexRender } from "@tanstack/react-table"
-import type { Column, Row, Table } from "@tanstack/react-table"
+import type { Column, Row } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type {
   PartialKeys,
@@ -331,9 +331,7 @@ interface VirtualBodyProps<TData extends object> {
   isVirtualizationEnabled: boolean
   isInfiniteMode: boolean
   isFetchingMore: boolean
-  hasMore?: boolean
   loadingMoreMessage: ReactNode
-  allRowsLoadedMessage: ReactNode
   measureRowRef?: (element: HTMLTableRowElement | null) => void
   centerColumnWindow?: { start: number; end: number }
 }
@@ -498,9 +496,7 @@ function DataGridTableVirtualBody<TData extends object>({
   isVirtualizationEnabled,
   isInfiniteMode,
   isFetchingMore,
-  hasMore,
   loadingMoreMessage,
-  allRowsLoadedMessage,
   measureRowRef,
   centerColumnWindow,
 }: VirtualBodyProps<TData>) {
@@ -526,8 +522,7 @@ function DataGridTableVirtualBody<TData extends object>({
 
   const hasCenterRows = centerRows.length > 0
   const showFetchingRow = isInfiniteMode && isFetchingMore
-  const showCompleteRow = isInfiniteMode && hasMore === false && totalRows > 0
-  const hasMiddleSection = hasCenterRows || showFetchingRow || showCompleteRow
+  const hasMiddleSection = hasCenterRows || showFetchingRow
   const leadingSpacerHeight =
     isVirtualizationEnabled && hasCenterRows && virtualItems.length > 0
       ? (virtualItems[0]?.start ?? 0)
@@ -611,18 +606,6 @@ function DataGridTableVirtualBody<TData extends object>({
           <Spinner className="size-4 opacity-60" />
           {loadingMoreMessage}
         </div>
-      </DataGridTableVirtualStatusRow>
-    )
-  }
-
-  if (showCompleteRow) {
-    renderedRows.push(
-      <DataGridTableVirtualStatusRow
-        key="virtual-status-complete"
-        table={table}
-        className="py-3 text-xs"
-      >
-        {allRowsLoadedMessage}
       </DataGridTableVirtualStatusRow>
     )
   }
@@ -717,8 +700,6 @@ function DataGridTableVirtual<TData extends object>({
   const isVirtualizationEnabled = virtualizerOptions?.enabled !== false
   const loadingMoreMessage =
     props.fetchingMoreMessage || props.loadingMessage || i18n.labels.loading
-  const allRowsLoadedMessage =
-    props.allRowsLoadedMessage || i18n.labels.allRowsLoaded
 
   const handleViewportRef = useCallback((node: HTMLDivElement | null) => {
     setViewportElements({
@@ -1218,9 +1199,7 @@ function DataGridTableVirtual<TData extends object>({
             isVirtualizationEnabled={isVirtualizationEnabled}
             isInfiniteMode={isInfiniteMode}
             isFetchingMore={isFetchingMore}
-            hasMore={hasMore}
             loadingMoreMessage={loadingMoreMessage}
-            allRowsLoadedMessage={allRowsLoadedMessage}
             measureRowRef={measureRowRef}
             centerColumnWindow={centerColumnWindow}
           />

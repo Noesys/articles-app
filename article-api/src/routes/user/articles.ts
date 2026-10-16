@@ -16,7 +16,7 @@ import { startEvaluation } from "../../services/user/startEvaluation.service";
 import { AppError } from "../../utils/errors";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
 import { accessAuth } from "../../middleware/accessAuth";
-import { isStuckPending } from "../../utils/evaluationTiming";
+import { isEvaluationInFlight } from "../../utils/evaluationTiming";
 
 const articleRoutes = new Hono<AppEnv>();
 
@@ -55,7 +55,8 @@ function articleToListItem(article: {
   status: string;
   submitted_at: string;
   created_at: string | null;
-  updated_at: string | null;
+  scored_at: string | null;
+  published_url: string | null;
   authorName: string;
   authorId: string;
 }) {
@@ -70,8 +71,9 @@ function articleToListItem(article: {
       // Fixed at creation, never touched again — falls back to submitted_at
       // only for rows created before created_at existed and not yet backfilled.
       created: article.created_at ?? article.submitted_at,
-      // Moves on every rewrite / re-evaluate / type-change / apply-suggestions.
-      edited: article.updated_at ?? article.submitted_at,
+      // When the AI last scored it; null until the first evaluation completes.
+      evaluated: article.scored_at,
+      published_url: article.published_url ?? null,
     },
     author: {
       id: article.authorId,
@@ -129,7 +131,8 @@ articleRoutes.get("/mine", async (c) => {
       status: article.status,
       submitted_at: article.submitted_at,
       created_at: article.created_at,
-      updated_at: article.updated_at,
+      scored_at: article.scored_at,
+      published_url: article.published_url,
       authorName: user.name,
       authorId: user.id,
     }),
@@ -356,9 +359,13 @@ articleRoutes.post("/", async (c) => {
     }
 
     // Already pending/processing and not stuck (< threshold old) — reject.
+    // Non-evaluatable leftover pending (e.g. seeded Not suitable) has no job.
     if (
-      (existingArticle.status === "pending" || existingArticle.status === "processing") &&
-      !isStuckPending(existingArticle.updated_at)
+      isEvaluationInFlight(
+        existingArticle.status,
+        existingArticle.updated_at,
+        Number(existingArticle.is_evaluatable) === 1,
+      )
     ) {
       return c.json(
         {
@@ -381,7 +388,7 @@ articleRoutes.post("/", async (c) => {
             // A row still "pending"/"processing" at snapshot time was never
             // actually resolved (stuck evaluation being superseded — see
             // isStuckPending above) — record it as failed, not a frozen
-            // "pending" that looks like it's still running.
+            // isEvaluationInFlight / isStuckPending above) — record it as failed, not a frozen
             `INSERT INTO article_history (id, article_id, article_type_id, title, ai_feedback, content, ai_score, pass_threshold, status, version, submitted_at, scored_at, snapshotted_at)
              SELECT ?, id, article_type_id, title,
                CASE WHEN status IN ('pending','processing') THEN 'Evaluation timed out. Please try again.' ELSE ai_feedback END,

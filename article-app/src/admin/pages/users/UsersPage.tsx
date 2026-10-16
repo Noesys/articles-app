@@ -193,7 +193,7 @@ const UsersPage = () => {
           users={filteredUsers}
           loading={loading}
           onToggleActive={handleToggleActive}
-          onUserClick={(id) => navigate(`/admin/${id}/articles`)}
+          onUserClick={(id) => navigate(`/admin/${id}/articles?viewAll=true`)}
           onRoleChange={handleRoleChange}
         />
       )}

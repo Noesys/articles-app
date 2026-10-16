@@ -44,6 +44,7 @@ export type Article = {
   user_id: string;
   article_type_id: string;
   article_type_name: string;
+  is_evaluatable: number;
   title: string;
   content: string;
   status: string;
@@ -59,6 +60,8 @@ export type Article = {
   suggested_title: string | null;
   /** Set when an admin applied AI suggestions; cleared when the author rewrites. */
   admin_edited_at: string | null;
+  /** External link where the article was published; set by an admin. */
+  published_url: string | null;
 };
 
 export type ArticlePagination = {

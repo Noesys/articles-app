@@ -27,10 +27,17 @@ export type ArticleSummary = {
   status: ArticleStatus;
   created_at: string;
   updated_at: string;
+  /** When the AI last scored it; null until the first evaluation completes. */
+  scored_at: string | null;
+  published_url: string | null;
   author_name: string;
   user_id: string;
   submitted_at: string;
   month_year: string;
+  article_type_id?: string;
+  article_type_name?: string;
+  /** 1 = scorable; 0 = skipped (e.g. Not suitable). Missing → treat as scorable. */
+  is_evaluatable?: number;
   parameters: ArticleParameterResult[];
 };
 
@@ -56,6 +63,7 @@ export type ArticleType = {
   description: string | null;
   general_instructions?: string | null;
   is_active: number;
+  is_evaluatable?: number;
   pass_threshold: number;
   created_by: string;
   created_at: string;

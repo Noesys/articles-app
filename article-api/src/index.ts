@@ -24,6 +24,10 @@ import { accessAuth } from "./middleware/accessAuth";
 import { requireRole } from "./middleware/requireRole";
 
 import { secureHeaders } from "hono/secure-headers";
+import { OAuthProvider } from "@cloudflare/workers-oauth-provider";
+import { authorizeApp } from "./mcp/authorize";
+import { contiqMcpApiHandler } from "./mcp/server";
+import type { Bindings } from "./types/shared-types";
 
 // Workflow classes must be exported from the Worker entry point for the binding to find them.
 export { EvaluateArticleWorkflow } from "./workflows/evaluateArticle.workflow";
@@ -134,4 +138,36 @@ app.onError((err, c) => {
   );
 });
 
-export default app;
+const CONTIQ_ORIGIN = "https://contiq.noesyssoftware.com";
+
+/**
+ * Contiq MCP (OAuth + Streamable HTTP) wraps the existing Hono API/SPA Worker.
+ * - /mcp — bearer-token MCP tools (role-filtered)
+ * - /authorize — CF Access identity + consent
+ * - /oauth/* — token + dynamic client registration (library)
+ * Everything else falls through to the Contiq Hono app.
+ */
+export default new OAuthProvider<Bindings>({
+  apiRoute: "/mcp",
+  apiHandler: contiqMcpApiHandler,
+  defaultHandler: {
+    async fetch(request, env, ctx) {
+      const path = new URL(request.url).pathname;
+      if (path === "/authorize") {
+        return authorizeApp.fetch(request, env, ctx);
+      }
+      return app.fetch(request, env, ctx);
+    },
+  },
+  authorizeEndpoint: "/authorize",
+  tokenEndpoint: "/oauth/token",
+  clientRegistrationEndpoint: "/oauth/register",
+  scopesSupported: ["contiq"],
+  requiredScopes: ["contiq"],
+  resourceMetadata: {
+    resource: `${CONTIQ_ORIGIN}/mcp`,
+    authorization_servers: [CONTIQ_ORIGIN],
+  },
+  // Cursor / Claude Desktop native clients often use private-use redirect URIs.
+  allowPrivateUseRedirectUris: true,
+});

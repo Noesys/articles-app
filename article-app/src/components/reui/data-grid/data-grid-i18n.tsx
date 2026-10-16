@@ -23,7 +23,6 @@ export interface DataGridI18nLabels {
   /* Grid states. */
   loading: string
   empty: string
-  allRowsLoaded: string
   /* Pagination. */
   rowsPerPage: string
   paginationInfo: (info: { from: number; to: number; count: number }) => string
@@ -67,7 +66,6 @@ const DEFAULT_DATA_GRID_LABELS: DataGridI18nLabels = {
   reorderingUnavailable: "Reordering unavailable",
   loading: "Loading...",
   empty: "No data available",
-  allRowsLoaded: "All records loaded",
   rowsPerPage: "Rows per page",
   paginationInfo: ({ from, to, count }) => `${from} - ${to} of ${count}`,
   previousPage: "Go to previous page",

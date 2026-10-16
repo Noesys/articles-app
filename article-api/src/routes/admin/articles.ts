@@ -9,6 +9,7 @@ import {
   getArticleStats,
   getArticleTypeMeta,
   prepareArticleReevaluate,
+  setArticlePublishedUrl,
   updateArticleTitle,
   updateArticleTypeOnly,
 } from "../../services/admin/articles.service";
@@ -20,6 +21,10 @@ import { AppEnv } from "../../types/shared-types";
 import { requireRole } from "../../middleware/requireRole";
 import { startEvaluation } from "../../services/user/startEvaluation.service";
 import { sanitizeHtmlServer } from "../../utils/sanitize";
+import {
+  InvalidPublishedUrlError,
+  normalizePublishedUrl,
+} from "../../utils/publishedUrl";
 import {
   listSuggestions,
   applySuggestions,
@@ -115,6 +120,7 @@ articlesRoute.get("/:id", async (c) => {
         content: article.content,
         article_type_id: article.article_type_id,
         article_type_name: article.article_type_name,
+        is_evaluatable: Number(article.is_evaluatable) === 1 ? 1 : 0,
         status: article.status,
         version: article.version,
         ai_score: article.ai_score,
@@ -187,6 +193,44 @@ articlesRoute.patch("/:id", async (c) => {
   });
 });
 
+/**
+ * Set (or clear, with an empty/null url) the external published link. Does not
+ * bump updated_at, version or status — see setArticlePublishedUrl.
+ */
+articlesRoute.put("/:id/published-url", async (c) => {
+  const id = c.req.param("id");
+
+  // A body that fails to parse is a bad request, never a "clear the link" —
+  // mapping it to {} would silently delete stored data.
+  const body: unknown = await c.req.json().catch(() => null);
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return c.json({ success: false, message: "Invalid JSON body" }, 400);
+  }
+  if (!("url" in body)) {
+    return c.json({ success: false, message: "Missing 'url' field" }, 400);
+  }
+
+  let publishedUrl: string | null;
+  try {
+    publishedUrl = normalizePublishedUrl((body as { url?: unknown }).url);
+  } catch (e) {
+    if (e instanceof InvalidPublishedUrlError) {
+      return c.json({ success: false, message: e.message }, 400);
+    }
+    throw e;
+  }
+
+  const result = await setArticlePublishedUrl(c.env.DB, id, publishedUrl);
+  if (!result) {
+    return c.json({ success: false, message: "Article not found" }, 404);
+  }
+
+  return c.json({
+    message: publishedUrl ? "Published link updated" : "Published link removed",
+    data: { article: { id: result.id, published_url: result.published_url } },
+  });
+});
+
 articlesRoute.get("/:id/parameter-results", async (c) => {
   const id = c.req.param("id");
   const versionQuery = c.req.query("version");
@@ -234,10 +278,21 @@ articlesRoute.patch("/:id/type", async (c) => {
     );
   }
 
-  const targetType = await getArticleTypeMeta(c.env.DB, body.article_type_id);
-  const evaluatable = Number(targetType?.is_evaluatable) === 1;
+  const existing = await getArticleById(c.env.DB, id);
+  if (!existing) {
+    return c.json({ success: false, message: "Article not found" }, 404);
+  }
 
-  if (body.reevaluate === false || (targetType && !evaluatable)) {
+  const targetType = await getArticleTypeMeta(c.env.DB, body.article_type_id);
+  const currentType = await getArticleTypeMeta(c.env.DB, existing.article_type_id);
+  const evaluatable = Number(targetType?.is_evaluatable) === 1;
+  const currentEvaluatable = Number(currentType?.is_evaluatable) === 1;
+  // Type-only would leave these rows pending with no job, and the next
+  // re-evaluate would then hit the real in-flight lock. There is no score
+  // to preserve, so leaving a skipped type always starts scoring.
+  const mustStartEval = !currentEvaluatable && evaluatable;
+
+  if (!mustStartEval && (body.reevaluate === false || (targetType && !evaluatable))) {
     let found: boolean;
     try {
       found = await updateArticleTypeOnly(c.env.DB, id, body.article_type_id);
